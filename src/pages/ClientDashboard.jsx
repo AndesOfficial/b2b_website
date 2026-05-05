@@ -110,6 +110,7 @@ export default function ClientDashboard() {
   const isTreeboClient =
     String(client?.name || "").toLowerCase().includes("treebo")
     || (clientProperties || []).some((p) => String(p || "").toLowerCase().includes("treebo"));
+  const displayClientName = isTreeboClient ? "Treebo Classic Grande Hotel Camp" : client?.name;
 
   const monthlyBilling = isTreeboClient
     ? 32000
@@ -237,8 +238,8 @@ export default function ClientDashboard() {
   };
 
   const handleExport = useCallback(() => {
-    exportCSV(filtered, `${(client?.name || "orders").replace(/\s+/g, "_")}_orders.csv`);
-  }, [filtered, client]);
+    exportCSV(filtered, `${(displayClientName || "orders").replace(/\s+/g, "_")}_orders.csv`);
+  }, [filtered, displayClientName]);
 
   // Issue Submission Handler
   const handleSubmitIssue = async () => {
@@ -279,7 +280,7 @@ export default function ClientDashboard() {
               <BrandLogo className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900 leading-tight">{client?.name}</h1>
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">{displayClientName}</h1>
               <p className="text-xs text-gray-500">Order History Dashboard</p>
             </div>
           </div>
@@ -498,7 +499,7 @@ export default function ClientDashboard() {
         </div>
 
         {/* Category Breakdown */}
-        {categoryStats.length > 0 && (
+        {!isTreeboClient && categoryStats.length > 0 && (
           <div>
             <h2 className="text-base font-bold text-gray-800 mb-3">Category Breakdown</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -556,7 +557,7 @@ export default function ClientDashboard() {
                   )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> Clothes</div>
+                    <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> {isTreeboClient ? "Pieces" : "Clothes"}</div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1.5"><MdScale size={13} className="text-gray-400" /> Weight (KG)</div>
@@ -682,7 +683,7 @@ export default function ClientDashboard() {
 
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <AirbnbOrderForm
-                  clientName={client?.name}
+                  clientName={displayClientName}
                   onSuccess={() => {
                     alert("Order successfully assigned to rider!");
                     setShowOrderModal(false);

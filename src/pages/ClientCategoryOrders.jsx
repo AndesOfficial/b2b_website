@@ -5,17 +5,16 @@ import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/ExpandableOrderRow";
 import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers } from "react-icons/fi";
-import { BiRupee } from "react-icons/bi";
 import { MdScale } from "react-icons/md";
 
 // CSV export helper
 function exportCSV(rows, filename) {
   if (!rows.length) return;
-  const headers = ["Order ID","Date","Property","Category","Clothes","Weight","Students","Status","Customer","Phone"];
+  const headers = ["Order ID", "Date", "Property", "Category", "Clothes", "Weight", "Students", "Status", "Customer", "Phone"];
   const csvRows = [
     headers.join(","),
     ...rows.map((o) =>
-      [o.id,o.date,`"${o.property}"`,o.category,o.items??"",o.weight??"",o.studentCount??"",o.status,`"${o.customerName||""}"`,o.customerNumber||""].join(",")
+      [o.id, o.date, `"${o.property}"`, o.category, o.items ?? "", o.weight ?? "", o.studentCount ?? "", o.status, `"${o.customerName || ""}"`, o.customerNumber || ""].join(",")
     ),
   ];
   const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
@@ -32,6 +31,12 @@ export default function ClientCategoryOrders() {
   const { categoryKey } = useParams();
   const { client, orders } = useHostelAuth();
   const navigate = useNavigate();
+
+  const isTreeboClient =
+    String(client?.name || "").toLowerCase().includes("treebo")
+    || (client?.partnernames || client?.properties || []).some((p) => String(p || "").toLowerCase().includes("treebo"));
+  const displayClientName = isTreeboClient ? "Treebo Classic Grande Hotel Camp" : client?.name;
+
   const pageLabelOverride = categoryKey === "AIRBNB" ? "Hotel Service" : null;
   const cat = CATEGORIES[categoryKey] || { label: categoryKey, icon: "📁", color: "#6B7280" };
   const clientProperties = useMemo(() => client?.properties || client?.partnernames || [], [client]);
@@ -78,7 +83,7 @@ export default function ClientCategoryOrders() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">{pageLabelOverride || cat.label}</h1>
-                <p className="text-xs text-gray-500">{client?.name} · {filtered.length} orders</p>
+                <p className="text-xs text-gray-500">{displayClientName} · {filtered.length} orders</p>
               </div>
             </div>
           </div>
@@ -92,7 +97,7 @@ export default function ClientCategoryOrders() {
         {/* Summary stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SummaryCard label="Orders" value={filtered.length} color={cat.color} Icon={FiPackage} />
-          <SummaryCard label="Items" value={totalItems} color="#7C3AED" Icon={FiShoppingBag} />
+          <SummaryCard label={isTreeboClient ? "Pieces" : "Items"} value={totalItems} color="#7C3AED" Icon={FiShoppingBag} />
           <SummaryCard label="Weight" value={`${totalWeight.toFixed(1)} KG`} color="#D97706" Icon={MdScale} />
         </div>
 
@@ -117,7 +122,7 @@ export default function ClientCategoryOrders() {
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Property</label>
                   <select value={propertyFilter} onChange={(e) => setPropertyFilter(e.target.value)} className="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:border-brand">
                     <option value="all">All</option>
-                    {uniqueProperties.map(p => <option key={p} value={p}>{p}</option>)}
+                    {uniqueProperties.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
               )}
@@ -125,7 +130,7 @@ export default function ClientCategoryOrders() {
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full rounded-lg border border-gray-200 text-sm px-3 py-2 focus:outline-none focus:border-brand">
                   <option value="all">All</option>
-                  {uniqueStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                  {uniqueStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div>
@@ -156,7 +161,7 @@ export default function ClientCategoryOrders() {
                   {isGroup && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Property</th>}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> Clothes</div>
+                    <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> {isTreeboClient ? "Pieces" : "Clothes"}</div>
                   </th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1.5"><MdScale size={13} className="text-gray-400" /> Weight (KG)</div>
@@ -195,3 +200,4 @@ function SummaryCard({ label, value, color, Icon }) {
     </div>
   );
 }
+
