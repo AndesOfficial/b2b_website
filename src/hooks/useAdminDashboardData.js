@@ -163,8 +163,30 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
           (error) => console.error("Error fetching screen stats:", error),
         ),
         onSnapshot(
-          query(collection(db, "analytics", "searches", "popular"), orderBy("count", "desc"), limit(10)),
-          (snapshot) => setSearchStats(snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))),
+          query(collection(db, "analytics", "searches", "popular"), orderBy("count", "desc"), limit(50)),
+          (snapshot) => {
+            const rawSearches = snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }));
+            
+            const filteredSearches = [];
+            for (const search of rawSearches) {
+              const queryStr = (search.query || "").toLowerCase().trim();
+              if (queryStr.length < 3) continue; // skip 1-2 char queries like 'b', 'bl'
+              
+              // Check if this query is just a partial typing of another longer query in the list
+              const isPartial = rawSearches.some(other => {
+                 if (other.id === search.id) return false;
+                 const otherStr = (other.query || "").toLowerCase().trim();
+                 return otherStr.length > queryStr.length && otherStr.startsWith(queryStr);
+              });
+
+              if (!isPartial) {
+                 filteredSearches.push(search);
+              }
+            }
+            
+            // Set the top 10 meaningful, complete searches
+            setSearchStats(filteredSearches.slice(0, 10));
+          },
           (error) => console.error("Error fetching search stats:", error),
         ),
         onSnapshot(

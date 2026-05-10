@@ -178,7 +178,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     .toISOString().split("T")[0];
 
   const liveB2b = useMemo(() => {
-    const b2bOrders = orders.filter(o => 
+    const b2bOrders = orders.filter(o =>
       o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b"
     );
     const totalActiveStudents = b2bOrders.reduce((s, o) => s + (o.studentCount || 0), 0);
@@ -208,7 +208,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       b2bMap[name].items += o.items || 0;
       b2bMap[name].orders += 1;
       b2bMap[name].revenue += o.amount || 0;
-      
+
       if (!b2bMap[name].firstOrder || o.date < b2bMap[name].firstOrder.date) {
         b2bMap[name].firstOrder = {
           date: o.date,
@@ -227,12 +227,24 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     const b2bBreakdown = Object.values(b2bMap)
       .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders);
 
-    // Top 3 contribution (by revenue now for a mixed metric, or keep KG for hostels)
-    const top3 = b2bBreakdown.slice(0, 3).map(h => ({
-      name: h.name,
-      kg: h.kg,
-      pct: totalKgReceived > 0 ? ((h.kg / totalKgReceived) * 100).toFixed(1) : "0",
-    }));
+    const isLinenOrHotel = (type, name) => {
+      const n = (name || "").toLowerCase();
+      return type === "airbnb" || type === "linen" || n.includes("hostel99") || n.includes("hostel 99") || n.includes("treebo") || n.includes("hotel");
+    };
+
+    const hostelBulkBreakdown = b2bBreakdown.filter(h => !isLinenOrHotel(h.type, h.name));
+    const hotelLinenBreakdown = b2bBreakdown.filter(h => isLinenOrHotel(h.type, h.name));
+
+    // Top 3 contribution (by KG for bulk hostels only)
+    const totalHostelKg = hostelBulkBreakdown.reduce((sum, h) => sum + (h.kg || 0), 0);
+    const top3 = [...hostelBulkBreakdown]
+      .sort((a, b) => b.kg - a.kg)
+      .slice(0, 3)
+      .map(h => ({
+        name: h.name,
+        kg: h.kg,
+        pct: totalHostelKg > 0 ? ((h.kg / totalHostelKg) * 100).toFixed(1) : "0",
+      }));
 
     // Today's activity
     const todayB2bOrders = b2bOrders.filter(o => o.date === todayStr);
@@ -253,6 +265,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       totalItemsReceived,
       totalOrders,
       b2bBreakdown,
+      hostelBulkBreakdown,
+      hotelLinenBreakdown,
       top3,
       todayPickups: { count: todayB2bNames.length, names: todayB2bNames },
       todayDeliveries: { count: todayDeliveryNames.length, names: todayDeliveryNames },
@@ -289,10 +303,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       const key = reason.toLowerCase().includes("not attend") || reason.toLowerCase().includes("not available")
         ? "Customer not available"
         : reason.toLowerCase().includes("rider")
-        ? "Rider delay"
-        : reason.toLowerCase().includes("tech")
-        ? "Tech issue"
-        : "Other";
+          ? "Rider delay"
+          : reason.toLowerCase().includes("tech")
+            ? "Tech issue"
+            : "Other";
       pendingPickupReasons[key] = (pendingPickupReasons[key] || 0) + 1;
     });
 
@@ -304,8 +318,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       const key = reason.toLowerCase().includes("rider")
         ? "Rider delay"
         : reason.toLowerCase().includes("customer")
-        ? "Customer issue"
-        : "Processing delay";
+          ? "Customer issue"
+          : "Processing delay";
       pendingDeliveryReasons[key] = (pendingDeliveryReasons[key] || 0) + 1;
     });
 
@@ -361,7 +375,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
   // ── Expenses listener (b2b_expenses) ──────────────────────────
   const [totalExpenses, setTotalExpenses] = useState(0);
   useEffect(() => {
-    let unsubSnap = () => {};
+    let unsubSnap = () => { };
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       unsubSnap();
       if (!user) return;
@@ -542,7 +556,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 flex justify-between items-center">
               <div>
-                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">B2B (Hostels / Hotels / Bulk)</h3>
+                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">B2B (Hostels / Hotels )</h3>
                 <p className="text-[10px] text-purple-200 font-bold mt-0.5">{liveB2b.totalOrders} pickups · All time</p>
               </div>
               <span className="text-[11px] font-bold text-purple-200 bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-sm">Live</span>
@@ -595,42 +609,87 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                 </div>
               )}
 
-              {/* B2B-wise Breakdown Table */}
-              <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-                <div className="px-3 py-2 bg-slate-100 border-b border-slate-200">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">B2B Breakdown</p>
-                </div>
-                {liveB2b.hasData ? (
-                  <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto">
-                    {liveB2b.b2bBreakdown.map((h, i) => (
-                      <div key={h.name} className="px-3 py-2.5">
-                        <div className="flex justify-between items-start mb-1">
-                          <div>
-                            <p className="text-[12px] font-black text-slate-800">{h.name}</p>
-                            {h.firstOrder && (
-                              <p className="text-[9px] font-bold text-slate-400 mt-0.5">
-                                Last: {h.firstOrder.date} · {h.firstOrder.customerName}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[11px] font-black text-purple-600">
-                              {h.kg > 0 ? `${h.kg.toFixed(1)} kg` : h.items > 0 ? `${h.items} items` : `₹${h.revenue.toFixed(0)}`}
-                            </p>
-                            <p className="text-[9px] font-bold text-slate-400">
-                              {h.students > 0 ? `${h.students} students` : `${h.orders} orders`}
-                            </p>
-                          </div>
-                        </div>
-                        {h.issues > 0 && (
-                          <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded">{h.issues} issues</span>
-                        )}
-                      </div>
-                    ))}
+              {/* B2B-wise Breakdown Tables */}
+              <div className="space-y-4">
+
+                {/* Hostel Bulk Breakdown */}
+                <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Hostel Orders </p>
+                    <span className="text-[9px] font-bold text-slate-400">{liveB2b.hostelBulkBreakdown.length} properties</span>
                   </div>
-                ) : (
-                  <p className="px-3 py-4 text-center text-[11px] text-slate-400">No B2B orders in date range</p>
-                )}
+                  {liveB2b.hostelBulkBreakdown.length > 0 ? (
+                    <div className="divide-y divide-slate-100 max-h-[160px] overflow-y-auto">
+                      {liveB2b.hostelBulkBreakdown.map((h, i) => (
+                        <div key={h.name} className="px-3 py-2.5">
+                          <div className="flex justify-between items-start mb-1">
+                            <div>
+                              <p className="text-[12px] font-black text-slate-800">{h.name}</p>
+                              {h.firstOrder && (
+                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                  Last: {h.firstOrder.date} · {h.firstOrder.customerName}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[11px] font-black text-purple-600">
+                                {h.kg > 0 ? `${h.kg.toFixed(1)} kg` : h.items > 0 ? `${h.items} items` : `₹${h.revenue.toFixed(0)}`}
+                              </p>
+                              <p className="text-[9px] font-bold text-slate-400">
+                                {h.students > 0 ? `${h.students} students` : `${h.orders} orders`}
+                              </p>
+                            </div>
+                          </div>
+                          {h.issues > 0 && (
+                            <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded">{h.issues} issues</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-3 py-4 text-center text-[11px] text-slate-400">No bulk orders in date range</p>
+                  )}
+                </div>
+
+                {/* Hotel & Linen Breakdown */}
+                <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Hotels & Airbnbs </p>
+                    <span className="text-[9px] font-bold text-slate-400">{liveB2b.hotelLinenBreakdown.length} properties</span>
+                  </div>
+                  {liveB2b.hotelLinenBreakdown.length > 0 ? (
+                    <div className="divide-y divide-slate-100 max-h-[160px] overflow-y-auto">
+                      {liveB2b.hotelLinenBreakdown.map((h, i) => (
+                        <div key={h.name} className="px-3 py-2.5">
+                          <div className="flex justify-between items-start mb-1">
+                            <div>
+                              <p className="text-[12px] font-black text-slate-800">{h.name}</p>
+                              {h.firstOrder && (
+                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                  Last: {h.firstOrder.date} · {h.firstOrder.customerName}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[11px] font-black text-indigo-600">
+                                {h.items > 0 ? `${h.items} items` : h.kg > 0 ? `${h.kg.toFixed(1)} kg` : `₹${h.revenue.toFixed(0)}`}
+                              </p>
+                              <p className="text-[9px] font-bold text-slate-400">
+                                {h.orders} orders
+                              </p>
+                            </div>
+                          </div>
+                          {h.issues > 0 && (
+                            <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded">{h.issues} issues</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-3 py-4 text-center text-[11px] text-slate-400">No linen orders in date range</p>
+                  )}
+                </div>
+
               </div>
 
               {/* Today's Pickups & Deliveries */}
@@ -725,7 +784,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                 </div>
                 <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{d.phase3.capacity.utilizationPct}% Utilized · {d.phase3.capacity.idleKg}kg Idle</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <StatCard label="Total Orders" value={d.phase3.capacity.totalOrders} />
                 <StatCard label="Avg Kg/Order" value={d.phase3.capacity.avgKgPerOrder} />

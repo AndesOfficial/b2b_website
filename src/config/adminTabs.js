@@ -63,16 +63,6 @@ export const ADMIN_TAB_CONFIG = {
     showKpis: false,
     kpiColumnsClass: "",
   },
-  clients: {
-    key: "clients",
-    title: "Client Accounts",
-    navLabel: "Clients",
-    navIcon: FiUsers,
-    showSidebar: true,
-    showHeaderActions: false,
-    showKpis: false,
-    kpiColumnsClass: "",
-  },
   expenses: {
     key: "expenses",
     title: "CEO Expenses",
