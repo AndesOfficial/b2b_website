@@ -11,9 +11,9 @@ import { isNegativeNumberInput } from "../utils/numberInputUtils";
 // --- ADDED: Known lists of properties for the dropdowns ---
 const KNOWN_PROPERTIES = {
   hostel: [
-    "Tulsi", "Adarsha", "Meera", "Aardhana", "Aakansha",
-    "Kirti", "Tara", "Samshrushti", "Hostel 99",
-    "Hostel 99 no-88", "Hostel 99 no-3"
+    "Aakansha", "Aardhana", "Adarsha", "Curie", "Gurukul", 
+    "Kirti", "Meera", "Plato", "Samriddhi", "Samshrushti", 
+    "Tara", "Tulsi"
   ],
   hotel: [
     "Airbnb Viman Nagar", "Airbnb Koregaon Park" // Add your common hotels here

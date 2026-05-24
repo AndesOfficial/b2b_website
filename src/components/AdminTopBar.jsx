@@ -1,9 +1,9 @@
 import { FiCalendar, FiDownload, FiDollarSign, FiMenu } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import ExportCSV from "./ExportCSV";
-import { FaIndianRupeeSign } from "react-icons/fa6";
+import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
-export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, isExpensesActive, orders, onMenuClick }) {
+export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, isExpensesActive, onCalculatorClick, orders, onMenuClick }) {
     return (
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200 h-16 lg:h-18 flex items-center justify-between px-4 lg:px-8 shadow-sm" style={{ fontFamily: 'DM Sans, sans-serif' }}>
             <div className="flex items-center gap-3">
@@ -27,6 +27,15 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                 >
                     <FaIndianRupeeSign size={16} />
                     ANDES Expenses
+                </button>
+
+                {/* Calculator */}
+                <button
+                    onClick={onCalculatorClick}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13.5px] font-bold transition-all border bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200 shadow-sm"
+                >
+                    <FaCalculator size={16} />
+                    Calculator
                 </button>
 
                 {/* Date Picker - Compact on mobile */}

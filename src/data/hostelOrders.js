@@ -25,7 +25,7 @@ export function getCategoryForProperty(property) {
   if (propLower.includes("hostel 99") || propLower.includes("hostel99") || propLower.includes("airbnb viman nagar")) {
     return propLower.includes("airbnb") ? CATEGORIES.AIRBNB : CATEGORIES.LINEN;
   }
-  if (["Samridhi", "Gurukul"].includes(property)) return CATEGORIES.BULK_LAUNDRY;
+  if (["Samriddhi", "Gurukul"].includes(property)) return CATEGORIES.BULK_LAUNDRY;
   if (property === "Regular Customers") return CATEGORIES.B2C_RETAIL;
   if (property === "Issues") return CATEGORIES.ISSUES;
   return CATEGORIES.STUDENT_LAUNDRY;

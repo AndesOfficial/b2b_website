@@ -3,7 +3,7 @@ import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChan
 import { auth, db } from "../firebase";
 import { getDoc, doc, onSnapshot, collection, setDoc } from "firebase/firestore";
 import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orders";
-import { normalizeOrder } from "../utils/orderNormalization";
+import { normalizeOrder, normalizePropertyName } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
 
 const HostelAuthContext = createContext(null);
@@ -57,14 +57,17 @@ export function HostelAuthProvider({ children }) {
           const userData = userDoc.data() || {};
           resolvedRole = userData.role || "client";
 
-          const partnernames = userData.partnernames || userData.properties || [];
+          const rawPartnernames = userData.partnernames || userData.properties || [];
+          const partnernames = rawPartnernames.map(name => normalizePropertyName(name));
           const clientData = {
             uid: firebaseUser.uid,
-            role: resolvedRole,
             email: userData.email || firebaseUser.email || "",
             name: userData.name || (userData.email || firebaseUser.email || "Client"),
-            partnernames,
             ...userData,
+            uid: firebaseUser.uid,
+            role: resolvedRole,
+            partnernames,
+            properties: partnernames,
           };
 
           setClient(clientData);
@@ -284,10 +287,15 @@ export function HostelAuthProvider({ children }) {
         throw new Error("User record not found in b2b_managers collection.");
       }
 
-      const userData = userDoc.data();
+      const userData = userDoc.data() || {};
+      const rawPartnernames = userData.partnernames || userData.properties || [];
+      const partnernames = rawPartnernames.map(name => normalizePropertyName(name));
       const clientData = {
         uid: userCredential.user.uid,
         ...userData,
+        role: userData.role || "client",
+        partnernames,
+        properties: partnernames,
       };
 
       setClient(clientData);
@@ -302,9 +310,22 @@ export function HostelAuthProvider({ children }) {
   }, []);
 
   const setAuthenticatedUser = useCallback((clientData) => {
-    setClient(clientData);
-    setIsAdmin(clientData.role === "admin");
-    sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
+    if (!clientData) {
+      setClient(null);
+      setIsAdmin(false);
+      sessionStorage.removeItem("hostelClient");
+      return;
+    }
+    const rawPartnernames = clientData.partnernames || clientData.properties || [];
+    const partnernames = rawPartnernames.map(name => normalizePropertyName(name));
+    const normalizedClient = {
+      ...clientData,
+      partnernames,
+      properties: partnernames,
+    };
+    setClient(normalizedClient);
+    setIsAdmin(normalizedClient.role === "admin");
+    sessionStorage.setItem("hostelClient", JSON.stringify(normalizedClient));
   }, []);
 
   const logout = useCallback(async () => {

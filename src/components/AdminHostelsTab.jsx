@@ -14,9 +14,21 @@ import { db } from "../firebase";
 
 
 const DEFAULT_HOSTEL_COLORS = {
-  "Tulsi": "#1976D2", "Adarsha": "#7C3AED", "Meera": "#059669", "Aardhana": "#D97706",
-  "Aakansha": "#0891B2", "Kirti": "#BE185D", "Tara": "#DC2626", "Samshrushti": "#4338CA",
-  "Hostel 99": "#7C3AED", "Hostel 99 no-88": "#059669", "Hostel 99 no-3": "#D97706"
+  "Aakansha": "#0891B2", 
+  "Aardhana": "#D97706", 
+  "Adarsha": "#7C3AED", 
+  "Curie": "#4F46E5", 
+  "Gurukul": "#06B6D4", 
+  "Kirti": "#BE185D", 
+  "Meera": "#059669", 
+  "Plato": "#F59E0B", 
+  "Samriddhi": "#10B981", 
+  "Samshrushti": "#4338CA", 
+  "Tara": "#DC2626", 
+  "Tulsi": "#1976D2",
+  "Hostel 99": "#7C3AED", 
+  "Hostel 99 no-88": "#059669", 
+  "Hostel 99 no-3": "#D97706"
 };
 const FALLBACK_COLORS = ["#1976D2", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D", "#DC2626", "#4338CA"];
 const HIDDEN_HOSTEL_PROPERTIES = new Set([]);
