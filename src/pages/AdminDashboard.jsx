@@ -168,6 +168,7 @@ export default function AdminDashboard() {
           setDateTo={setDateTo}
           onExpensesClick={() => handleTabChange(activeTab === "expenses" ? "overview" : "expenses")}
           isExpensesActive={activeTab === "expenses"}
+          onCalculatorClick={() => navigate("/admin/calculator")}
           orders={orders}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />

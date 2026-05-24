@@ -5,27 +5,84 @@ import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG } from "../config/orderRateCard";
 
 // --- ADDED ALIASES HERE TO FIX CASE SENSITIVITY AND DUPLICATES ---
 const CANONICAL_PROPERTY_NAMES = {
+  // Aakansha
   aakansha: "Aakansha",
   akansha: "Aakansha",
   "aakansha hostel": "Aakansha",
+  "aakansha hostel kothurd": "Aakansha",
+  "aakansha hostel kothrud": "Aakansha",
+
+  // Adarsha
   adarsha: "Adarsha",
   "adarsha hostel": "Adarsha",
+  "adarsha hostel bhavdan": "Adarsha",
+  "adarsha hostel bavdhan": "Adarsha",
+
+  // Aardhana
   aardhana: "Aardhana",
   ardhana: "Aardhana",
   "aardhana hostel": "Aardhana",
+  aaradhana: "Aardhana",
+  "aaradhana hostel": "Aardhana",
+  "aaradhana hostel bhavdan": "Aardhana",
+  "aaradhana hostel bavdhan": "Aardhana",
+  "aardhana hostel bhavdan": "Aardhana",
+
+  // Curie
+  curie: "Curie",
+  "curie hostel": "Curie",
+  "curie hostel sb road": "Curie",
+
+  // Gurukul
+  gurukul: "Gurukul",
+  "gurukul hostel": "Gurukul",
+
+  // Kirti
   kirti: "Kirti",
   "kirti hostel": "Kirti",
+  keerti: "Kirti",
+  "keerti hostel": "Kirti",
+  "keerti hostel karve nagar": "Kirti",
+  "kirti hostel karve nagar": "Kirti",
+
+  // Meera
   meera: "Meera",
   "meera hostel": "Meera",
-  samridhi: "Samridhi",
-  "samridhi hostel": "Samridhi",
+  "meera hostel karve nagar": "Meera",
+
+  // Plato
+  plato: "Plato",
+  "plato hostel": "Plato",
+  "plato hostel viman nagar": "Plato",
+
+  // Samriddhi
+  samridhi: "Samriddhi",
+  "samridhi hostel": "Samriddhi",
+  samriddhi: "Samriddhi",
+  "samriddhi hostel": "Samriddhi",
+
+  // Samshrushti
   samshrushti: "Samshrushti",
   "samshrushti hostel": "Samshrushti",
+  samshursti: "Samshrushti",
+  "samshursti hostel": "Samshrushti",
+  "samshursti hostel karve nagar": "Samshrushti",
+  "samshrushti hostel karve nagar": "Samshrushti",
+
+  // Tara
   tara: "Tara",
   "tara hostel": "Tara",
+  "tara hostel kothurd": "Tara",
+  "tara hostel kothrud": "Tara",
+
+  // Tulsi
   tulsi: "Tulsi",
-  "tulsi hostel": "Tulsi",       // Maps "tulsi hostel" -> "Tulsi"
-  "tulsi boys hostel": "Tulsi",  // Maps "tulsi boys hostel" -> "Tulsi"
+  "tulsi hostel": "Tulsi",
+  "tulsi boys hostel": "Tulsi",
+  "tulsi hostel bhavdan": "Tulsi",
+  "tulsi hostel bavdhan": "Tulsi",
+
+  // Other properties
   hostel99: "Hostel 99",
   "hostel 99": "Hostel 99",
   "hostel99 koregaon park": "Hostel99 koregaon park",
@@ -46,11 +103,6 @@ const CANONICAL_PROPERTY_NAMES = {
   "airbnb viman nagar": "Airbnb Viman Nagar",
   "airbnb viman nagar ": "Airbnb Viman Nagar",
   "airbnb viman nagar, pune": "Airbnb Viman Nagar",
-  "meera hostel karve nagar": "Meera",
-  "samshursti hostel karve nagar": "Samshrushti",
-  "samshrushti hostel karve nagar": "Samshrushti",
-  "tulsi hostel bhavdan": "Tulsi",
-  "tulsi hostel bavdhan": "Tulsi",
   "treebo trend hotel": "Treebo Trend Hotel",
 };
 

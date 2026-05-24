@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import EmptyState from "./EmptyState";
+import { normalizePropertyName } from "../utils/orderNormalization";
 
 function normalizeList(value) {
   if (Array.isArray(value)) return value.filter(Boolean).map((v) => String(v).trim()).filter(Boolean);
@@ -91,6 +92,7 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
     setIsModalOpen(true);
   }, []);
 
+
   const closeModal = useCallback(() => {
     if (submitting) return;
     setIsModalOpen(false);
@@ -105,7 +107,7 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
       const email = String(draft.email || "").trim();
       const name = String(draft.name || "").trim();
       const role = String(draft.role || "client").trim();
-      const partnernames = normalizeList(draft.partnernames);
+      const partnernames = normalizeList(draft.partnernames).map(name => normalizePropertyName(name));
       const monthlyBillingNumber = draft.monthlyBilling === "" ? undefined : Number(draft.monthlyBilling);
       if (monthlyBillingNumber !== undefined && !Number.isFinite(monthlyBillingNumber)) {
         throw new Error("Monthly billing must be a number.");
