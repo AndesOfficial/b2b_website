@@ -41,13 +41,21 @@ const fmtR   = n => `₹ ${fmt(n)}`;
 function calcScenario(scenarioKey, a) {
   const seed = SCENARIO_SEEDS[scenarioKey];
 
-  // B2C capacity
+  // Machines are active if either channel is enabled
+  const anyActive = a.b2cEnabled || a.b2bEnabled;
+
+  // Machine daily outputs — show capacity whenever any channel is active
+  const m1daily = anyActive ? a.m1cap * seed.cycles : 0;
+  const m2daily = anyActive ? a.m2cap * seed.cycles : 0;
+  const m3daily = (anyActive && a.m3enabled) ? a.m3cap * seed.cycles : 0;
+
+  // B2C capacity — combined machine output (shown as "daily output" card)
   let b2cDailyKg = 0;
-  if (a.b2cEnabled) {
+  if (anyActive) {
     b2cDailyKg = (a.m1cap + a.m2cap) * seed.cycles;
     if (a.m3enabled) b2cDailyKg += a.m3cap * seed.cycles;
   }
-  const b2cMonthly = b2cDailyKg * a.workdays;
+  const b2cMonthly = a.b2cEnabled ? b2cDailyKg * a.workdays : 0;
 
   // B2C revenue — each split is independent (can both be 0)
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
@@ -68,16 +76,11 @@ function calcScenario(scenarioKey, a) {
                    a.packaging + a.detergent + a.delivery +
                    a.maintenance + a.overtime + a.misc;
 
-  const totalKg   = b2cMonthly + b2bMonthly;
+  const totalKg   = (a.b2cEnabled ? b2cMonthly : 0) + b2bMonthly;
   const profit    = totalRev - totalExp;
   const margin    = totalRev > 0 ? (profit / totalRev) * 100 : 0;
   const revPerKg  = totalKg > 0 ? totalRev / totalKg : 0;
   const expPerKg  = totalKg > 0 ? totalExp / totalKg : 0;
-
-  // Machine breakdown
-  const m1daily = a.b2cEnabled ? a.m1cap * seed.cycles : 0;
-  const m2daily = a.b2cEnabled ? a.m2cap * seed.cycles : 0;
-  const m3daily = (a.b2cEnabled && a.m3enabled) ? a.m3cap * seed.cycles : 0;
 
   return {
     seed, m1daily, m2daily, m3daily,
