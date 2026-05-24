@@ -6,16 +6,16 @@ import { useHostelAuth } from "../context/HostelAuthContext";
 
 // ─── Defaults per model ───────────────────────────────────────────────────────
 const DEFAULTS = {
-  M1: { m1cap:13, m2cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
+  M1: { m1cap:13, m2cap:8, m3cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
         b2bprice:60, b2cprice:81, dcprice:100, gpkg:3,
         laundrysplit:100, dcsplit:0 },
-  M2: { m1cap:13, m2cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
+  M2: { m1cap:13, m2cap:8, m3cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
         b2bprice:60, b2cprice:81, dcprice:100, gpkg:3,
         laundrysplit:83.33, dcsplit:16.67 },
-  M3: { m1cap:13, m2cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
+  M3: { m1cap:13, m2cap:8, m3cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
         b2bprice:60, b2cprice:81, dcprice:100, gpkg:3,
         laundrysplit:83.33, dcsplit:16.67 },
-  M4: { m1cap:13, m2cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
+  M4: { m1cap:13, m2cap:8, m3cap:8, b2bcycles:6, b2ccycles:11, workdays:30,
         b2bprice:60, b2cprice:81, dcprice:100, gpkg:3,
         laundrysplit:83.33, dcsplit:16.67 },
 };
@@ -24,7 +24,7 @@ const MODEL_INFO = {
   M1: { label:"B2B Only",   color:"blue",    desc:"Both machines (M1 + M2) run B2B bulk laundry at configured cycles/day. 100% laundry pricing." },
   M2: { label:"B2C Only",   color:"emerald", desc:"Both machines share B2C cycles/day for retail customers. Laundry + dry clean split applies." },
   M3: { label:"Dedicated",  color:"violet",  desc:"M1 dedicated to B2B at B2B cycles/day. M2 dedicated to B2C at B2C cycles/day." },
-  M4: { label:"Combined",   color:"amber",   desc:"M1 + M2 handle B2B at B2B cycles/day. M2 capacity also runs B2C at B2C cycles/day." },
+  M4: { label:"Combined",   color:"amber",   desc:"M1 + M2 handle B2B at B2B cycles/day. A new Machine 3 (M3) runs exclusively for B2C at B2C cycles/day." },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ function fmtL(n)  { return (n / 100000).toFixed(2); }
 function fmtKg(n) { return `${fmt(n)} kg`; }
 
 function calculate(model, s) {
-  const { m1cap, m2cap, b2bcycles, b2ccycles, workdays,
+  const { m1cap, m2cap, m3cap, b2bcycles, b2ccycles, workdays,
           b2bprice, b2cprice, dcprice, gpkg,
           laundrysplit, dcsplit } = s;
 
@@ -47,7 +47,7 @@ function calculate(model, s) {
     b2cDailyKg = m2cap * b2ccycles;
   } else if (model === "M4") {
     b2bDailyKg = (m1cap + m2cap) * b2bcycles;
-    b2cDailyKg = m2cap * b2ccycles;
+    b2cDailyKg = (m3cap || 8) * b2ccycles;  // dedicated 3rd machine for B2C
   }
 
   const b2bMonthly = b2bDailyKg * workdays;
@@ -264,6 +264,12 @@ export default function Calculator() {
                   <FieldLabel unit="kg/cycle">Machine 2 capacity</FieldLabel>
                   <NumInput value={s.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
                 </div>
+                {activeModel === "M4" && (
+                  <div>
+                    <FieldLabel unit="kg/cycle">Machine 3 capacity <span className="text-amber-500 font-medium">(B2C dedicated)</span></FieldLabel>
+                    <NumInput value={s.m3cap} min={1} max={50} step={0.5} onChange={v => set("m3cap", v)} />
+                  </div>
+                )}
                 <div className={!showB2B ? "opacity-40 pointer-events-none" : ""}>
                   <FieldLabel unit="cycles/day">B2B cycles per day</FieldLabel>
                   <NumInput value={s.b2bcycles} min={1} max={20} onChange={v => set("b2bcycles", v)} disabled={!showB2B} />
