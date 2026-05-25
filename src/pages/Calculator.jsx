@@ -14,7 +14,8 @@ const SCENARIO_SEEDS = {
 // ─── Auto-cost constants ──────────────────────────────────────────────────────
 const ELEC_RATE          = 13.80;  // ₹/unit (kWh)
 const B2C_UNITS_PER_CYCLE = 8;     // units per cycle
-const B2B_KWH_PER_KG     = 0.331; // kWh per kg
+const B2B_KWH_PER_KG     = 0.331; // kWh per kg (washing machine)
+const DRYER_KWH_PER_KG   = 0.415; // kWh per kg (dryer)
 const WATER_LITRES_CYCLE  = 60;    // litres per cycle
 const WATER_RATE          = 0.38;  // ₹/litre
 const DETERGENT_RATE      = 5;     // ₹/kg
@@ -55,6 +56,8 @@ const DEFAULT_ASSUMPTIONS = {
   laundrySplit: 83.33, dcSplit: 16.67,
   // Auto-cost rate overrides (user can tweak in modal)
   elecRate: ELEC_RATE,
+  // Dryer
+  dryerMonthlyKg: 0,
   // Fixed expenses (auto-calculated ones are derived, not stored here)
   rent: 30000, salaries: 80000,
   delivery: 8000, maintenance: 5000, overtime: 4000, misc: 5000,
@@ -127,7 +130,11 @@ function calcScenario(scenarioKey, a) {
   const b2bElecUnits = b2bMonthly * B2B_KWH_PER_KG;
   const b2bElecCost  = b2bElecUnits * a.elecRate;
 
-  const electricityCost = Math.round(b2cElecCost + b2bElecCost);
+  //    Dryer: user-input monthly kg × 0.415 kWh × rate
+  const dryerElecUnits = (a.dryerMonthlyKg || 0) * DRYER_KWH_PER_KG;
+  const dryerElecCost  = dryerElecUnits * a.elecRate;
+
+  const electricityCost = Math.round(b2cElecCost + b2bElecCost + dryerElecCost);
 
   // 2. Water: total monthly cycles (B2C + B2B) × 60 litres × ₹0.38
   const b2bMonthlyCycles = b2bDailyCycles * a.workdays;
@@ -163,6 +170,7 @@ function calcScenario(scenarioKey, a) {
     laundryRev, dcRev, b2bRev, totalRev, dailyRev,
     // auto expenses (exposed for detail panel)
     electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
+    dryerElecUnits, dryerElecCost,
     waterCost, detergentCost, packagingCostVal,
     totalExp, profit, margin, revPerKg, expPerKg,
   };
@@ -335,6 +343,7 @@ function ConfigModal({ assumptions, set, onClose }) {
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-[10px] text-slate-500 space-y-1">
             <p><span className="font-semibold text-slate-600">B2C electricity:</span> cycles/month × 8 units × rate</p>
             <p><span className="font-semibold text-slate-600">B2B electricity:</span> kg/month × 0.331 kWh × rate</p>
+            <p><span className="font-semibold text-slate-600">Dryer electricity:</span> dryer kg/month × 0.415 kWh × rate</p>
             <p><span className="font-semibold text-slate-600">Water:</span> cycles/month × 60 L × ₹0.38</p>
             <p><span className="font-semibold text-slate-600">Detergent:</span> total kg/month × ₹5</p>
             <p><span className="font-semibold text-slate-600">Packaging:</span> tiered by laundry split % (25%→₹3,920 · 35%→₹5,236 · 80%→₹12,514 · 100%→₹15,760)</p>
@@ -401,6 +410,7 @@ function DetailPanel({ out, assumptions }) {
     b2cMonthly, b2bMonthly, b2cActive, b2bActive,
     laundryKg, dcKg, garments, laundryRev, dcRev, b2bRev, totalRev, dailyRev,
     electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
+    dryerElecUnits, dryerElecCost,
     waterCost, detergentCost, packagingCostVal,
     totalExp, profit, margin, revPerKg, expPerKg,
   } = out;
@@ -544,7 +554,8 @@ function DetailPanel({ out, assumptions }) {
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right leading-relaxed">
                 {b2cActive && <div>B2C: {fmt(b2cElecUnits)} u → ₹{fmt(b2cElecCost)}</div>}
-                {b2bActive && <div>B2B: {fmt(Math.round(b2bElecUnits))} u → ₹{fmt(b2bElecCost)}</div>}
+                {b2bActive && <div>B2B machine: {fmt(Math.round(b2bElecUnits))} u → ₹{fmt(b2bElecCost)}</div>}
+                {assumptions.dryerMonthlyKg > 0 && <div>Dryer: {fmt(Math.round(dryerElecUnits))} u → ₹{fmt(dryerElecCost)}</div>}
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(electricityCost)}</td>
             </tr>
@@ -627,7 +638,8 @@ function DetailPanel({ out, assumptions }) {
             { l:"Laundry quantity",        v:fmtKg(laundryKg),               dim:!b2cActive },
             { l:"Dry clean garments",      v:`${fmt(garments)} pcs`,          dim:!b2cActive },
             { l:"B2C elec units",          v:`${fmt(Math.round(b2cElecUnits))} kWh`, dim:!b2cActive },
-            { l:"B2B elec units",          v:`${fmt(Math.round(b2bElecUnits))} kWh`, dim:!b2bActive },
+            { l:"B2B machine elec units",   v:`${fmt(Math.round(b2bElecUnits))} kWh`, dim:!b2bActive },
+            { l:"Dryer elec units",         v:`${fmt(Math.round(dryerElecUnits))} kWh`, dim: assumptions.dryerMonthlyKg <= 0 },
           ].map(({ l, v, dim }) => (
             <div key={l} className={`bg-white border border-slate-200 rounded-xl p-3.5 ${dim ? "opacity-30" : ""}`}>
               <p className="text-[10px] text-slate-400 mb-1">{l}</p>
@@ -829,6 +841,16 @@ export default function Calculator() {
               </button>
 
               {/* ── AUTO-COSTS INFO ── */}
+              <SectionDivider>Dryer configuration</SectionDivider>
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 mb-2.5">
+                <p className="text-[10px] font-bold text-violet-700 mb-1 flex items-center gap-1"><FiZap size={10} /> Dryer Electricity</p>
+                <p className="text-[10px] text-violet-600">Rate: 0.415 kWh/kg × ₹{assumptions.elecRate}/unit</p>
+              </div>
+              <FieldRow label="Dryer monthly load" unit="kg / month">
+                <NI value={assumptions.dryerMonthlyKg} min={0} step={1} onChange={v => set("dryerMonthlyKg", v)} />
+              </FieldRow>
+
+              {/* ── AUTO-COSTS INFO ── */}
               <SectionDivider>Auto-calculated costs</SectionDivider>
               <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 mb-2.5">
                 <p className="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1"><FiZap size={10} /> Automatically computed</p>
@@ -837,6 +859,7 @@ export default function Calculator() {
                   { l:"Water",       v: fmtR(activeOut.waterCost)       },
                   { l:"Detergent",   v: fmtR(activeOut.detergentCost)   },
                   { l:"Packaging",   v: fmtR(activeOut.packagingCostVal)},
+                  { l:"Dryer elec",  v: fmtR(activeOut.dryerElecCost)   },
                 ].map(({ l, v }) => (
                   <div key={l} className="flex items-center justify-between mb-1 last:mb-0">
                     <p className="text-[10px] text-teal-600">{l}</p>
