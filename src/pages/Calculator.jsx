@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiMenu, FiArrowLeft, FiRefreshCw, FiAlertTriangle, FiTrendingUp, FiTrendingDown, FiMinus } from "react-icons/fi";
+import { FiMenu, FiArrowLeft, FiRefreshCw, FiAlertTriangle, FiTrendingUp, FiTrendingDown, FiMinus, FiSettings, FiX } from "react-icons/fi";
 import AdminSidebar from "../components/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
@@ -16,15 +16,17 @@ const DEFAULT_ASSUMPTIONS = {
   // Machines
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
+  m4enabled: false, m4cap: 8,
+  m5enabled: false, m5cap: 8,
+  // Per-machine channel mode: "b2c" | "b2b" | "both"
+  m1mode: "b2c", m2mode: "b2c", m3mode: "b2c", m4mode: "b2c", m5mode: "b2c",
   // Operational
   workdays: 30,
   // Pricing
   b2bPrice: 60, b2cPrice: 81, dcPrice: 100, gpkg: 3,
   // B2C
-  b2cEnabled: true,
   laundrySplit: 83.33, dcSplit: 16.67,
-  // B2B
-  b2bEnabled: false, b2bDailyKg: 126, b2bPrice2: 60,
+  // B2B (no separate enable — derived from machine modes)
   // Expenses
   rent: 30000, salaries: 80000, electricity: 15000,
   water: 8000, packaging: 5000, detergent: 10000,
@@ -38,67 +40,72 @@ const fmtKg  = n => `${fmt(n)} kg`;
 const fmtPct = n => `${n.toFixed(1)}%`;
 const fmtR   = n => `₹ ${fmt(n)}`;
 
-// B2B always runs at a fixed 6 cycles/day regardless of scenario
 const B2B_CYCLES = 6;
+
+// Helper: does a machine contribute to a channel given its mode?
+function machineDoesB2C(mode) { return mode === "b2c" || mode === "both"; }
+function machineDoesB2B(mode) { return mode === "b2b" || mode === "both"; }
 
 function calcScenario(scenarioKey, a) {
   const seed = SCENARIO_SEEDS[scenarioKey];
 
+  // Channels are derived purely from machine mode assignments
   // ── B2C machine output (scenario-dependent cycles) ──
-  const b2cM1daily = a.b2cEnabled ? a.m1cap * seed.cycles : 0;
-  const b2cM2daily = a.b2cEnabled ? a.m2cap * seed.cycles : 0;
-  const b2cM3daily = (a.b2cEnabled && a.m3enabled) ? a.m3cap * seed.cycles : 0;
+  const b2cM1daily = machineDoesB2C(a.m1mode) ? a.m1cap * seed.cycles : 0;
+  const b2cM2daily = machineDoesB2C(a.m2mode) ? a.m2cap * seed.cycles : 0;
+  const b2cM3daily = (a.m3enabled && machineDoesB2C(a.m3mode)) ? a.m3cap * seed.cycles : 0;
+  const b2cM4daily = (a.m4enabled && machineDoesB2C(a.m4mode)) ? a.m4cap * seed.cycles : 0;
+  const b2cM5daily = (a.m5enabled && machineDoesB2C(a.m5mode)) ? a.m5cap * seed.cycles : 0;
 
-  // ── B2B machine output (fixed 6 cycles/day) — used for capacity display only ──
-  const b2bM1daily = a.b2bEnabled ? a.m1cap * B2B_CYCLES : 0;
-  const b2bM2daily = a.b2bEnabled ? a.m2cap * B2B_CYCLES : 0;
-  const b2bM3daily = (a.b2bEnabled && a.m3enabled) ? a.m3cap * B2B_CYCLES : 0;
+  // ── B2B machine output (fixed 6 cycles/day) ──
+  const b2bM1daily = machineDoesB2B(a.m1mode) ? a.m1cap * B2B_CYCLES : 0;
+  const b2bM2daily = machineDoesB2B(a.m2mode) ? a.m2cap * B2B_CYCLES : 0;
+  const b2bM3daily = (a.m3enabled && machineDoesB2B(a.m3mode)) ? a.m3cap * B2B_CYCLES : 0;
+  const b2bM4daily = (a.m4enabled && machineDoesB2B(a.m4mode)) ? a.m4cap * B2B_CYCLES : 0;
+  const b2bM5daily = (a.m5enabled && machineDoesB2B(a.m5mode)) ? a.m5cap * B2B_CYCLES : 0;
 
-  // ── Combined machine cards (B2C + B2B) ──
   const m1daily = b2cM1daily + b2bM1daily;
   const m2daily = b2cM2daily + b2bM2daily;
   const m3daily = b2cM3daily + b2bM3daily;
+  const m4daily = b2cM4daily + b2bM4daily;
+  const m5daily = b2cM5daily + b2bM5daily;
 
-  // ── Daily totals ──
-  const b2cDailyKg     = b2cM1daily + b2cM2daily + b2cM3daily;
-  // Machine-derived B2B capacity (includes M3) — shown as info, not used for revenue
-  const b2bDailyKgCalc = b2bM1daily + b2bM2daily + b2bM3daily;
+  const b2cDailyKg     = b2cM1daily + b2cM2daily + b2cM3daily + b2cM4daily + b2cM5daily;
+  const b2bDailyKgCalc = b2bM1daily + b2bM2daily + b2bM3daily + b2bM4daily + b2bM5daily;
 
-  // ── Monthly volumes ──
   const b2cMonthly = b2cDailyKg * a.workdays;
-  const b2bMonthly = a.b2bEnabled ? a.b2bDailyKg * a.workdays : 0;
+  const b2bMonthly = b2bDailyKgCalc * a.workdays;
 
-  // B2C revenue — each split is independent
+  const b2cActive = b2cDailyKg > 0;
+  const b2bActive = b2bDailyKgCalc > 0;
+
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
   const dcKg       = b2cMonthly * (a.dcSplit / 100);
   const garments   = dcKg * a.gpkg;
-  const laundryRev = a.b2cEnabled ? laundryKg * a.b2cPrice : 0;
-  const dcRev      = a.b2cEnabled ? garments  * a.dcPrice  : 0;
-
-  // B2B revenue — based on manual daily kg input
-  const b2bRev = a.b2bEnabled ? b2bMonthly * a.b2bPrice : 0;
+  const laundryRev = laundryKg * a.b2cPrice;
+  const dcRev      = garments  * a.dcPrice;
+  const b2bRev     = b2bMonthly * a.b2bPrice;
 
   const totalRev = laundryRev + dcRev + b2bRev;
   const dailyRev = a.workdays > 0 ? totalRev / a.workdays : 0;
 
-  // Expenses
   const totalExp = a.rent + a.salaries + a.electricity + a.water +
                    a.packaging + a.detergent + a.delivery +
                    a.maintenance + a.overtime + a.misc;
 
-  const totalKg  = (a.b2cEnabled ? b2cMonthly : 0) + b2bMonthly;
+  const totalKg  = b2cMonthly + b2bMonthly;
   const profit   = totalRev - totalExp;
   const margin   = totalRev > 0 ? (profit / totalRev) * 100 : 0;
   const revPerKg = totalKg  > 0 ? totalRev / totalKg : 0;
   const expPerKg = totalKg  > 0 ? totalExp / totalKg : 0;
 
   return {
-    seed, m1daily, m2daily, m3daily,
-    b2cDailyKg, b2cMonthly,
-    b2bDailyKgCalc,
+    seed, m1daily, m2daily, m3daily, m4daily, m5daily,
+    b2cDailyKg, b2cMonthly, b2cActive,
+    b2bDailyKgCalc, b2bMonthly, b2bActive,
     laundryKg, dcKg, garments,
     laundryRev, dcRev,
-    b2bRev, b2bMonthly,
+    b2bRev,
     totalRev, dailyRev, totalExp,
     profit, margin, revPerKg, expPerKg,
   };
@@ -158,6 +165,118 @@ function Toggle({ enabled, onToggle, labelOn = "Enabled", labelOff = "Disabled",
   );
 }
 
+// ─── Machine mode selector: B2C / Both / B2B ──────────────────────────────────
+function ModeToggle({ value, onChange }) {
+  const opts = [
+    { v: "b2c",  label: "B2C",  activeClass: "bg-emerald-500 border-emerald-500 text-white" },
+    { v: "both", label: "Both", activeClass: "bg-violet-600 border-violet-600 text-white" },
+    { v: "b2b",  label: "B2B",  activeClass: "bg-blue-600 border-blue-600 text-white" },
+  ];
+  return (
+    <div className="flex rounded-lg overflow-hidden border border-slate-200 h-7">
+      {opts.map(({ v, label, activeClass }) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          className={`flex-1 text-[10px] font-bold uppercase tracking-wide transition border-r last:border-r-0 border-slate-200
+            ${value === v ? activeClass : "bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600"}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+function ConfigModal({ assumptions, set, onClose }) {
+  const splitTotal = assumptions.laundrySplit + assumptions.dcSplit;
+  const splitWarn  = Math.abs(splitTotal - 100) > 0.1;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(15,23,42,0.55)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pricing settings</p>
+            <p className="text-base font-semibold text-slate-800 mt-0.5">Edit Configuration</p>
+          </div>
+          <button onClick={onClose}
+            className="h-8 w-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition">
+            <FiX size={16} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+
+          {/* ── B2C PRICING ── */}
+          <SectionDivider>B2C pricing</SectionDivider>
+          <FieldRow label="B2C laundry price" unit="₹ / kg">
+            <NI value={assumptions.b2cPrice} min={1} prefix="₹" onChange={v => set("b2cPrice", v)} />
+          </FieldRow>
+          <FieldRow label="Dry clean price" unit="₹ / garment">
+            <NI value={assumptions.dcPrice} min={1} prefix="₹" onChange={v => set("dcPrice", v)} />
+          </FieldRow>
+          <FieldRow label="Garments per kg" unit="pcs / kg">
+            <NI value={assumptions.gpkg} min={1} step={0.5} onChange={v => set("gpkg", v)} />
+          </FieldRow>
+
+          {/* B2C split */}
+          <div className="bg-slate-50 rounded-xl p-3 mb-2 border border-slate-100">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">B2C revenue split</p>
+            <p className="text-[10px] text-slate-400 mb-2">Laundry % and Dry Clean % are independent — set each freely</p>
+            <div className="grid grid-cols-2 gap-2 mb-1">
+              <div>
+                <p className="text-[10px] text-slate-500 mb-1">Laundry split %</p>
+                <NI value={assumptions.laundrySplit} min={0} max={100} step={0.01}
+                  onChange={v => set("laundrySplit", v)} />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500 mb-1">Dry clean split %</p>
+                <NI value={assumptions.dcSplit} min={0} max={100} step={0.01}
+                  onChange={v => set("dcSplit", v)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-[10px] text-slate-400">
+                Total: <span className={`font-mono font-semibold ${Math.abs(splitTotal - 100) < 0.1 ? "text-emerald-600" : splitTotal > 100 ? "text-red-500" : "text-amber-500"}`}>
+                  {splitTotal.toFixed(2)}%
+                </span>
+              </p>
+              {splitWarn && (
+                <p className="text-[10px] text-amber-600 flex items-center gap-1">
+                  <FiAlertTriangle size={10} /> {splitTotal > 100 ? "Over 100%" : "Under 100% — unused capacity"}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── B2B PRICING ── */}
+          <SectionDivider>B2B pricing</SectionDivider>
+          <FieldRow label="B2B price" unit="₹ / kg">
+            <NI value={assumptions.b2bPrice} min={1} prefix="₹" onChange={v => set("b2bPrice", v)} />
+          </FieldRow>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
+          <button onClick={onClose}
+            className="w-full h-9 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 transition">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Scenario card ────────────────────────────────────────────────────────────
 function ScenarioCard({ scenarioKey, out, active, onClick }) {
   const { seed, totalRev, totalExp, profit, margin, b2cDailyKg, b2cMonthly, dailyRev } = out;
@@ -199,32 +318,36 @@ function ScenarioCard({ scenarioKey, out, active, onClick }) {
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 function DetailPanel({ out, assumptions }) {
-  const { seed, m1daily, m2daily, m3daily, b2cDailyKg, b2cMonthly,
-          b2bDailyKgCalc,
+  const { seed, m1daily, m2daily, m3daily, m4daily, m5daily,
+          b2cDailyKg, b2cMonthly, b2cActive,
+          b2bDailyKgCalc, b2bMonthly, b2bActive,
           laundryKg, dcKg, garments, laundryRev, dcRev,
-          b2bRev, b2bMonthly, totalRev, dailyRev,
+          b2bRev, totalRev, dailyRev,
           totalExp, profit, margin, revPerKg, expPerKg } = out;
   const st = SS[seed.color];
 
-  const m1sub = [
-    assumptions.b2cEnabled && `B2C: ${assumptions.m1cap}×${seed.cycles}=${assumptions.m1cap * seed.cycles}kg`,
-    assumptions.b2bEnabled && `B2B: ${assumptions.m1cap}×${B2B_CYCLES}=${assumptions.m1cap * B2B_CYCLES}kg`,
-  ].filter(Boolean).join(" · ") || `${assumptions.m1cap} kg × ${seed.cycles}`;
-
-  const m2sub = [
-    assumptions.b2cEnabled && `B2C: ${assumptions.m2cap}×${seed.cycles}=${assumptions.m2cap * seed.cycles}kg`,
-    assumptions.b2bEnabled && `B2B: ${assumptions.m2cap}×${B2B_CYCLES}=${assumptions.m2cap * B2B_CYCLES}kg`,
-  ].filter(Boolean).join(" · ") || `${assumptions.m2cap} kg × ${seed.cycles}`;
-
-  const m3sub = [
-    assumptions.b2cEnabled && `B2C: ${assumptions.m3cap}×${seed.cycles}=${assumptions.m3cap * seed.cycles}kg`,
-    assumptions.b2bEnabled && `B2B: ${assumptions.m3cap}×${B2B_CYCLES}=${assumptions.m3cap * B2B_CYCLES}kg`,
-  ].filter(Boolean).join(" · ") || `${assumptions.m3cap} kg × ${seed.cycles}`;
+  const modeLabel = (mode) => mode === "b2c" ? "B2C" : mode === "b2b" ? "B2B" : "B2C+B2B";
 
   const combinedSub = [
-    assumptions.b2cEnabled && `B2C: ${b2cDailyKg}kg (${seed.cycles} cyc)`,
-    assumptions.b2bEnabled && `B2B: ${assumptions.b2bDailyKg}kg (manual)`,
-  ].filter(Boolean).join(" · ") || `${seed.cycles} cycles/day`;
+    b2cActive ? `${seed.cycles} cyc B2C` : null,
+    b2bActive ? `${B2B_CYCLES} cyc B2B` : null,
+  ].filter(Boolean).join(" + ") || "no machines assigned";
+
+  const machineSub = (cap, mode) => {
+    const parts = [];
+    if (machineDoesB2C(mode)) parts.push(`${cap} kg × ${seed.cycles} cyc B2C`);
+    if (machineDoesB2B(mode)) parts.push(`${cap} kg × ${B2B_CYCLES} cyc B2B`);
+    return parts.join(" + ");
+  };
+
+  const enabledMachines = [
+    { l:"Machine 1", v:fmtKg(m1daily), sub: machineSub(assumptions.m1cap, assumptions.m1mode) },
+    { l:"Machine 2", v:fmtKg(m2daily), sub: machineSub(assumptions.m2cap, assumptions.m2mode) },
+    ...(assumptions.m3enabled ? [{ l:"Machine 3", v:fmtKg(m3daily), sub: machineSub(assumptions.m3cap, assumptions.m3mode) }] : []),
+    ...(assumptions.m4enabled ? [{ l:"Machine 4", v:fmtKg(m4daily), sub: machineSub(assumptions.m4cap, assumptions.m4mode) }] : []),
+    ...(assumptions.m5enabled ? [{ l:"Machine 5", v:fmtKg(m5daily), sub: machineSub(assumptions.m5cap, assumptions.m5mode) }] : []),
+    { l:"Combined daily", v:fmtKg(b2cDailyKg + b2bDailyKgCalc), sub: combinedSub },
+  ];
 
   const expRows = [
     ["Rent", assumptions.rent], ["Salaries", assumptions.salaries],
@@ -259,13 +382,8 @@ function DetailPanel({ out, assumptions }) {
       </div>
 
       {/* Machine cards */}
-      <div className={`grid gap-3 ${assumptions.m3enabled ? "grid-cols-4" : "grid-cols-3"}`}>
-        {[
-          { l:"Machine 1", v:fmtKg(m1daily), sub: m1sub },
-          { l:"Machine 2", v:fmtKg(m2daily), sub: m2sub },
-          ...(assumptions.m3enabled ? [{ l:"Machine 3", v:fmtKg(m3daily), sub: m3sub }] : []),
-          { l:"Combined daily", v:fmtKg(b2cDailyKg + (assumptions.b2bEnabled ? assumptions.b2bDailyKg : 0)), sub: combinedSub },
-        ].map(({ l, v, sub }) => (
+      <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${Math.min(enabledMachines.length, 4)}, 1fr)` }}>
+        {enabledMachines.map(({ l, v, sub }) => (
           <div key={l} className="bg-white border border-slate-200 rounded-xl p-3">
             <p className="text-[10px] text-slate-400 mb-1">{l}</p>
             <p className="text-base font-mono font-semibold text-slate-800">{v}</p>
@@ -274,25 +392,6 @@ function DetailPanel({ out, assumptions }) {
         ))}
       </div>
 
-      {/* B2B machine capacity info box — shown when B2B enabled */}
-      {assumptions.b2bEnabled && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-3">
-          <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1">B2B machine capacity (info only)</p>
-            <p className="text-sm font-mono font-semibold text-blue-700">{fmtKg(b2bDailyKgCalc)} / day</p>
-            <p className="text-[10px] text-blue-400 font-mono mt-0.5">
-              All machines × {B2B_CYCLES} cycles — M1({assumptions.m1cap}kg) + M2({assumptions.m2cap}kg)
-              {assumptions.m3enabled ? ` + M3(${assumptions.m3cap}kg)` : ""}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] text-blue-400 uppercase tracking-widest mb-1">Revenue uses</p>
-            <p className="text-sm font-mono font-semibold text-blue-700">{fmtKg(assumptions.b2bDailyKg)} / day</p>
-            <p className="text-[10px] text-blue-400 font-mono mt-0.5">manual input</p>
-          </div>
-        </div>
-      )}
-
       {/* Revenue breakdown */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50">
@@ -300,7 +399,7 @@ function DetailPanel({ out, assumptions }) {
         </div>
         <table className="w-full text-sm">
           <tbody>
-            {assumptions.b2cEnabled && (
+            {b2cActive && (
               <>
                 <tr className="border-b border-slate-100">
                   <td className="px-4 py-2.5 text-slate-600">
@@ -318,7 +417,7 @@ function DetailPanel({ out, assumptions }) {
                 </tr>
               </>
             )}
-            {assumptions.b2bEnabled && (
+            {b2bActive && (
               <tr className="border-b border-slate-100">
                 <td className="px-4 py-2.5 text-slate-600">
                   <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500" />B2B Laundry</span>
@@ -327,8 +426,8 @@ function DetailPanel({ out, assumptions }) {
                 <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(b2bRev)}</td>
               </tr>
             )}
-            {!assumptions.b2cEnabled && !assumptions.b2bEnabled && (
-              <tr><td colSpan={3} className="px-4 py-4 text-center text-slate-400 text-xs italic">Both B2C and B2B are disabled — no revenue to show</td></tr>
+            {!b2cActive && !b2bActive && (
+              <tr><td colSpan={3} className="px-4 py-4 text-center text-slate-400 text-xs italic">Assign at least one machine to B2C or B2B to see revenue</td></tr>
             )}
             <tr className="bg-slate-50 font-semibold">
               <td className="px-4 py-2.5 text-slate-800">Total Revenue</td>
@@ -380,10 +479,10 @@ function DetailPanel({ out, assumptions }) {
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Intermediate calculations</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { l:"Monthly B2C processing", v:fmtKg(b2cMonthly),  dim:!assumptions.b2cEnabled },
-            { l:"Monthly B2B processing", v:fmtKg(b2bMonthly),  dim:!assumptions.b2bEnabled },
-            { l:"Laundry quantity",       v:fmtKg(laundryKg),   dim:!assumptions.b2cEnabled },
-            { l:"Dry clean garments",     v:`${fmt(garments)} pcs`, dim:!assumptions.b2cEnabled },
+            { l:"Monthly B2C processing", v:fmtKg(b2cMonthly),      dim:!b2cActive },
+            { l:"Monthly B2B processing", v:fmtKg(b2bMonthly),      dim:!b2bActive },
+            { l:"Laundry quantity",        v:fmtKg(laundryKg),       dim:!b2cActive },
+            { l:"Dry clean garments",      v:`${fmt(garments)} pcs`, dim:!b2cActive },
           ].map(({ l, v, dim }) => (
             <div key={l} className={`bg-white border border-slate-200 rounded-xl p-3.5 ${dim ? "opacity-30" : ""}`}>
               <p className="text-[10px] text-slate-400 mb-1">{l}</p>
@@ -405,6 +504,7 @@ export default function Calculator() {
   const [activeScenario,     setActiveScenario]     = useState("mostlikely");
   const [assumptions,        setAssumptions]        = useState({ ...DEFAULT_ASSUMPTIONS });
   const [tab,                setTab]                = useState("overview");
+  const [showConfig,         setShowConfig]         = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -426,23 +526,12 @@ export default function Calculator() {
   const set         = (key, val) => setAssumptions(prev => ({ ...prev, [key]: val }));
   const handleReset = () => setAssumptions({ ...DEFAULT_ASSUMPTIONS });
 
-  // Auto-sync b2bDailyKg whenever machine caps or M3 toggle change
-  // so adding/removing M3 is always reflected in the B2B daily kg field
-  useEffect(() => {
-    setAssumptions(prev => {
-      const derived = prev.m1cap * B2B_CYCLES
-                    + prev.m2cap * B2B_CYCLES
-                    + (prev.m3enabled ? prev.m3cap * B2B_CYCLES : 0);
-      return { ...prev, b2bDailyKg: derived };
-    });
-  }, [assumptions.m1cap, assumptions.m2cap, assumptions.m3cap, assumptions.m3enabled]);
-
   const outputs   = Object.fromEntries(Object.keys(SCENARIO_SEEDS).map(k => [k, calcScenario(k, assumptions)]));
   const activeOut = outputs[activeScenario];
   const activeSt  = SS[SCENARIO_SEEDS[activeScenario].color];
 
   const splitTotal = assumptions.laundrySplit + assumptions.dcSplit;
-  const splitWarn  = assumptions.b2cEnabled && Math.abs(splitTotal - 100) > 0.1;
+  // splitWarn derived per-modal only
 
   const expFields = [
     ["rent","Rent"],["salaries","Salaries"],["electricity","Electricity"],
@@ -513,100 +602,103 @@ export default function Calculator() {
               <FieldRow label="Machine 1 capacity" unit="kg/cycle">
                 <NI value={assumptions.m1cap} min={1} max={50} step={0.5} onChange={v => set("m1cap", v)} />
               </FieldRow>
+              <FieldRow label="Machine 1 channel" unit="assign to">
+                <ModeToggle value={assumptions.m1mode} onChange={v => set("m1mode", v)} />
+              </FieldRow>
               <FieldRow label="Machine 2 capacity" unit="kg/cycle">
                 <NI value={assumptions.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
+              </FieldRow>
+              <FieldRow label="Machine 2 channel" unit="assign to">
+                <ModeToggle value={assumptions.m2mode} onChange={v => set("m2mode", v)} />
               </FieldRow>
 
               {/* Machine 3 */}
               <FieldRow label="Machine 3" unit="add new machine">
-                <Toggle
-                  enabled={assumptions.m3enabled}
-                  onToggle={() => set("m3enabled", !assumptions.m3enabled)}
-                  labelOn="Added ✓" labelOff="+ Add Machine 3"
-                  colorOn="bg-violet-600 border-violet-600 text-white"
-                />
+                <Toggle enabled={assumptions.m3enabled} onToggle={() => set("m3enabled", !assumptions.m3enabled)}
+                  labelOn="Added ✓" labelOff="+ Add Machine 3" colorOn="bg-violet-600 border-violet-600 text-white" />
               </FieldRow>
               {assumptions.m3enabled && (
-                <FieldRow label="Machine 3 capacity" unit="kg/cycle">
-                  <NI value={assumptions.m3cap} min={1} max={50} step={0.5} onChange={v => set("m3cap", v)} />
+                <>
+                  <FieldRow label="Machine 3 capacity" unit="kg/cycle">
+                    <NI value={assumptions.m3cap} min={1} max={50} step={0.5} onChange={v => set("m3cap", v)} />
+                  </FieldRow>
+                  <FieldRow label="Machine 3 channel" unit="assign to">
+                    <ModeToggle value={assumptions.m3mode} onChange={v => set("m3mode", v)} />
+                  </FieldRow>
+                </>
+              )}
+
+              {/* Machine 4 */}
+              {assumptions.m3enabled && (
+                <FieldRow label="Machine 4" unit="add new machine">
+                  <Toggle enabled={assumptions.m4enabled} onToggle={() => set("m4enabled", !assumptions.m4enabled)}
+                    labelOn="Added ✓" labelOff="+ Add Machine 4" colorOn="bg-violet-600 border-violet-600 text-white" />
                 </FieldRow>
+              )}
+              {assumptions.m4enabled && (
+                <>
+                  <FieldRow label="Machine 4 capacity" unit="kg/cycle">
+                    <NI value={assumptions.m4cap} min={1} max={50} step={0.5} onChange={v => set("m4cap", v)} />
+                  </FieldRow>
+                  <FieldRow label="Machine 4 channel" unit="assign to">
+                    <ModeToggle value={assumptions.m4mode} onChange={v => set("m4mode", v)} />
+                  </FieldRow>
+                </>
+              )}
+
+              {/* Machine 5 */}
+              {assumptions.m4enabled && (
+                <FieldRow label="Machine 5" unit="add new machine">
+                  <Toggle enabled={assumptions.m5enabled} onToggle={() => set("m5enabled", !assumptions.m5enabled)}
+                    labelOn="Added ✓" labelOff="+ Add Machine 5" colorOn="bg-violet-600 border-violet-600 text-white" />
+                </FieldRow>
+              )}
+              {assumptions.m5enabled && (
+                <>
+                  <FieldRow label="Machine 5 capacity" unit="kg/cycle">
+                    <NI value={assumptions.m5cap} min={1} max={50} step={0.5} onChange={v => set("m5cap", v)} />
+                  </FieldRow>
+                  <FieldRow label="Machine 5 channel" unit="assign to">
+                    <ModeToggle value={assumptions.m5mode} onChange={v => set("m5mode", v)} />
+                  </FieldRow>
+                </>
               )}
 
               <FieldRow label="Working days / month" unit="days">
                 <NI value={assumptions.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
               </FieldRow>
 
-              {/* ── B2C CHANNEL ── */}
-              <SectionDivider>B2C channel</SectionDivider>
-              <FieldRow label="B2C operations">
-                <Toggle
-                  enabled={assumptions.b2cEnabled}
-                  onToggle={() => set("b2cEnabled", !assumptions.b2cEnabled)}
-                  labelOn="Enabled" labelOff="Disabled"
-                  colorOn="bg-emerald-600 border-emerald-600 text-white"
-                />
-              </FieldRow>
+              {/* ── PRICING CONFIGURATION ── */}
+              <SectionDivider>Pricing configuration</SectionDivider>
 
-              {assumptions.b2cEnabled && (
-                <>
-                  <FieldRow label="B2C laundry price" unit="₹ / kg">
-                    <NI value={assumptions.b2cPrice} min={1} prefix="₹" onChange={v => set("b2cPrice", v)} />
-                  </FieldRow>
-                  <FieldRow label="Dry clean price" unit="₹ / garment">
-                    <NI value={assumptions.dcPrice} min={1} prefix="₹" onChange={v => set("dcPrice", v)} />
-                  </FieldRow>
-                  <FieldRow label="Garments per kg" unit="pcs / kg">
-                    <NI value={assumptions.gpkg} min={1} step={0.5} onChange={v => set("gpkg", v)} />
-                  </FieldRow>
-
-                  {/* B2C split */}
-                  <div className="bg-slate-50 rounded-xl p-3 mb-2 border border-slate-100">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">B2C revenue split</p>
-                    <p className="text-[10px] text-slate-400 mb-2">Laundry % and Dry Clean % are independent — set each freely</p>
-                    <div className="grid grid-cols-2 gap-2 mb-1">
-                      <div>
-                        <p className="text-[10px] text-slate-500 mb-1">Laundry split %</p>
-                        <NI value={assumptions.laundrySplit} min={0} max={100} step={0.01}
-                          onChange={v => set("laundrySplit", v)} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-500 mb-1">Dry clean split %</p>
-                        <NI value={assumptions.dcSplit} min={0} max={100} step={0.01}
-                          onChange={v => set("dcSplit", v)} />
-                      </div>
+              {/* Active channel summary — derived from machine modes */}
+              {(() => {
+                const modes = [assumptions.m1mode, assumptions.m2mode,
+                  ...(assumptions.m3enabled ? [assumptions.m3mode] : []),
+                  ...(assumptions.m4enabled ? [assumptions.m4mode] : []),
+                  ...(assumptions.m5enabled ? [assumptions.m5mode] : [])];
+                const hasB2C = modes.some(machineDoesB2C);
+                const hasB2B = modes.some(machineDoesB2B);
+                return (
+                  <div className="flex gap-2 mb-2.5">
+                    <div className={`flex-1 rounded-lg px-2.5 py-2 border text-center ${hasB2C ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${hasB2C ? "text-emerald-600" : "text-slate-400"}`}>B2C</p>
+                      <p className={`text-[10px] ${hasB2C ? "text-emerald-500" : "text-slate-400"}`}>{hasB2C ? "Active" : "No machines"}</p>
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-[10px] text-slate-400">Total: <span className={`font-mono font-semibold ${Math.abs(splitTotal - 100) < 0.1 ? "text-emerald-600" : splitTotal > 100 ? "text-red-500" : "text-amber-500"}`}>{splitTotal.toFixed(2)}%</span></p>
-                      {splitWarn && (
-                        <p className="text-[10px] text-amber-600 flex items-center gap-1">
-                          <FiAlertTriangle size={10} /> {splitTotal > 100 ? "Over 100%" : "Under 100% — unused capacity"}
-                        </p>
-                      )}
+                    <div className={`flex-1 rounded-lg px-2.5 py-2 border text-center ${hasB2B ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${hasB2B ? "text-blue-600" : "text-slate-400"}`}>B2B</p>
+                      <p className={`text-[10px] ${hasB2B ? "text-blue-500" : "text-slate-400"}`}>{hasB2B ? "Active" : "No machines"}</p>
                     </div>
                   </div>
-                </>
-              )}
+                );
+              })()}
 
-              {/* ── B2B CHANNEL ── */}
-              <SectionDivider>B2B channel</SectionDivider>
-              <FieldRow label="B2B operations">
-                <Toggle
-                  enabled={assumptions.b2bEnabled}
-                  onToggle={() => set("b2bEnabled", !assumptions.b2bEnabled)}
-                  labelOn="Enabled" labelOff="Disabled"
-                  colorOn="bg-blue-600 border-blue-600 text-white"
-                />
-              </FieldRow>
-              {assumptions.b2bEnabled && (
-                <>
-                  <FieldRow label="B2B daily kg" unit="kg / day">
-                    <NI value={assumptions.b2bDailyKg} min={0} onChange={v => set("b2bDailyKg", v)} />
-                  </FieldRow>
-                  <FieldRow label="B2B price" unit="₹ / kg">
-                    <NI value={assumptions.b2bPrice} min={1} prefix="₹" onChange={v => set("b2bPrice", v)} />
-                  </FieldRow>
-                </>
-              )}
+              <button
+                onClick={() => setShowConfig(true)}
+                className="w-full h-9 bg-slate-800 text-white rounded-xl text-xs font-semibold
+                  hover:bg-slate-700 transition flex items-center justify-center gap-1.5">
+                <FiSettings size={13} /> Edit Pricing
+              </button>
 
               {/* ── EXPENSES ── */}
               <SectionDivider>Monthly expenses</SectionDivider>
@@ -710,6 +802,15 @@ export default function Calculator() {
           </div>
         </div>
       </main>
+
+      {/* Edit Configuration Modal */}
+      {showConfig && (
+        <ConfigModal
+          assumptions={assumptions}
+          set={set}
+          onClose={() => setShowConfig(false)}
+        />
+      )}
     </div>
   );
 }
