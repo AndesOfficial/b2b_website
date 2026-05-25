@@ -149,7 +149,8 @@ function calcScenario(scenarioKey, a) {
   const detergentCost = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
 
   // 4. Packaging: based on laundry split %
-  const packagingCostVal = packagingCost(a.laundrySplit);
+  // Packaging only applies to B2C; zero when purely B2B
+  const packagingCostVal = b2cActive ? packagingCost(a.laundrySplit) : 0;
 
   // ── Fixed expenses ──
   const totalExp = a.rent + a.salaries + electricityCost + waterCost +
