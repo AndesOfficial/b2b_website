@@ -18,15 +18,15 @@ const CANONICAL_PROPERTY_NAMES = {
   "adarsha hostel bhavdan": "Adarsha",
   "adarsha hostel bavdhan": "Adarsha",
 
-  // Aardhana
-  aardhana: "Aardhana",
-  ardhana: "Aardhana",
-  "aardhana hostel": "Aardhana",
-  aaradhana: "Aardhana",
-  "aaradhana hostel": "Aardhana",
-  "aaradhana hostel bhavdan": "Aardhana",
-  "aaradhana hostel bavdhan": "Aardhana",
-  "aardhana hostel bhavdan": "Aardhana",
+  // Aaradhana (previously "Aardhana" in UI)
+  aardhana: "Aaradhana",
+  ardhana: "Aaradhana",
+  "aardhana hostel": "Aaradhana",
+  aaradhana: "Aaradhana",
+  "aaradhana hostel": "Aaradhana",
+  "aaradhana hostel bhavdan": "Aaradhana",
+  "aaradhana hostel bavdhan": "Aaradhana",
+  "aardhana hostel bhavdan": "Aaradhana",
 
   // Curie
   curie: "Curie",
@@ -37,13 +37,13 @@ const CANONICAL_PROPERTY_NAMES = {
   gurukul: "Gurukul",
   "gurukul hostel": "Gurukul",
 
-  // Kirti
-  kirti: "Kirti",
-  "kirti hostel": "Kirti",
-  keerti: "Kirti",
-  "keerti hostel": "Kirti",
-  "keerti hostel karve nagar": "Kirti",
-  "kirti hostel karve nagar": "Kirti",
+  // Keerti (previously "Kirti" in UI)
+  kirti: "Keerti",
+  "kirti hostel": "Keerti",
+  keerti: "Keerti",
+  "keerti hostel": "Keerti",
+  "keerti hostel karve nagar": "Keerti",
+  "kirti hostel karve nagar": "Keerti",
 
   // Meera
   meera: "Meera",
