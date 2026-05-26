@@ -15,11 +15,11 @@ import { db } from "../firebase";
 
 const DEFAULT_HOSTEL_COLORS = {
   "Aakansha": "#0891B2", 
-  "Aardhana": "#D97706", 
+  "Aaradhana": "#D97706", 
   "Adarsha": "#7C3AED", 
   "Curie": "#4F46E5", 
   "Gurukul": "#06B6D4", 
-  "Kirti": "#BE185D", 
+  "Keerti": "#BE185D", 
   "Meera": "#059669", 
   "Plato": "#F59E0B", 
   "Samriddhi": "#10B981", 
