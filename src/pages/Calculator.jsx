@@ -134,7 +134,7 @@ function calcScenario(scenarioKey, a) {
   // ── Machine daily kg per channel ─────────────────────────────────────────────
   const machines = [
     { cap: a.m1cap, mode: a.m1mode, enabled: true },
-    { cap: a.m2cap, mode: a.m2mode, enabled: true },
+    { cap: a.m2cap, mode: a.m2mode, enabled: a.machine_count >= 2 },
     { cap: a.m3cap, mode: a.m3mode, enabled: a.m3enabled },
     { cap: a.m4cap, mode: a.m4mode, enabled: a.m4enabled },
     { cap: a.m5cap, mode: a.m5mode, enabled: a.m5enabled },
@@ -639,6 +639,8 @@ function DSOnboarding({ onComplete }) {
   const mcInput = useIntInput(1, 1, 20);
   // step 3b: per-machine capacities (array of strings, one per machine)
   const [machineCaps, setMachineCaps] = useState(["13"]);     // raw strings
+  // step 4 (both model): per-machine channel assignment "b2c" | "b2b"
+  const [machineModes, setMachineModes] = useState(["b2c"]);  // default first machine to b2c
 
   // ── Derived: step count depends on model ──────────────────────────────────────
   // b2c: step1 → step3(count) → step3b(caps)     = 3 visual steps
@@ -652,6 +654,12 @@ function DSOnboarding({ onComplete }) {
     setMachineCaps(prev => {
       const next = [...prev];
       while (next.length < mcCount) next.push("13");
+      return next.slice(0, mcCount);
+    });
+    setMachineModes(prev => {
+      const next = [...prev];
+      // new machines: alternate b2c / b2b so there's always at least one of each
+      while (next.length < mcCount) next.push(next.length % 2 === 0 ? "b2c" : "b2b");
       return next.slice(0, mcCount);
     });
   }, [mcCount]);
@@ -704,8 +712,15 @@ function DSOnboarding({ onComplete }) {
     const enableKeys  = ["m3enabled","m4enabled","m5enabled"];
     parsedCaps.forEach((c, i) => {
       capOverrides[machineKeys[i]] = c;
-      modeOverrides[`m${i+1}mode`] = mMode;
+      // For "both" model, use the per-machine channel assignment (b2c or b2b).
+      // For b2c/b2b only models, use the single mMode for all machines.
+      modeOverrides[`m${i+1}mode`] = model === "both" ? (machineModes[i] || "b2c") : mMode;
     });
+    // For machines beyond the selected count, reset their mode to "b2c" (neutral default)
+    // so stale modes from a previous session don't bleed into calculations.
+    for (let i = mcCount; i < 5; i++) {
+      modeOverrides[`m${i+1}mode`] = "b2c";
+    }
     // enable extra machines if count > 2
     enableKeys.forEach((k, i) => {
       capOverrides[k] = mcCount >= i + 3;
@@ -972,40 +987,70 @@ function DSOnboarding({ onComplete }) {
                 {machineCaps.map((cap, i) => {
                   const n = parseFloat(cap);
                   const err = isNaN(n) || n <= 0;
+                  const modeVal = machineModes[i] || "b2c";
                   return (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-24 flex-shrink-0">
-                        <p className="text-xs font-semibold text-slate-700">Machine {i + 1}</p>
-                        <p className="text-[10px] text-slate-400">kg/cycle</p>
+                    <div key={i} className={`rounded-xl border p-3 ${distModel === "both" ? (modeVal === "b2c" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50") : "border-slate-100 bg-white"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 flex-shrink-0">
+                          <p className="text-xs font-semibold text-slate-700">Machine {i + 1}</p>
+                          <p className="text-[10px] text-slate-400">kg/cycle</p>
+                        </div>
+                        <div className="flex-1">
+                          <input
+                            type="number" value={cap} min={1} max={200} step={0.5}
+                            onChange={e => {
+                              const next = [...machineCaps];
+                              next[i] = e.target.value;
+                              setMachineCaps(next);
+                            }}
+                            className={`w-full h-10 border rounded-xl text-sm font-mono text-slate-800 bg-white px-3
+                              focus:outline-none transition
+                              ${err ? "border-red-400 focus:ring-1 focus:ring-red-100" : "border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"}`}
+                            placeholder="e.g. 13"
+                          />
+                          {err && <p className="text-[10px] text-red-500 mt-0.5">Enter a positive number</p>}
+                        </div>
+                        {/* Quick-set buttons */}
+                        <div className="flex gap-1 flex-shrink-0">
+                          {[13, 8].map(q => (
+                            <button key={q} onClick={() => {
+                              const next = [...machineCaps];
+                              next[i] = String(q);
+                              setMachineCaps(next);
+                            }}
+                              className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-slate-600 hover:bg-blue-100 hover:text-blue-700 transition border border-slate-200">
+                              {q}kg
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <input
-                          type="number" value={cap} min={1} max={200} step={0.5}
-                          onChange={e => {
-                            const next = [...machineCaps];
-                            next[i] = e.target.value;
-                            setMachineCaps(next);
-                          }}
-                          className={`w-full h-10 border rounded-xl text-sm font-mono text-slate-800 bg-white px-3
-                            focus:outline-none transition
-                            ${err ? "border-red-400 focus:ring-1 focus:ring-red-100" : "border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"}`}
-                          placeholder="e.g. 13"
-                        />
-                        {err && <p className="text-[10px] text-red-500 mt-0.5">Enter a positive number</p>}
-                      </div>
-                      {/* Quick-set buttons */}
-                      <div className="flex gap-1 flex-shrink-0">
-                        {[13, 8].map(q => (
-                          <button key={q} onClick={() => {
-                            const next = [...machineCaps];
-                            next[i] = String(q);
-                            setMachineCaps(next);
-                          }}
-                            className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-700 transition border border-slate-200">
-                            {q} kg
-                          </button>
-                        ))}
-                      </div>
+                      {/* Channel assignment — only shown for "both" model */}
+                      {distModel === "both" && (
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <p className="text-[10px] text-slate-500 font-semibold w-20 flex-shrink-0">Channel:</p>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => { const next = [...machineModes]; next[i] = "b2c"; setMachineModes(next); }}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition
+                                ${modeVal === "b2c"
+                                  ? "bg-emerald-600 border-emerald-600 text-white"
+                                  : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600"}`}>
+                              B2C
+                            </button>
+                            <button
+                              onClick={() => { const next = [...machineModes]; next[i] = "b2b"; setMachineModes(next); }}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition
+                                ${modeVal === "b2b"
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-600"}`}>
+                              B2B
+                            </button>
+                          </div>
+                          <span className={`text-[10px] ml-1 ${modeVal === "b2c" ? "text-emerald-600" : "text-blue-600"}`}>
+                            {modeVal === "b2c" ? "→ serves retail customers" : "→ serves business clients"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1091,9 +1136,27 @@ function DSOnboarding({ onComplete }) {
                 </div>
               )}
 
-              <button onClick={handleFinish} disabled={!capsValid}
+              {/* Channel balance warning for "both" model */}
+              {distModel === "both" && capsValid && (() => {
+                const hasB2C = machineModes.some(m => m === "b2c");
+                const hasB2B = machineModes.some(m => m === "b2b");
+                if (!hasB2C || !hasB2B) return (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                    <FiAlertTriangle size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-[11px] text-amber-700">
+                      You selected <strong>B2C + B2B</strong> but all machines are assigned to <strong>{!hasB2C ? "B2B" : "B2C"}</strong>.
+                      Assign at least one machine to each channel, or go back and choose a single-channel model.
+                    </p>
+                  </div>
+                );
+                return null;
+              })()}
+
+              <button onClick={handleFinish} disabled={!capsValid || (distModel === "both" && (!machineModes.some(m => m === "b2c") || !machineModes.some(m => m === "b2b")))}
                 className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${capsValid ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
+                  ${capsValid && (distModel !== "both" || (machineModes.some(m => m === "b2c") && machineModes.some(m => m === "b2b")))
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
                 Save & Continue →
               </button>
             </div>
@@ -1583,12 +1646,14 @@ export default function Calculator() {
               <FieldRow label="Machine 1 channel" unit="assign to">
                 <ModeToggle value={assumptions.m1mode} onChange={v => set("m1mode", v)} />
               </FieldRow>
-              <FieldRow label="Machine 2 capacity" unit="kg/cycle">
-                <NI value={assumptions.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
-              </FieldRow>
-              <FieldRow label="Machine 2 channel" unit="assign to">
-                <ModeToggle value={assumptions.m2mode} onChange={v => set("m2mode", v)} />
-              </FieldRow>
+              {assumptions.machine_count >= 2 && (<>
+                <FieldRow label="Machine 2 capacity" unit="kg/cycle">
+                  <NI value={assumptions.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
+                </FieldRow>
+                <FieldRow label="Machine 2 channel" unit="assign to">
+                  <ModeToggle value={assumptions.m2mode} onChange={v => set("m2mode", v)} />
+                </FieldRow>
+              </>)}
 
               <FieldRow label="Machine 3" unit="add new machine">
                 <Toggle enabled={assumptions.m3enabled} onToggle={() => set("m3enabled", !assumptions.m3enabled)}
