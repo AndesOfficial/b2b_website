@@ -390,7 +390,7 @@ function MachineRecommendation({ assumptions }) {
 }
 
 // ─── Edit Configuration Modal ─────────────────────────────────────────────────
-function ConfigModal({ assumptions, set, onClose }) {
+function ConfigModal({ assumptions, set, onClose, hasB2B }) {
   const splitTotal = assumptions.laundrySplit + assumptions.dcSplit;
   const splitWarn  = Math.abs(splitTotal - 100) > 0.1;
 
@@ -455,27 +455,29 @@ function ConfigModal({ assumptions, set, onClose }) {
             </div>
           </div>
 
-          {/* B2B pricing */}
-          <SectionDivider>B2B pricing</SectionDivider>
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1.5">Rates by client type (blended from mix)</p>
-            {Object.entries(B2B_CLIENTS).map(([key, c]) => {
-              const pct = key === "hostel" ? assumptions.hostelPct : assumptions.hotelPct;
-              return (
-                <div key={key} className={`flex items-center justify-between py-1.5 border-b border-blue-100 last:border-0 ${pct > 0 ? "" : "opacity-40"}`}>
-                  <span className="text-xs text-blue-700 font-semibold">{c.label} {pct}%</span>
-                  <span className="text-xs font-mono text-blue-700">₹{c.rate}/kg · {c.cycles} cyc/day · {c.kgPerCycle} kg/cyc</span>
-                </div>
-              );
-            })}
-            <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
-              <span className="text-[10px] text-blue-500 font-semibold">Blended effective rate</span>
-              <span className="text-xs font-mono font-bold text-blue-700">
-                ₹{(B2B_CLIENTS.hostel.rate * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.rate * (assumptions.hotelPct/100)).toFixed(1)}/kg
-              </span>
+          {/* B2B pricing — only shown when at least one machine is B2B/Both */}
+          {hasB2B && (<>
+            <SectionDivider>B2B pricing</SectionDivider>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-1.5">Rates by client type (blended from mix)</p>
+              {Object.entries(B2B_CLIENTS).map(([key, c]) => {
+                const pct = key === "hostel" ? assumptions.hostelPct : assumptions.hotelPct;
+                return (
+                  <div key={key} className={`flex items-center justify-between py-1.5 border-b border-blue-100 last:border-0 ${pct > 0 ? "" : "opacity-40"}`}>
+                    <span className="text-xs text-blue-700 font-semibold">{c.label} {pct}%</span>
+                    <span className="text-xs font-mono text-blue-700">₹{c.rate}/kg · {c.cycles} cyc/day · {c.kgPerCycle} kg/cyc</span>
+                  </div>
+                );
+              })}
+              <div className="mt-2 pt-2 border-t border-blue-200 flex items-center justify-between">
+                <span className="text-[10px] text-blue-500 font-semibold">Blended effective rate</span>
+                <span className="text-xs font-mono font-bold text-blue-700">
+                  ₹{(B2B_CLIENTS.hostel.rate * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.rate * (assumptions.hotelPct/100)).toFixed(1)}/kg
+                </span>
+              </div>
+              <p className="text-[10px] text-blue-400 mt-1">Adjust mix via the B2B client mix slider in the left panel.</p>
             </div>
-            <p className="text-[10px] text-blue-400 mt-1">Adjust mix via the B2B client mix slider in the left panel.</p>
-          </div>
+          </>)}
 
           {/* Auto-cost rates */}
           <SectionDivider>Auto-calculated cost rates</SectionDivider>
@@ -966,68 +968,75 @@ export default function Calculator() {
                 <NI value={assumptions.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
               </FieldRow>
 
-              {/* B2B client mix */}
-              <SectionDivider>B2B client mix</SectionDivider>
-              <div className="mb-3">
-                <p className="text-[10px] text-slate-400 mb-2">What % of your B2B load is Hostel vs Hotel? (must sum to 100)</p>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div>
-                    <p className="text-[11px] font-semibold text-blue-700 mb-1">🏨 Hostel %</p>
-                    <NI value={assumptions.hostelPct} min={0} max={100} step={1}
-                      onChange={v => {
-                        const c = Math.min(100, Math.max(0, v));
-                        set("hostelPct", c); set("hotelPct", 100 - c);
-                        set("b2bClientType", c >= 50 ? "hostel" : "hotel");
-                      }} />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-violet-700 mb-1">🏩 Hotel %</p>
-                    <NI value={assumptions.hotelPct} min={0} max={100} step={1}
-                      onChange={v => {
-                        const c = Math.min(100, Math.max(0, v));
-                        set("hotelPct", c); set("hostelPct", 100 - c);
-                        set("b2bClientType", (100 - c) >= 50 ? "hostel" : "hotel");
-                      }} />
-                  </div>
-                </div>
-                {Math.abs(assumptions.hostelPct + assumptions.hotelPct - 100) > 0.1 && (
-                  <p className="text-[10px] text-red-500 flex items-center gap-1 mb-2">
-                    <FiAlertTriangle size={10} /> Must sum to 100% (currently {assumptions.hostelPct + assumptions.hotelPct}%)
-                  </p>
-                )}
-                <div className="flex rounded-xl overflow-hidden h-7 border border-slate-200 mb-1">
-                  {assumptions.hostelPct > 0 && (
-                    <div className="bg-blue-500 flex items-center justify-center transition-all" style={{ width: `${assumptions.hostelPct}%` }}>
-                      <span className="text-[9px] font-bold text-white truncate px-1">Hostel {assumptions.hostelPct}%</span>
+              {/* B2B client mix — only shown when at least one machine is B2B or Both */}
+              {hasB2B && (<>
+                <SectionDivider>B2B client mix</SectionDivider>
+                <div className="mb-3">
+                  <p className="text-[10px] text-slate-400 mb-2">What % of your B2B load is Hostel vs Hotel? (must sum to 100 · 0% allowed)</p>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-blue-700 mb-1">🏨 Hostel %</p>
+                      <NI value={assumptions.hostelPct} min={0} max={100} step={1}
+                        onChange={v => {
+                          const c = Math.min(100, Math.max(0, v));
+                          set("hostelPct", c); set("hotelPct", 100 - c);
+                          set("b2bClientType", c >= 50 ? "hostel" : "hotel");
+                        }} />
                     </div>
-                  )}
-                  {assumptions.hotelPct > 0 && (
-                    <div className="bg-violet-500 flex items-center justify-center transition-all" style={{ width: `${assumptions.hotelPct}%` }}>
-                      <span className="text-[9px] font-bold text-white truncate px-1">Hotel {assumptions.hotelPct}%</span>
+                    <div>
+                      <p className="text-[11px] font-semibold text-violet-700 mb-1">🏩 Hotel %</p>
+                      <NI value={assumptions.hotelPct} min={0} max={100} step={1}
+                        onChange={v => {
+                          const c = Math.min(100, Math.max(0, v));
+                          set("hotelPct", c); set("hostelPct", 100 - c);
+                          set("b2bClientType", (100 - c) >= 50 ? "hostel" : "hotel");
+                        }} />
                     </div>
+                  </div>
+                  {Math.abs(assumptions.hostelPct + assumptions.hotelPct - 100) > 0.1 && (
+                    <p className="text-[10px] text-red-500 flex items-center gap-1 mb-2">
+                      <FiAlertTriangle size={10} /> Must sum to 100% (currently {assumptions.hostelPct + assumptions.hotelPct}%)
+                    </p>
                   )}
+                  <div className="flex rounded-xl overflow-hidden h-7 border border-slate-200 mb-1">
+                    {assumptions.hostelPct > 0 && (
+                      <div className="bg-blue-500 flex items-center justify-center transition-all" style={{ width: `${assumptions.hostelPct}%` }}>
+                        <span className="text-[9px] font-bold text-white truncate px-1">Hostel {assumptions.hostelPct}%</span>
+                      </div>
+                    )}
+                    {assumptions.hotelPct > 0 && (
+                      <div className="bg-violet-500 flex items-center justify-center transition-all" style={{ width: `${assumptions.hotelPct}%` }}>
+                        <span className="text-[9px] font-bold text-white truncate px-1">Hotel {assumptions.hotelPct}%</span>
+                      </div>
+                    )}
+                    {assumptions.hostelPct === 0 && assumptions.hotelPct === 0 && (
+                      <div className="flex-1 bg-slate-100 flex items-center justify-center">
+                        <span className="text-[9px] text-slate-400">0% / 0% — set a mix above</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 mt-2 bg-slate-50 rounded-xl p-2 border border-slate-100 text-center">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400">Blended cycles</p>
+                      <p className="text-xs font-mono font-semibold text-slate-700">
+                        {(B2B_CLIENTS.hostel.cycles * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.cycles * (assumptions.hotelPct/100)).toFixed(1)}/day
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400">Blended rate</p>
+                      <p className="text-xs font-mono font-semibold text-slate-700">
+                        ₹{(B2B_CLIENTS.hostel.rate * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.rate * (assumptions.hotelPct/100)).toFixed(0)}/kg
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400">Kg/machine/day</p>
+                      <p className="text-xs font-mono font-semibold text-slate-700">
+                        ~{Math.round((B2B_CLIENTS.hostel.cycles * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.cycles * (assumptions.hotelPct/100)) * 21)} kg
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5 mt-2 bg-slate-50 rounded-xl p-2 border border-slate-100 text-center">
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Blended cycles</p>
-                    <p className="text-xs font-mono font-semibold text-slate-700">
-                      {(B2B_CLIENTS.hostel.cycles * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.cycles * (assumptions.hotelPct/100)).toFixed(1)}/day
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Blended rate</p>
-                    <p className="text-xs font-mono font-semibold text-slate-700">
-                      ₹{(B2B_CLIENTS.hostel.rate * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.rate * (assumptions.hotelPct/100)).toFixed(0)}/kg
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Kg/machine/day</p>
-                    <p className="text-xs font-mono font-semibold text-slate-700">
-                      ~{Math.round((B2B_CLIENTS.hostel.cycles * (assumptions.hostelPct/100) + B2B_CLIENTS.hotel.cycles * (assumptions.hotelPct/100)) * 21)} kg
-                    </p>
-                  </div>
-                </div>
-              </div>
+              </>)}
 
               {/* Daily kg demand */}
               <SectionDivider>Daily kg demand</SectionDivider>
@@ -1180,7 +1189,7 @@ export default function Calculator() {
       </main>
 
       {showConfig && (
-        <ConfigModal assumptions={assumptions} set={set} onClose={() => setShowConfig(false)} />
+        <ConfigModal assumptions={assumptions} set={set} onClose={() => setShowConfig(false)} hasB2B={hasB2B} />
       )}
     </div>
   );
