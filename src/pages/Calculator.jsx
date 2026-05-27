@@ -40,12 +40,13 @@ function packagingCost(laundrySplitPct) {
 // cycles/day are for a standard 21 kg machine (8 hr day).
 // Cycle durations are used to time-split machines with mixed hostel/hotel loads.
 const B2B_CLIENTS = {
-  hostel: { label: "Hostel", cycles: 11, cycleMins: 40, kgPerCycle: 21, rate: 55, is_premium: true },
+  hostel: { label: "Hostel", cycles: 12, cycleMins: 40, kgPerCycle: 21, rate: 55, is_premium: true },
   hotel:  { label: "Hotel",  cycles: 6,  cycleMins: 75, kgPerCycle: 21, rate: 60, is_premium: true },
 };
 
-// Total operating minutes assumed for a standard B2B day (11 cycles × 40 min ≈ 440 min)
-const B2B_DAY_MINS = B2B_CLIENTS.hostel.cycles * B2B_CLIENTS.hostel.cycleMins; // 440 min
+// Total operating minutes in a standard B2B day = 8 hours = 480 min
+// (matches reference: 50% hostel → 6 cycles × 40 min = 240 min; 50% hotel → 3 cycles × 75 min = 225 min)
+const B2B_DAY_MINS = 480;
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
@@ -100,8 +101,9 @@ function calcScenario(scenarioKey, a) {
   const hotelW        = (a.hotelPct  || 0) / 100;
   const hostel        = B2B_CLIENTS.hostel;
   const hotel         = B2B_CLIENTS.hotel;
-  const hostelCycles  = (hostelW * B2B_DAY_MINS) / hostel.cycleMins; // e.g. 50% → 220/40 = 5.5
-  const hotelCycles   = (hotelW  * B2B_DAY_MINS) / hotel.cycleMins;  // e.g. 50% → 220/75 ≈ 2.93
+  // Use Math.floor so only complete cycles are counted (partial cycles aren't processed)
+  const hostelCycles  = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins); // e.g. 50% → floor(240/40) = 6
+  const hotelCycles   = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);  // e.g. 50% → floor(240/75) = 3
   const b2bCycles     = Math.round((hostelCycles + hotelCycles) * 2) / 2; // rounded to 0.5
   // kgPerCycle is per-machine (machine capacity), NOT hardcoded to 21.
   // This is resolved per-machine in the mDetails loop below.
@@ -198,6 +200,17 @@ function calcScenario(scenarioKey, a) {
   const revPerKg = totalKg  > 0 ? totalRev / totalKg : 0;
   const expPerKg = totalKg  > 0 ? totalExp / totalKg : 0;
 
+  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
+  const totalB2BCycles = hostelCycles + hotelCycles;
+  const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
+  const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
+  const hostelDailyKg  = b2bDailyKg * hostelFrac;
+  const hotelDailyKg   = b2bDailyKg * hotelFrac;
+  const hostelMonthly  = hostelDailyKg * a.workdays;
+  const hotelMonthly   = hotelDailyKg  * a.workdays;
+  const hostelRev      = hostelMonthly * hostel.rate;
+  const hotelRev       = hotelMonthly  * hotel.rate;
+
   return {
     seed, b2bClient, is_premium: b2bClient.is_premium,
     m1daily, m2daily, m3daily, m4daily, m5daily,
@@ -208,6 +221,10 @@ function calcScenario(scenarioKey, a) {
     b2cActive, b2bActive,
     laundryKg, dcKg, garments,
     laundryRev, dcRev, b2bRev, totalRev, dailyRev,
+    hostelCycles, hotelCycles,
+    hostelDailyKg, hotelDailyKg,
+    hostelMonthly, hotelMonthly,
+    hostelRev, hotelRev,
     electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
     dryerElecUnits, dryerElecCost, b2bTotalElecUnits, b2bTotalElecCost,
     waterCost, detergentCost, packagingCostVal,
@@ -570,6 +587,10 @@ function DetailPanel({ out, assumptions }) {
     b2cMonthlyCycles, b2bMonthlyCycles, totalMonthlyCycles,
     b2cMonthly, b2bMonthly, b2cActive, b2bActive,
     laundryKg, dcKg, garments, laundryRev, dcRev, b2bRev, totalRev, dailyRev,
+    hostelCycles, hotelCycles,
+    hostelDailyKg, hotelDailyKg,
+    hostelMonthly, hotelMonthly,
+    hostelRev, hotelRev,
     electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
     dryerElecUnits, dryerElecCost, b2bTotalElecUnits, b2bTotalElecCost,
     waterCost, detergentCost, packagingCostVal,
@@ -669,15 +690,45 @@ function DetailPanel({ out, assumptions }) {
                 </tr>
               </>
             )}
-            {b2bActive && (
-              <tr className="border-b border-slate-100">
-                <td className="px-4 py-2.5 text-slate-600">
-                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500" />B2B {out.b2bClient.label} (₹{out.b2bClient.rate.toFixed(1)}/kg · {out.b2bClient.cycles} cyc/day)</span>
+            {b2bActive && (<>
+              {/* Hostel sub-row (shown when hostel % > 0) */}
+              {assumptions.hostelPct > 0 && (
+                <tr className="border-b border-slate-100">
+                  <td className="px-4 py-2.5 text-slate-600">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-400" />
+                      B2B Hostel ({assumptions.hostelPct}%) · ₹{B2B_CLIENTS.hostel.rate}/kg · {hostelCycles.toFixed(1)} cyc/day
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmtKg(hostelMonthly)}</td>
+                  <td className="px-4 py-2.5 font-mono font-medium text-right text-blue-700">₹ {fmt(hostelRev)}</td>
+                </tr>
+              )}
+              {/* Hotel sub-row (shown when hotel % > 0) */}
+              {assumptions.hotelPct > 0 && (
+                <tr className="border-b border-slate-100">
+                  <td className="px-4 py-2.5 text-slate-600">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                      B2B Hotel ({assumptions.hotelPct}%) · ₹{B2B_CLIENTS.hotel.rate}/kg · {hotelCycles.toFixed(1)} cyc/day
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmtKg(hotelMonthly)}</td>
+                  <td className="px-4 py-2.5 font-mono font-medium text-right text-indigo-700">₹ {fmt(hotelRev)}</td>
+                </tr>
+              )}
+              {/* B2B total row */}
+              <tr className="border-b border-slate-100 bg-blue-50/40">
+                <td className="px-4 py-2 text-slate-600 pl-8">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    B2B Total ({out.b2bClient.label} · blended ₹{out.b2bClient.rate.toFixed(1)}/kg · {out.b2bClient.cycles} cyc/day)
+                  </span>
                 </td>
-                <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmtKg(b2bMonthly)}</td>
-                <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(b2bRev)}</td>
+                <td className="px-4 py-2 text-slate-400 font-mono text-xs text-right">{fmtKg(b2bMonthly)}</td>
+                <td className="px-4 py-2 font-mono font-semibold text-right text-blue-800">₹ {fmt(b2bRev)}</td>
               </tr>
-            )}
+            </>)}
             {!b2cActive && !b2bActive && (
               <tr><td colSpan={3} className="px-4 py-4 text-center text-slate-400 text-xs italic">Assign at least one machine to B2C or B2B to see revenue</td></tr>
             )}
