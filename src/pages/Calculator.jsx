@@ -59,12 +59,12 @@ const B2B_DAY_MINS = 480;
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
   // DS onboarding fields
-  distribution_model:  null,
+  distribution_model:  "b2c",
   b2b_client_type:     null,
   machine_count:       1,
   is_premium:          false,
   b2b_split_percent:   null,
-  onboarding_done:     false,
+  onboarding_done:     true,
   // Machines
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
@@ -1503,7 +1503,7 @@ export default function Calculator() {
   const [isMobileMenuOpen,   setIsMobileMenuOpen]   = useState(false);
   const [activeScenario,     setActiveScenario]     = useState("mostlikely");
   const [assumptions,        setAssumptions]        = useState({ ...DEFAULT_ASSUMPTIONS });
-  const [tab,                setTab]                = useState("overview");
+  const [tab,                setTab]                = useState("detail");
   const [showConfig,         setShowConfig]         = useState(false);
 
   useEffect(() => {
