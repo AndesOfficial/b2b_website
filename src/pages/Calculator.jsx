@@ -48,23 +48,8 @@ const B2B_CLIENTS = {
 // (matches reference: 50% hostel → 6 cycles × 40 min = 240 min; 50% hotel → 3 cycles × 75 min = 225 min)
 const B2B_DAY_MINS = 480;
 
-// ─── DS onboarding config ─────────────────────────────────────────────────────
-// distribution_model: null | "b2c" | "b2b" | "both"
-// b2b_client_type:    null | "hostel" | "hotel"
-// machine_count:      1–20 (used by onboarding step 3)
-// is_premium:         true for all B2B clients
-// b2b_split_percent:  0–100, only used if model = "both"
-// onboarding_done:    false until user completes DS onboarding flow
-
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
-  // DS onboarding fields
-  distribution_model:  null,
-  b2b_client_type:     null,
-  machine_count:       1,
-  is_premium:          false,
-  b2b_split_percent:   null,
-  onboarding_done:     false,
   // Machines
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
@@ -131,6 +116,21 @@ function calcScenario(scenarioKey, a) {
     is_premium:   true,
   };
 
+  // ── B2B hostel/hotel kg — fixed 21 kg per cycle (spec §5) ───────────────────
+  // Each cycle processes exactly 21 kg regardless of individual machine drum size.
+  // hostelCycles & hotelCycles are time-split from B2B_DAY_MINS above.
+  //   50% Hostel → floor(240/40) = 6 cycles → 6×21 = 126 kg/day
+  //   50% Hotel  → floor(240/75) = 3 cycles → 3×21 =  63 kg/day
+  //   Total                                          → 189 kg/day → 5,670 kg/month
+  const KG_PER_CYCLE  = 21;
+  const hostelDailyKg = hostelCycles * KG_PER_CYCLE;   // e.g. 6 × 21 = 126 kg
+  const hotelDailyKg  = hotelCycles  * KG_PER_CYCLE;   // e.g. 3 × 21 =  63 kg
+  const b2bDailyKgFixed = hostelDailyKg + hotelDailyKg; // e.g. 189 kg/day
+  const hostelMonthly = hostelDailyKg * a.workdays;     // e.g. 3,780 kg/month
+  const hotelMonthly  = hotelDailyKg  * a.workdays;     // e.g. 1,890 kg/month
+  const hostelRev     = hostelMonthly * hostel.rate;    // 3,780 × ₹55 = ₹2,07,900
+  const hotelRev      = hotelMonthly  * hotel.rate;     // 1,890 × ₹60 = ₹1,13,400
+
   // ── Machine daily kg per channel ─────────────────────────────────────────────
   const machines = [
     { cap: a.m1cap, mode: a.m1mode, enabled: true },
@@ -140,45 +140,38 @@ function calcScenario(scenarioKey, a) {
     { cap: a.m5cap, mode: a.m5mode, enabled: a.m5enabled },
   ];
 
-  let b2cDailyKg = 0, b2bDailyKg = 0;
-  let b2cDailyCycles = 0, b2bDailyCycles = 0;
+  const b2bMachineCount = machines.filter(m => m.enabled && machineDoesB2B(m.mode)).length;
+
+  let b2cDailyKg = 0;
+  let b2cDailyCycles = 0;
 
   const mDetails = machines.map(m => {
     if (!m.enabled) return { b2cKg: 0, b2bKg: 0, b2cCyc: 0, b2bCyc: 0 };
     // B2C: machine capacity × scenario cycles
     const b2cKg  = machineDoesB2C(m.mode) ? m.cap * seed.cycles : 0;
-    // B2B: blended time-split cycles × this machine's actual capacity (not hardcoded 21)
-    const b2bKg  = machineDoesB2B(m.mode) ? b2bCycles * m.cap : 0;
     const b2cCyc = machineDoesB2C(m.mode) ? seed.cycles : 0;
-    const b2bCyc = machineDoesB2B(m.mode) ? b2bCycles  : 0;
-    b2cDailyKg    += b2cKg;  b2bDailyKg    += b2bKg;
-    b2cDailyCycles += b2cCyc; b2bDailyCycles += b2bCyc;
+    // B2B: fixed total kg split equally across all B2B-assigned machines (display only)
+    const b2bKg  = machineDoesB2B(m.mode) && b2bMachineCount > 0
+      ? b2bDailyKgFixed / b2bMachineCount : 0;
+    const b2bCyc = machineDoesB2B(m.mode) ? b2bCycles : 0;
+    b2cDailyKg    += b2cKg;
+    b2cDailyCycles += b2cCyc;
     return { b2cKg, b2bKg, b2cCyc, b2bCyc };
   });
 
   const [m1daily, m2daily, m3daily, m4daily, m5daily] =
     mDetails.map(m => m.b2cKg + m.b2bKg);
 
+  // B2B total daily kg = fixed value (independent of machine drum sizes)
+  const b2bDailyKg     = machines.some(m => m.enabled && machineDoesB2B(m.mode))
+    ? b2bDailyKgFixed : 0;
+  const b2bDailyCycles = b2bCycles;
+
   // ── Monthly volumes ──────────────────────────────────────────────────────────
   const b2cMonthly = b2cDailyKg * a.workdays;
-  const b2bMonthly = b2bDailyKg * a.workdays;
+  const b2bMonthly = b2bDailyKg * a.workdays;   // e.g. 189 × 30 = 5,670 kg
   const b2cActive  = b2cDailyKg > 0;
   const b2bActive  = b2bDailyKg > 0;
-
-  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
-  // Computed BEFORE revenue so hostelRev/hotelRev can feed into totalRev correctly.
-  // Each client type's daily kg = their cycle count × total machine capacity (21 kg).
-  // This matches the reference: hostel 6 cyc × 21 kg = 126 kg/day; hotel 3 cyc × 21 kg = 63 kg/day.
-  // We do NOT blend rates — each segment is billed at its own rate independently.
-  const totalB2BCycles = hostelCycles + hotelCycles;
-  const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
-  const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
-  const hostelDailyKg  = b2bDailyKg * hostelFrac;   // e.g. 189 × 6/9 = 126 kg/day
-  const hotelDailyKg   = b2bDailyKg * hotelFrac;    // e.g. 189 × 3/9 =  63 kg/day
-  const hostelMonthly  = hostelDailyKg * a.workdays; // 126 × 30 = 3,780 kg/month
-  const hotelMonthly   = hotelDailyKg  * a.workdays; // 63  × 30 = 1,890 kg/month
-  const hostelRev      = hostelMonthly * hostel.rate; // 3,780 × ₹55 = ₹2,07,900
-  const hotelRev       = hotelMonthly  * hotel.rate;  // 1,890 × ₹60 = ₹1,13,400
 
   // ── Revenue ──────────────────────────────────────────────────────────────────
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
@@ -186,10 +179,8 @@ function calcScenario(scenarioKey, a) {
   const garments   = dcKg * a.gpkg;
   const laundryRev = laundryKg * a.b2cPrice;
   const dcRev      = garments  * a.dcPrice;
-  // B2B revenue = hostel rev + hotel rev (billed at separate rates, NOT blended average).
-  // For 100% hostel: hostelRev = b2bMonthly×₹55, hotelRev=0 → correct.
-  // For 100% hotel:  hostelRev = 0, hotelRev = b2bMonthly×₹60 → correct.
-  // For 50/50 mix:   hostelRev + hotelRev = ₹2,07,900 + ₹1,13,400 = ₹3,21,300 → matches reference.
+  // B2B revenue = hostelRev + hotelRev — billed at each client's own rate, NOT blended.
+  // 50/50: ₹2,07,900 + ₹1,13,400 = ₹3,21,300 (matches spec reference exactly).
   const b2bRev     = hostelRev + hotelRev;
   const totalRev   = laundryRev + dcRev + b2bRev;
   const dailyRev   = a.workdays > 0 ? totalRev / a.workdays : 0;
@@ -563,345 +554,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
   );
 }
 
-// ─── DS Onboarding Flow ───────────────────────────────────────────────────────
-function DSOnboarding({ onComplete }) {
-  const [step,            setStep]            = useState(1);
-  const [distModel,       setDistModel]       = useState(null);
-  const [b2bClientType,   setB2bClientType]   = useState(null);
-  const [machineCount,    setMachineCount]    = useState(1);
-  const [b2bSplitPct,     setB2bSplitPct]     = useState(50);
-  const [mcRaw,           setMcRaw]           = useState("1");
-
-  // ── Live revenue helpers (Step 3) ────────────────────────────────────────────
-  const getClientPreset = () => {
-    if (distModel === "b2c") return null;
-    const type = b2bClientType || "hostel";
-    return B2B_CLIENTS[type];
-  };
-  const preset = getClientPreset();
-
-  const liveCalc = () => {
-    if (!preset) return null;
-    const mc    = Math.max(1, machineCount);
-    const daily_kg  = preset.cycles * preset.kgPerCycle * mc;
-    const daily_rev = daily_kg * preset.rate;
-    const monthly_rev = daily_rev * 30;
-    return { daily_kg, daily_rev, monthly_rev, cycles_day: preset.cycles * mc };
-  };
-  const live = liveCalc();
-
-  // ── Step 3 title ─────────────────────────────────────────────────────────────
-  const step3Title = () => {
-    if (distModel === "b2c") return "B2C processing";
-    if (b2bClientType === "hotel") return "Hotel processing";
-    return "Hostel processing";
-  };
-
-  // ── Machine count input (validates inline) ───────────────────────────────────
-  const mcParsed  = parseInt(mcRaw, 10);
-  const mcInvalid = isNaN(mcParsed) || mcParsed < 1 || mcParsed > 20 || !Number.isInteger(mcParsed);
-
-  const handleMcChange = e => {
-    const v = e.target.value;
-    setMcRaw(v);
-    const n = parseInt(v, 10);
-    if (!isNaN(n) && n >= 1 && n <= 20 && Number.isInteger(n)) setMachineCount(n);
-  };
-
-  // ── Save & continue ──────────────────────────────────────────────────────────
-  const handleFinish = () => {
-    if (mcInvalid) return;
-    const model    = distModel;
-    const isPremium = model !== "b2c";
-    // For machine mode wiring: B2C → b2c, B2B → b2b, both → both
-    const modeMap  = { b2c: "b2c", b2b: "b2b", both: "both" };
-    const mMode    = modeMap[model] || "b2c";
-
-    // Build partial assumptions to merge in
-    onComplete({
-      distribution_model: model,
-      b2b_client_type:    model === "b2c" ? null : b2bClientType,
-      machine_count:      machineCount,
-      is_premium:         isPremium,
-      b2b_split_percent:  model === "both" ? b2bSplitPct : null,
-      onboarding_done:    true,
-      // Wire machine modes from DS selection
-      m1mode: mMode,
-      m2mode: mMode,
-      // Preset hostel/hotel split from client type
-      hostelPct: model === "b2b" && b2bClientType === "hotel" ? 0
-               : model === "b2b" && b2bClientType === "hostel" ? 100
-               : model === "both" ? 100 - b2bSplitPct
-               : 0,
-      hotelPct:  model === "b2b" && b2bClientType === "hotel" ? 100
-               : model === "b2b" && b2bClientType === "hostel" ? 0
-               : model === "both" ? b2bSplitPct
-               : 0,
-    });
-  };
-
-  // ── Step 2 only shown for B2B 100% ───────────────────────────────────────────
-  const handleStep1Continue = () => {
-    if (!distModel) return;
-    if (distModel === "b2b") { setStep(2); }
-    else { setStep(3); }
-  };
-
-  const handleBack = () => {
-    if (step === 2) { setStep(1); setB2bClientType(null); }
-    if (step === 3) { distModel === "b2b" ? setStep(2) : setStep(1); }
-  };
-
-  // ── Shared card style ─────────────────────────────────────────────────────────
-  const optCard = (active) =>
-    `w-full text-left rounded-2xl border-2 p-4 transition-all cursor-pointer
-     ${active
-       ? "border-blue-500 bg-blue-50 ring-2 ring-blue-300 ring-offset-1"
-       : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`;
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4"
-      style={{ fontFamily: "DM Sans, sans-serif" }}>
-      <div className="w-full max-w-lg">
-
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            {[1,2,3].map(n => (
-              <div key={n} className={`h-1.5 flex-1 rounded-full transition-all
-                ${n < step ? "bg-blue-600" : n === step ? "bg-blue-400" : "bg-slate-200"}`} />
-            ))}
-          </div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400 text-center">
-            Step {step} of {distModel === "b2b" ? 3 : step < 3 ? "—" : 2} &nbsp;·&nbsp; Distribution Strategy Setup
-          </p>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-
-          {/* ── STEP 1 ─────────────────────────────────────────────────────────── */}
-          {step === 1 && (
-            <div className="p-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step 1</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">How do you distribute?</h2>
-              <p className="text-sm text-slate-400 mb-6">Choose your primary distribution channel. This determines your revenue model.</p>
-
-              <div className="space-y-3 mb-6">
-                {[
-                  { val: "b2c",  label: "B2C 100%",        desc: "Direct to end customers only" },
-                  { val: "b2b",  label: "B2B 100%",        desc: "Business clients (Hotels, Hostels)", premium: true },
-                  { val: "both", label: "B2C + B2B (50/50)", desc: "Mixed — both channels" },
-                ].map(({ val, label, desc, premium }) => (
-                  <button key={val} className={optCard(distModel === val)} onClick={() => setDistModel(val)}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-semibold text-slate-800">{label}</p>
-                          {premium && (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
-                              ★ Premium
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500">{desc}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition
-                        ${distModel === val ? "border-blue-500 bg-blue-500" : "border-slate-300"}`}>
-                        {distModel === val && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* B2C+B2B split % input */}
-              {distModel === "both" && (
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Set B2B split %</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-slate-500 mb-1">Hotel mix (B2B %)</p>
-                      <input type="range" min={0} max={100} step={5} value={b2bSplitPct}
-                        onChange={e => setB2bSplitPct(parseInt(e.target.value, 10))}
-                        className="w-full" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-mono font-bold text-blue-600">{b2bSplitPct}%</p>
-                      <p className="text-[9px] text-slate-400">B2B</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                    <span>B2C: {100 - b2bSplitPct}%</span>
-                    <span>B2B: {b2bSplitPct}%</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleStep1Continue}
-                disabled={!distModel}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${distModel
-                    ? "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
-                    : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {/* ── STEP 2 (B2B only) ──────────────────────────────────────────────── */}
-          {step === 2 && (
-            <div className="p-6">
-              <button onClick={handleBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-4 transition">
-                <FiArrowLeft size={13} /> Back
-              </button>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step 2</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">What type of B2B client?</h2>
-              <p className="text-sm text-slate-400 mb-6">Select your primary B2B client category.</p>
-
-              <div className="space-y-3 mb-6">
-                {[
-                  {
-                    val: "hostel",
-                    label: "Hostel",
-                    meta: `${B2B_CLIENTS.hostel.cycles} cycles/day · ${B2B_CLIENTS.hostel.kgPerCycle} kg per cycle · Rs ${B2B_CLIENTS.hostel.rate} per kg`,
-                  },
-                  {
-                    val: "hotel",
-                    label: "Hotel",
-                    meta: `${B2B_CLIENTS.hotel.cycles} cycles/day · ${B2B_CLIENTS.hotel.kgPerCycle} kg per cycle · Rs ${B2B_CLIENTS.hotel.rate} per kg`,
-                  },
-                ].map(({ val, label, meta }) => (
-                  <button key={val} className={optCard(b2bClientType === val)} onClick={() => setB2bClientType(val)}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-semibold text-slate-800">{label}</p>
-                          <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
-                            ★ Premium
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 font-mono">{meta}</p>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition
-                        ${b2bClientType === val ? "border-blue-500 bg-blue-500" : "border-slate-300"}`}>
-                        {b2bClientType === val && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => b2bClientType && setStep(3)}
-                disabled={!b2bClientType}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${b2bClientType
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {/* ── STEP 3 ─────────────────────────────────────────────────────────── */}
-          {step === 3 && (
-            <div className="p-6">
-              <button onClick={handleBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-4 transition">
-                <FiArrowLeft size={13} /> Back
-              </button>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step 3</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">{step3Title()}</h2>
-              <p className="text-sm text-slate-400 mb-5">Enter your machine count to see live revenue estimates.</p>
-
-              {/* Machine count input */}
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  How many machines do you have?
-                </label>
-                <input
-                  type="number"
-                  value={mcRaw}
-                  min={1} max={20} step={1}
-                  onChange={handleMcChange}
-                  className={`w-full h-11 border rounded-xl text-sm font-mono text-slate-800 bg-white px-4
-                    focus:outline-none transition
-                    ${mcInvalid
-                      ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"}`}
-                  placeholder="Enter 1–20"
-                />
-                {mcInvalid && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
-                    <FiAlertTriangle size={11} /> Must be a whole number between 1 and 20
-                  </p>
-                )}
-              </div>
-
-              {/* Live summary card (B2B / B2C+B2B) */}
-              {preset && live && !mcInvalid && (
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 mb-5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3">
-                    Live revenue summary · {preset.label || b2bClientType}
-                  </p>
-                  <div className="space-y-2">
-                    {[
-                      { l: "Machines",     v: String(machineCount) },
-                      { l: "Cycles / day", v: String(live.cycles_day) },
-                      { l: "Kg / day",     v: `${live.daily_kg.toLocaleString("en-IN")} kg` },
-                      { l: "Rate",         v: `Rs ${preset.rate} per kg` },
-                    ].map(({ l, v }) => (
-                      <div key={l} className="flex items-center justify-between">
-                        <p className="text-xs text-blue-700">{l}</p>
-                        <p className="text-xs font-mono font-semibold text-blue-900">{v}</p>
-                      </div>
-                    ))}
-                    <div className="border-t border-blue-200 pt-2 mt-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-blue-800">Daily revenue</p>
-                        <p className="text-sm font-mono font-bold text-emerald-600">
-                          Rs {live.daily_rev.toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-blue-600">Monthly revenue</p>
-                        <p className="text-xs font-mono font-semibold text-slate-700">
-                          Rs {live.monthly_rev.toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* B2C-only placeholder */}
-              {distModel === "b2c" && !mcInvalid && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-2">B2C Setup</p>
-                  <p className="text-xs text-emerald-700">
-                    {machineCount} machine{machineCount > 1 ? "s" : ""} assigned to B2C. Revenue will be calculated in the main dashboard based on your pricing and scenario settings.
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={handleFinish}
-                disabled={mcInvalid}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${!mcInvalid
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Save & Continue →
-              </button>
-            </div>
-          )}
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Scenario card ────────────────────────────────────────────────────────────
 function ScenarioCard({ scenarioKey, out, active, onClick }) {
   const { seed, totalRev, totalExp, profit, margin, b2cDailyKg, b2cMonthly, dailyRev } = out;
@@ -964,7 +616,7 @@ function DetailPanel({ out, assumptions }) {
   const machineSub = (cap, mode) => {
     const parts = [];
     if (machineDoesB2C(mode)) parts.push(`${cap}kg × ${seed.cycles} cyc B2C`);
-    if (machineDoesB2B(mode)) parts.push(`${cap}kg × ${b2bCycles} cyc B2B`);
+    if (machineDoesB2B(mode)) parts.push(`21kg × ${b2bCycles} cyc B2B`);
     return parts.join(" + ");
   };
 
@@ -1260,19 +912,6 @@ export default function Calculator() {
   const set         = (key, val) => setAssumptions(prev => ({ ...prev, [key]: val }));
   const handleReset = () => setAssumptions({ ...DEFAULT_ASSUMPTIONS });
 
-  // ── DS onboarding completion ──────────────────────────────────────────────────
-  const handleOnboardingComplete = (dsData) => {
-    setAssumptions(prev => ({ ...prev, ...dsData }));
-  };
-  const handleEditDS = () => {
-    setAssumptions(prev => ({ ...prev, onboarding_done: false }));
-  };
-
-  // Show onboarding if not done yet
-  if (!assumptions.onboarding_done) {
-    return <DSOnboarding onComplete={handleOnboardingComplete} />;
-  }
-
   const outputs   = Object.fromEntries(Object.keys(SCENARIO_SEEDS).map(k => [k, calcScenario(k, assumptions)]));
   const activeOut = outputs[activeScenario];
   const activeSt  = SS[SCENARIO_SEEDS[activeScenario].color];
@@ -1320,10 +959,6 @@ export default function Calculator() {
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiRefreshCw size={12} /> Reset
               </button>
-              <button onClick={handleEditDS}
-                className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
-                <FiSettings size={12} /> Edit DS Setup
-              </button>
               <button onClick={() => navigate("/admin")}
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiArrowLeft size={12} /> Back
@@ -1348,27 +983,6 @@ export default function Calculator() {
             <div className="p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
-
-              {/* DS config summary */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400 mb-1">Distribution Strategy</p>
-                  <p className="text-xs font-semibold text-blue-800">
-                    {assumptions.distribution_model === "b2c" ? "B2C 100%"
-                     : assumptions.distribution_model === "b2b" ? `B2B 100% · ${assumptions.b2b_client_type === "hotel" ? "Hotel" : "Hostel"}`
-                     : assumptions.distribution_model === "both" ? `B2C + B2B (${100 - (assumptions.b2b_split_percent||0)}% / ${assumptions.b2b_split_percent||0}%)`
-                     : "—"}
-                  </p>
-                  <p className="text-[10px] text-blue-600 mt-0.5">
-                    {assumptions.machine_count} machine{assumptions.machine_count > 1 ? "s" : ""}
-                    {assumptions.is_premium ? " · ★ Premium" : ""}
-                  </p>
-                </div>
-                <button onClick={handleEditDS}
-                  className="text-[10px] text-blue-500 font-semibold hover:text-blue-700 border border-blue-200 rounded-lg px-2 py-1 transition whitespace-nowrap flex-shrink-0">
-                  Edit
-                </button>
-              </div>
 
               {/* Machine specs */}
               <SectionDivider>Machine specifications</SectionDivider>
