@@ -1530,14 +1530,9 @@ export default function Calculator() {
   const handleOnboardingComplete = (dsData) => {
     setAssumptions(prev => ({ ...prev, ...dsData }));
   };
-  const handleEditDS = () => {
-    setAssumptions(prev => ({ ...prev, onboarding_done: false }));
-  };
+  // handleEditDS intentionally disabled — onboarding no longer used
 
-  // Show onboarding if not done yet
-  if (!assumptions.onboarding_done) {
-    return <DSOnboarding onComplete={handleOnboardingComplete} />;
-  }
+  // Onboarding is disabled — calculator opens directly
 
   const outputs   = Object.fromEntries(Object.keys(SCENARIO_SEEDS).map(k => [k, calcScenario(k, assumptions)]));
   const activeOut = outputs[activeScenario];
@@ -1586,10 +1581,7 @@ export default function Calculator() {
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiRefreshCw size={12} /> Reset
               </button>
-              <button onClick={handleEditDS}
-                className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
-                <FiSettings size={12} /> Edit DS Setup
-              </button>
+
               <button onClick={() => navigate("/admin")}
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiArrowLeft size={12} /> Back
@@ -1632,10 +1624,7 @@ export default function Calculator() {
                     {assumptions.is_premium ? " · ★ Premium" : ""}
                   </p>
                 </div>
-                <button onClick={handleEditDS}
-                  className="text-[10px] text-blue-500 font-semibold hover:text-blue-700 border border-blue-200 rounded-lg px-2 py-1 transition whitespace-nowrap flex-shrink-0">
-                  Edit
-                </button>
+
               </div>
 
               {/* Machine specs */}
