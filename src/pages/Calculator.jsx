@@ -150,13 +150,32 @@ function calcScenario(scenarioKey, a) {
   const b2cActive  = b2cDailyKg > 0;
   const b2bActive  = b2bDailyKg > 0;
 
+  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
+  // Computed BEFORE revenue so hostelRev/hotelRev can feed into totalRev correctly.
+  // Each client type's daily kg = their cycle count × total machine capacity (21 kg).
+  // This matches the reference: hostel 6 cyc × 21 kg = 126 kg/day; hotel 3 cyc × 21 kg = 63 kg/day.
+  // We do NOT blend rates — each segment is billed at its own rate independently.
+  const totalB2BCycles = hostelCycles + hotelCycles;
+  const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
+  const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
+  const hostelDailyKg  = b2bDailyKg * hostelFrac;   // e.g. 189 × 6/9 = 126 kg/day
+  const hotelDailyKg   = b2bDailyKg * hotelFrac;    // e.g. 189 × 3/9 =  63 kg/day
+  const hostelMonthly  = hostelDailyKg * a.workdays; // 126 × 30 = 3,780 kg/month
+  const hotelMonthly   = hotelDailyKg  * a.workdays; // 63  × 30 = 1,890 kg/month
+  const hostelRev      = hostelMonthly * hostel.rate; // 3,780 × ₹55 = ₹2,07,900
+  const hotelRev       = hotelMonthly  * hotel.rate;  // 1,890 × ₹60 = ₹1,13,400
+
   // ── Revenue ──────────────────────────────────────────────────────────────────
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
   const dcKg       = b2cMonthly * (a.dcSplit / 100);
   const garments   = dcKg * a.gpkg;
   const laundryRev = laundryKg * a.b2cPrice;
   const dcRev      = garments  * a.dcPrice;
-  const b2bRev     = b2bMonthly * b2bRate;
+  // B2B revenue = hostel rev + hotel rev (billed at separate rates, NOT blended average).
+  // For 100% hostel: hostelRev = b2bMonthly×₹55, hotelRev=0 → correct.
+  // For 100% hotel:  hostelRev = 0, hotelRev = b2bMonthly×₹60 → correct.
+  // For 50/50 mix:   hostelRev + hotelRev = ₹2,07,900 + ₹1,13,400 = ₹3,21,300 → matches reference.
+  const b2bRev     = hostelRev + hotelRev;
   const totalRev   = laundryRev + dcRev + b2bRev;
   const dailyRev   = a.workdays > 0 ? totalRev / a.workdays : 0;
 
@@ -199,17 +218,6 @@ function calcScenario(scenarioKey, a) {
   const margin   = totalRev > 0 ? (profit / totalRev) * 100 : 0;
   const revPerKg = totalKg  > 0 ? totalRev / totalKg : 0;
   const expPerKg = totalKg  > 0 ? totalExp / totalKg : 0;
-
-  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
-  const totalB2BCycles = hostelCycles + hotelCycles;
-  const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
-  const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
-  const hostelDailyKg  = b2bDailyKg * hostelFrac;
-  const hotelDailyKg   = b2bDailyKg * hotelFrac;
-  const hostelMonthly  = hostelDailyKg * a.workdays;
-  const hotelMonthly   = hotelDailyKg  * a.workdays;
-  const hostelRev      = hostelMonthly * hostel.rate;
-  const hotelRev       = hotelMonthly  * hotel.rate;
 
   return {
     seed, b2bClient, is_premium: b2bClient.is_premium,
