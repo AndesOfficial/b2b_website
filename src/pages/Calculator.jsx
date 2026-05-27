@@ -12,14 +12,15 @@ const SCENARIO_SEEDS = {
 };
 
 // ─── Auto-cost constants ──────────────────────────────────────────────────────
-const ELEC_RATE           = 13.80;
-const B2C_UNITS_PER_CYCLE = 8;
-const B2B_KWH_PER_KG      = 0.331;
-const DRYER_KWH_PER_KG    = 0.415;
-const WATER_LITRES_CYCLE  = 60;
-const WATER_RATE          = 0.38;
-const DETERGENT_RATE      = 5;
+const ELEC_RATE           = 13.80; // ₹/unit (kWh)
+const B2C_UNITS_PER_CYCLE = 8;    // units per cycle
+const B2B_KWH_PER_KG      = 0.331; // kWh per kg (washing machine)
+const DRYER_KWH_PER_KG    = 0.415; // kWh per kg (dryer)
+const WATER_LITRES_CYCLE  = 60;   // litres per cycle
+const WATER_RATE          = 0.38; // ₹/litre
+const DETERGENT_RATE      = 5;    // ₹/kg
 
+// Packaging: tiered by utilisation % of B2C monthly kg capacity
 const PKG_TIERS = [
   { upto: 25,  cost: 3920  },
   { upto: 35,  cost: 5236  },
@@ -36,11 +37,14 @@ function packagingCost(laundrySplitPct) {
 }
 
 // ─── B2B client presets ───────────────────────────────────────────────────────
+// cycles/day are for a standard 21 kg machine (8 hr day).
+// Cycle durations are used to time-split machines with mixed hostel/hotel loads.
 const B2B_CLIENTS = {
   hostel: { label: "Hostel", cycles: 12, cycleMins: 40, kgPerCycle: 21, rate: 55, is_premium: true },
   hotel:  { label: "Hotel",  cycles: 6,  cycleMins: 75, kgPerCycle: 21, rate: 60, is_premium: true },
 };
 
+// Total operating minutes in a standard B2B day = 8 hours = 480 min
 const B2B_DAY_MINS = 480;
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -85,17 +89,24 @@ const fmtR   = n => `₹ ${fmt(n)}`;
 function machineDoesB2C(mode) { return mode === "b2c" || mode === "both"; }
 function machineDoesB2B(mode) { return mode === "b2b" || mode === "both"; }
 
-// ─── Core calculation ─────────────────────────────────────────────────────────
+// ─── Core calculation (from File 2 — most accurate) ───────────────────────────
 function calcScenario(scenarioKey, a) {
   const seed = SCENARIO_SEEDS[scenarioKey];
 
+  // ── Blended B2B from hostel/hotel split ──────────────────────────────────────
+  // Cycles are computed by time-splitting the operating day, NOT by averaging.
+  // B2B_DAY_MINS = total daily operating minutes (480 min = 8 hr day).
+  // Each channel gets (its % × B2B_DAY_MINS) minutes, divided by its cycle duration.
   const hostelW      = (a.hostelPct || 0) / 100;
   const hotelW       = (a.hotelPct  || 0) / 100;
   const hostel       = B2B_CLIENTS.hostel;
   const hotel        = B2B_CLIENTS.hotel;
-  const hostelCycles = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins);
-  const hotelCycles  = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);
-  const b2bCycles    = Math.round((hostelCycles + hotelCycles) * 2) / 2;
+  // Use Math.floor so only complete cycles are counted (partial cycles aren't processed)
+  const hostelCycles = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins); // e.g. 50% → floor(240/40) = 6
+  const hotelCycles  = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);  // e.g. 50% → floor(240/75) = 3
+  const b2bCycles    = Math.round((hostelCycles + hotelCycles) * 2) / 2; // rounded to 0.5
+  // kgPerCycle is per-machine (machine capacity), NOT hardcoded to 21.
+  // This is resolved per-machine in the mDetails loop below.
   const b2bRate      = hostel.rate * hostelW + hotel.rate * hotelW;
   const b2bClient = {
     label:        hostelW === 1 ? "Hostel" : hotelW === 1 ? "Hotel" : `Hostel ${a.hostelPct}% / Hotel ${a.hotelPct}%`,
@@ -105,6 +116,7 @@ function calcScenario(scenarioKey, a) {
     is_premium:   true,
   };
 
+  // ── Machine daily kg per channel ─────────────────────────────────────────────
   // Machine 2 is only active when machine_count >= 2
   const machines = [
     { cap: a.m1cap, mode: a.m1mode, enabled: true },
@@ -119,7 +131,9 @@ function calcScenario(scenarioKey, a) {
 
   const mDetails = machines.map(m => {
     if (!m.enabled) return { b2cKg: 0, b2bKg: 0, b2cCyc: 0, b2bCyc: 0 };
+    // B2C: machine capacity × scenario cycles
     const b2cKg  = machineDoesB2C(m.mode) ? m.cap * seed.cycles : 0;
+    // B2B: blended time-split cycles × this machine's actual capacity (not hardcoded 21)
     const b2bKg  = machineDoesB2B(m.mode) ? b2bCycles * m.cap : 0;
     const b2cCyc = machineDoesB2C(m.mode) ? seed.cycles : 0;
     const b2bCyc = machineDoesB2B(m.mode) ? b2bCycles  : 0;
@@ -131,12 +145,16 @@ function calcScenario(scenarioKey, a) {
   const [m1daily, m2daily, m3daily, m4daily, m5daily] =
     mDetails.map(m => m.b2cKg + m.b2bKg);
 
+  // ── Monthly volumes ──────────────────────────────────────────────────────────
   const b2cMonthly = b2cDailyKg * a.workdays;
   const b2bMonthly = b2bDailyKg * a.workdays;
   const b2cActive  = b2cDailyKg > 0;
   const b2bActive  = b2bDailyKg > 0;
 
-  // ── B2B hostel/hotel kg & revenue split (per-rate, not blended) ──────────────
+  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
+  // Computed BEFORE revenue so hostelRev/hotelRev can feed into totalRev correctly.
+  // Each client type's daily kg = their cycle count × total machine capacity.
+  // We do NOT blend rates — each segment is billed at its own rate independently.
   const totalB2BCycles = hostelCycles + hotelCycles;
   const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
   const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
@@ -153,14 +171,19 @@ function calcScenario(scenarioKey, a) {
   const garments   = dcKg * a.gpkg;
   const laundryRev = laundryKg * a.b2cPrice;
   const dcRev      = garments  * a.dcPrice;
+  // B2B revenue = hostel rev + hotel rev (billed at separate rates, NOT blended average).
+  // For 100% hostel: hostelRev = b2bMonthly×₹55, hotelRev=0 → correct.
+  // For 100% hotel:  hostelRev = 0, hotelRev = b2bMonthly×₹60 → correct.
   const b2bRev     = hostelRev + hotelRev;
   const totalRev   = laundryRev + dcRev + b2bRev;
   const dailyRev   = a.workdays > 0 ? totalRev / a.workdays : 0;
 
   // ── AUTO-CALCULATED EXPENSES ─────────────────────────────────────────────────
-  const b2cMonthlyCycles  = b2cDailyCycles * a.workdays;
-  const b2cElecUnits      = b2cMonthlyCycles * B2C_UNITS_PER_CYCLE;
-  const b2cElecCost       = b2cElecUnits * a.elecRate;
+
+  // 1. Electricity
+  const b2cMonthlyCycles = b2cDailyCycles * a.workdays;
+  const b2cElecUnits     = b2cMonthlyCycles * B2C_UNITS_PER_CYCLE;
+  const b2cElecCost      = b2cElecUnits * a.elecRate;
 
   const b2bElecUnits      = b2bMonthly * B2B_KWH_PER_KG;
   const b2bElecCost       = b2bElecUnits * a.elecRate;
@@ -170,12 +193,18 @@ function calcScenario(scenarioKey, a) {
   const b2bTotalElecCost  = b2bElecCost + dryerElecCost;
   const electricityCost   = Math.round(b2cElecCost + b2bTotalElecCost);
 
+  // 2. Water: total monthly cycles × 60 L × ₹0.38
   const b2bMonthlyCycles   = b2bDailyCycles * a.workdays;
   const totalMonthlyCycles = b2cMonthlyCycles + b2bMonthlyCycles;
   const waterCost          = Math.round(totalMonthlyCycles * WATER_LITRES_CYCLE * WATER_RATE);
-  const detergentCost      = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
-  const packagingCostVal   = b2cActive ? packagingCost(a.laundrySplit) : 0;
 
+  // 3. Detergent: total monthly kg × ₹5
+  const detergentCost = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
+
+  // 4. Packaging: tiered by laundry split % (B2C only)
+  const packagingCostVal = b2cActive ? packagingCost(a.laundrySplit) : 0;
+
+  // ── Total expenses ───────────────────────────────────────────────────────────
   const totalExp = a.rent + a.salaries + electricityCost + waterCost +
                    packagingCostVal + detergentCost + a.delivery +
                    a.maintenance + a.overtime + a.misc;
@@ -301,6 +330,7 @@ function MachineRecommendation({ assumptions }) {
   const hostelCycles  = (hostelW * B2B_DAY_MINS) / B2B_CLIENTS.hostel.cycleMins;
   const hotelCycles   = (hotelW  * B2B_DAY_MINS) / B2B_CLIENTS.hotel.cycleMins;
   const blendedCycles = hostelCycles + hotelCycles;
+  // Use machine 1 capacity as the representative machine for recommendation
   const kgPerMachineDay = Math.round(blendedCycles * assumptions.m1cap);
   const machinesNeeded  = demand > 0 ? Math.ceil(demand / kgPerMachineDay) : 0;
 
