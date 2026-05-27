@@ -12,15 +12,14 @@ const SCENARIO_SEEDS = {
 };
 
 // ─── Auto-cost constants ──────────────────────────────────────────────────────
-const ELEC_RATE           = 13.80; // ₹/unit (kWh)
-const B2C_UNITS_PER_CYCLE = 8;    // units per cycle
-const B2B_KWH_PER_KG      = 0.331; // kWh per kg (washing machine)
-const DRYER_KWH_PER_KG    = 0.415; // kWh per kg (dryer)
-const WATER_LITRES_CYCLE  = 60;   // litres per cycle
-const WATER_RATE          = 0.38; // ₹/litre
-const DETERGENT_RATE      = 5;    // ₹/kg
+const ELEC_RATE           = 13.80;
+const B2C_UNITS_PER_CYCLE = 8;
+const B2B_KWH_PER_KG      = 0.331;
+const DRYER_KWH_PER_KG    = 0.415;
+const WATER_LITRES_CYCLE  = 60;
+const WATER_RATE          = 0.38;
+const DETERGENT_RATE      = 5;
 
-// Packaging: tiered by utilisation % of B2C monthly kg capacity
 const PKG_TIERS = [
   { upto: 25,  cost: 3920  },
   { upto: 35,  cost: 5236  },
@@ -37,35 +36,17 @@ function packagingCost(laundrySplitPct) {
 }
 
 // ─── B2B client presets ───────────────────────────────────────────────────────
-// cycles/day are for a standard 21 kg machine (8 hr day).
-// Cycle durations are used to time-split machines with mixed hostel/hotel loads.
 const B2B_CLIENTS = {
   hostel: { label: "Hostel", cycles: 12, cycleMins: 40, kgPerCycle: 21, rate: 55, is_premium: true },
   hotel:  { label: "Hotel",  cycles: 6,  cycleMins: 75, kgPerCycle: 21, rate: 60, is_premium: true },
 };
 
-// Total operating minutes in a standard B2B day = 8 hours = 480 min
-// (matches reference: 50% hostel → 6 cycles × 40 min = 240 min; 50% hotel → 3 cycles × 75 min = 225 min)
 const B2B_DAY_MINS = 480;
-
-// ─── DS onboarding config ─────────────────────────────────────────────────────
-// distribution_model: null | "b2c" | "b2b" | "both"
-// b2b_client_type:    null | "hostel" | "hotel"
-// machine_count:      1–20 (used by onboarding step 3)
-// is_premium:         true for all B2B clients
-// b2b_split_percent:  0–100, only used if model = "both"
-// onboarding_done:    false until user completes DS onboarding flow
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
-  // DS onboarding fields
-  distribution_model:  "b2c",
-  b2b_client_type:     null,
-  machine_count:       1,
-  is_premium:          false,
-  b2b_split_percent:   null,
-  onboarding_done:     true,
-  // Machines
+  // Machines — machine_count drives which machines are active in calculations
+  machine_count: 2,
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
   m4enabled: false, m4cap: 8,
@@ -108,21 +89,14 @@ function machineDoesB2B(mode) { return mode === "b2b" || mode === "both"; }
 function calcScenario(scenarioKey, a) {
   const seed = SCENARIO_SEEDS[scenarioKey];
 
-  // ── Blended B2B from hostel/hotel split ──────────────────────────────────────
-  // Cycles are computed by time-splitting the operating day, NOT by averaging.
-  // B2B_DAY_MINS = total daily operating minutes (440 min for 100% hostel baseline).
-  // Each channel gets (its % × B2B_DAY_MINS) minutes, divided by its cycle duration.
-  const hostelW       = (a.hostelPct || 0) / 100;
-  const hotelW        = (a.hotelPct  || 0) / 100;
-  const hostel        = B2B_CLIENTS.hostel;
-  const hotel         = B2B_CLIENTS.hotel;
-  // Use Math.floor so only complete cycles are counted (partial cycles aren't processed)
-  const hostelCycles  = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins); // e.g. 50% → floor(240/40) = 6
-  const hotelCycles   = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);  // e.g. 50% → floor(240/75) = 3
-  const b2bCycles     = Math.round((hostelCycles + hotelCycles) * 2) / 2; // rounded to 0.5
-  // kgPerCycle is per-machine (machine capacity), NOT hardcoded to 21.
-  // This is resolved per-machine in the mDetails loop below.
-  const b2bRate       = hostel.rate * hostelW + hotel.rate * hotelW;
+  const hostelW      = (a.hostelPct || 0) / 100;
+  const hotelW       = (a.hotelPct  || 0) / 100;
+  const hostel       = B2B_CLIENTS.hostel;
+  const hotel        = B2B_CLIENTS.hotel;
+  const hostelCycles = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins);
+  const hotelCycles  = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);
+  const b2bCycles    = Math.round((hostelCycles + hotelCycles) * 2) / 2;
+  const b2bRate      = hostel.rate * hostelW + hotel.rate * hotelW;
   const b2bClient = {
     label:        hostelW === 1 ? "Hostel" : hotelW === 1 ? "Hotel" : `Hostel ${a.hostelPct}% / Hotel ${a.hotelPct}%`,
     cycles:       b2bCycles,
@@ -131,10 +105,10 @@ function calcScenario(scenarioKey, a) {
     is_premium:   true,
   };
 
-  // ── Machine daily kg per channel ─────────────────────────────────────────────
+  // Machine 2 is only active when machine_count >= 2
   const machines = [
     { cap: a.m1cap, mode: a.m1mode, enabled: true },
-    { cap: a.m2cap, mode: a.m2mode, enabled: a.machine_count >= 2 },
+    { cap: a.m2cap, mode: a.m2mode, enabled: (a.machine_count || 2) >= 2 },
     { cap: a.m3cap, mode: a.m3mode, enabled: a.m3enabled },
     { cap: a.m4cap, mode: a.m4mode, enabled: a.m4enabled },
     { cap: a.m5cap, mode: a.m5mode, enabled: a.m5enabled },
@@ -145,9 +119,7 @@ function calcScenario(scenarioKey, a) {
 
   const mDetails = machines.map(m => {
     if (!m.enabled) return { b2cKg: 0, b2bKg: 0, b2cCyc: 0, b2bCyc: 0 };
-    // B2C: machine capacity × scenario cycles
     const b2cKg  = machineDoesB2C(m.mode) ? m.cap * seed.cycles : 0;
-    // B2B: blended time-split cycles × this machine's actual capacity (not hardcoded 21)
     const b2bKg  = machineDoesB2B(m.mode) ? b2bCycles * m.cap : 0;
     const b2cCyc = machineDoesB2C(m.mode) ? seed.cycles : 0;
     const b2bCyc = machineDoesB2B(m.mode) ? b2bCycles  : 0;
@@ -159,26 +131,21 @@ function calcScenario(scenarioKey, a) {
   const [m1daily, m2daily, m3daily, m4daily, m5daily] =
     mDetails.map(m => m.b2cKg + m.b2bKg);
 
-  // ── Monthly volumes ──────────────────────────────────────────────────────────
   const b2cMonthly = b2cDailyKg * a.workdays;
   const b2bMonthly = b2bDailyKg * a.workdays;
   const b2cActive  = b2cDailyKg > 0;
   const b2bActive  = b2bDailyKg > 0;
 
-  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
-  // Computed BEFORE revenue so hostelRev/hotelRev can feed into totalRev correctly.
-  // Each client type's daily kg = their cycle count × total machine capacity (21 kg).
-  // This matches the reference: hostel 6 cyc × 21 kg = 126 kg/day; hotel 3 cyc × 21 kg = 63 kg/day.
-  // We do NOT blend rates — each segment is billed at its own rate independently.
+  // ── B2B hostel/hotel kg & revenue split (per-rate, not blended) ──────────────
   const totalB2BCycles = hostelCycles + hotelCycles;
   const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
   const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
-  const hostelDailyKg  = b2bDailyKg * hostelFrac;   // e.g. 189 × 6/9 = 126 kg/day
-  const hotelDailyKg   = b2bDailyKg * hotelFrac;    // e.g. 189 × 3/9 =  63 kg/day
-  const hostelMonthly  = hostelDailyKg * a.workdays; // 126 × 30 = 3,780 kg/month
-  const hotelMonthly   = hotelDailyKg  * a.workdays; // 63  × 30 = 1,890 kg/month
-  const hostelRev      = hostelMonthly * hostel.rate; // 3,780 × ₹55 = ₹2,07,900
-  const hotelRev       = hotelMonthly  * hotel.rate;  // 1,890 × ₹60 = ₹1,13,400
+  const hostelDailyKg  = b2bDailyKg * hostelFrac;
+  const hotelDailyKg   = b2bDailyKg * hotelFrac;
+  const hostelMonthly  = hostelDailyKg * a.workdays;
+  const hotelMonthly   = hotelDailyKg  * a.workdays;
+  const hostelRev      = hostelMonthly * hostel.rate;
+  const hotelRev       = hotelMonthly  * hotel.rate;
 
   // ── Revenue ──────────────────────────────────────────────────────────────────
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
@@ -186,44 +153,29 @@ function calcScenario(scenarioKey, a) {
   const garments   = dcKg * a.gpkg;
   const laundryRev = laundryKg * a.b2cPrice;
   const dcRev      = garments  * a.dcPrice;
-  // B2B revenue = hostel rev + hotel rev (billed at separate rates, NOT blended average).
-  // For 100% hostel: hostelRev = b2bMonthly×₹55, hotelRev=0 → correct.
-  // For 100% hotel:  hostelRev = 0, hotelRev = b2bMonthly×₹60 → correct.
-  // For 50/50 mix:   hostelRev + hotelRev = ₹2,07,900 + ₹1,13,400 = ₹3,21,300 → matches reference.
   const b2bRev     = hostelRev + hotelRev;
   const totalRev   = laundryRev + dcRev + b2bRev;
   const dailyRev   = a.workdays > 0 ? totalRev / a.workdays : 0;
 
   // ── AUTO-CALCULATED EXPENSES ─────────────────────────────────────────────────
+  const b2cMonthlyCycles  = b2cDailyCycles * a.workdays;
+  const b2cElecUnits      = b2cMonthlyCycles * B2C_UNITS_PER_CYCLE;
+  const b2cElecCost       = b2cElecUnits * a.elecRate;
 
-  // 1. Electricity
-  const b2cMonthlyCycles = b2cDailyCycles * a.workdays;
-  const b2cElecUnits     = b2cMonthlyCycles * B2C_UNITS_PER_CYCLE;
-  const b2cElecCost      = b2cElecUnits * a.elecRate;
-
-  const b2bElecUnits = b2bMonthly * B2B_KWH_PER_KG;
-  const b2bElecCost  = b2bElecUnits * a.elecRate;
-
+  const b2bElecUnits      = b2bMonthly * B2B_KWH_PER_KG;
+  const b2bElecCost       = b2bElecUnits * a.elecRate;
   const dryerElecUnits    = b2bMonthly * DRYER_KWH_PER_KG;
   const dryerElecCost     = dryerElecUnits * a.elecRate;
-
   const b2bTotalElecUnits = b2bElecUnits + dryerElecUnits;
   const b2bTotalElecCost  = b2bElecCost + dryerElecCost;
+  const electricityCost   = Math.round(b2cElecCost + b2bTotalElecCost);
 
-  const electricityCost = Math.round(b2cElecCost + b2bTotalElecCost);
-
-  // 2. Water: total monthly cycles × 60 L × ₹0.38
   const b2bMonthlyCycles   = b2bDailyCycles * a.workdays;
   const totalMonthlyCycles = b2cMonthlyCycles + b2bMonthlyCycles;
   const waterCost          = Math.round(totalMonthlyCycles * WATER_LITRES_CYCLE * WATER_RATE);
+  const detergentCost      = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
+  const packagingCostVal   = b2cActive ? packagingCost(a.laundrySplit) : 0;
 
-  // 3. Detergent: total monthly kg × ₹5
-  const detergentCost = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
-
-  // 4. Packaging: tiered by laundry split % (B2C only)
-  const packagingCostVal = b2cActive ? packagingCost(a.laundrySplit) : 0;
-
-  // ── Total expenses ───────────────────────────────────────────────────────────
   const totalExp = a.rent + a.salaries + electricityCost + waterCost +
                    packagingCostVal + detergentCost + a.delivery +
                    a.maintenance + a.overtime + a.misc;
@@ -299,40 +251,6 @@ function NI({ value, onChange, min = 0, max, step = 1, prefix, disabled }) {
   );
 }
 
-function MachineCountNI({ value, onChange, min = 1, max = 20 }) {
-  const [raw, setRaw] = useState(String(value));
-  const parsed = parseInt(raw, 10);
-  const isInvalid = isNaN(parsed) || parsed < min || !Number.isInteger(parsed);
-
-  const handleChange = e => {
-    const v = e.target.value;
-    setRaw(v);
-    const n = parseInt(v, 10);
-    if (!isNaN(n) && n >= min && Number.isInteger(n)) onChange(Math.min(n, max));
-  };
-
-  useEffect(() => { setRaw(String(value)); }, [value]);
-
-  return (
-    <div>
-      <input
-        type="number" value={raw} min={min} max={max} step={1}
-        onChange={handleChange}
-        className={`w-full h-8 border rounded-lg text-sm font-mono text-slate-800 bg-white
-          focus:outline-none transition px-3
-          ${isInvalid
-            ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-100"
-            : "border-slate-200 focus:border-teal-400 focus:ring-1 focus:ring-teal-100"}`}
-      />
-      {isInvalid && (
-        <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
-          <FiAlertTriangle size={10} /> Must be a whole number between {min} and {max}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function Toggle({ enabled, onToggle, labelOn = "Enabled", labelOff = "Disabled", colorOn = "bg-blue-600 border-blue-600 text-white" }) {
   return (
     <button onClick={onToggle}
@@ -362,7 +280,6 @@ function ModeToggle({ value, onChange }) {
   );
 }
 
-// ─── Auto-cost info badge ─────────────────────────────────────────────────────
 function AutoBadge() {
   return (
     <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider
@@ -384,7 +301,6 @@ function MachineRecommendation({ assumptions }) {
   const hostelCycles  = (hostelW * B2B_DAY_MINS) / B2B_CLIENTS.hostel.cycleMins;
   const hotelCycles   = (hotelW  * B2B_DAY_MINS) / B2B_CLIENTS.hotel.cycleMins;
   const blendedCycles = hostelCycles + hotelCycles;
-  // Use machine 1 capacity (13 kg) as the representative machine for recommendation
   const kgPerMachineDay = Math.round(blendedCycles * assumptions.m1cap);
   const machinesNeeded  = demand > 0 ? Math.ceil(demand / kgPerMachineDay) : 0;
 
@@ -465,8 +381,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
-
-          {/* B2C pricing */}
           <SectionDivider>B2C pricing</SectionDivider>
           <FieldRow label="B2C laundry price" unit="₹ / kg">
             <NI value={assumptions.b2cPrice} min={1} prefix="₹" onChange={v => set("b2cPrice", v)} />
@@ -478,7 +392,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             <NI value={assumptions.gpkg} min={1} step={0.5} onChange={v => set("gpkg", v)} />
           </FieldRow>
 
-          {/* B2C split */}
           <div className="bg-slate-50 rounded-xl p-3 mb-2 border border-slate-100">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">B2C revenue split</p>
             <p className="text-[10px] text-slate-400 mb-2">Laundry % and Dry Clean % are independent — set each freely</p>
@@ -508,7 +421,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </div>
 
-          {/* B2B pricing — only shown when at least one machine is B2B/Both */}
           {hasB2B && (<>
             <SectionDivider>B2B pricing</SectionDivider>
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 mb-2">
@@ -532,7 +444,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </>)}
 
-          {/* Auto-cost rates */}
           <SectionDivider>Auto-calculated cost rates</SectionDivider>
           <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 mb-3">
             <p className="text-[10px] text-teal-700 font-semibold mb-1">These rates drive automatic expense calculation</p>
@@ -549,7 +460,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             <p><span className="font-semibold text-slate-600">Detergent:</span> total kg/month × ₹5</p>
             <p><span className="font-semibold text-slate-600">Packaging:</span> tiered by laundry split % (25%→₹3,920 · 35%→₹5,236 · 80%→₹12,514 · 100%→₹15,760)</p>
           </div>
-
         </div>
 
         <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
@@ -557,611 +467,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             className="w-full h-9 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 transition">
             Done
           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── DS Onboarding — helpers ──────────────────────────────────────────────────
-// B2C constants (Andes common assumptions)
-const B2C_LAUNDRY_RATE   = 81;    // ₹/kg
-const B2C_DC_RATE        = 100;   // ₹/garment
-const B2C_LAUNDRY_PCT    = 83.33; // % of B2C kg going to laundry
-const B2C_DC_PCT         = 16.67; // % of B2C kg going to dry clean
-const B2C_GPK            = 3;     // garments per kg (dry clean)
-const WORKDAYS           = 30;
-
-// Compute total kg/cycle from an array of per-machine capacities
-const totalKgPerCycle = (caps) => caps.reduce((s, c) => s + c, 0);
-
-// B2C live calculation for all 3 scenarios
-function calcB2CLive(machineCaps) {
-  const kgCycle = totalKgPerCycle(machineCaps);
-  return Object.entries(SCENARIO_SEEDS).map(([key, seed]) => {
-    const dailyKg     = kgCycle * seed.cycles;
-    const monthlyKg   = dailyKg * WORKDAYS;
-    const laundryKg   = monthlyKg * (B2C_LAUNDRY_PCT / 100);
-    const dcKg        = monthlyKg * (B2C_DC_PCT / 100);
-    const garments    = dcKg * B2C_GPK;
-    const laundryRev  = laundryKg * B2C_LAUNDRY_RATE;
-    const dcRev       = garments  * B2C_DC_RATE;
-    const totalRev    = laundryRev + dcRev;
-    return { key, label: seed.label, color: seed.color, dailyKg, monthlyKg, laundryRev, dcRev, totalRev };
-  });
-}
-
-// B2B live calculation for hostel-only, hotel-only, or mix
-// Uses actual sum of machine caps (not hardcoded 21) — scales correctly per machine count
-function calcB2BLive(machineCaps, hostelPct, hotelPct) {
-  const kgCycle    = totalKgPerCycle(machineCaps);
-  const hostelW    = hostelPct / 100;
-  const hotelW     = hotelPct  / 100;
-  // Time-split: each client gets its share of 480 min day
-  const hostelCyc  = Math.floor((hostelW * B2B_DAY_MINS) / B2B_CLIENTS.hostel.cycleMins);
-  const hotelCyc   = Math.floor((hotelW  * B2B_DAY_MINS) / B2B_CLIENTS.hotel.cycleMins);
-  // Daily kg per client type = cycles × total machine capacity (sum of all machine caps)
-  const hostelDailyKg  = hostelCyc * kgCycle;
-  const hotelDailyKg   = hotelCyc  * kgCycle;
-  const totalDailyKg   = hostelDailyKg + hotelDailyKg;
-  const hostelMonthly  = hostelDailyKg * WORKDAYS;
-  const hotelMonthly   = hotelDailyKg  * WORKDAYS;
-  const hostelRev      = hostelMonthly * B2B_CLIENTS.hostel.rate;
-  const hotelRev       = hotelMonthly  * B2B_CLIENTS.hotel.rate;
-  const totalRev       = hostelRev + hotelRev;
-  return { hostelCyc, hotelCyc, hostelDailyKg, hotelDailyKg, totalDailyKg,
-           hostelMonthly, hotelMonthly, hostelRev, hotelRev, totalRev,
-           totalMonthly: hostelMonthly + hotelMonthly };
-}
-
-// Validated integer input hook
-function useIntInput(initial, min, max) {
-  const [raw, setRaw] = useState(String(initial));
-  const parsed  = parseInt(raw, 10);
-  const invalid = isNaN(parsed) || parsed < min || parsed > max || !Number.isInteger(parsed);
-  const value   = invalid ? min : parsed;
-  const onChange = (e) => {
-    const v = e.target.value;
-    setRaw(v);
-  };
-  const syncTo = (n) => setRaw(String(n));
-  return { raw, value, invalid, onChange, syncTo };
-}
-
-// ─── DS Onboarding Flow ───────────────────────────────────────────────────────
-function DSOnboarding({ onComplete }) {
-  // ── Step & flow state ────────────────────────────────────────────────────────
-  const [step,          setStep]          = useState(1);
-  const [distModel,     setDistModel]     = useState(null);   // "b2c"|"b2b"|"both"
-  const [b2bClientType, setB2bClientType] = useState(null);   // "hostel"|"hotel"|"mix"
-  const [hostelSplitPct,setHostelSplitPct]= useState(50);     // used when mix selected
-  // step 3a: machine count
-  const mcInput = useIntInput(1, 1, 20);
-  // step 3b: per-machine capacities (array of strings, one per machine)
-  const [machineCaps, setMachineCaps] = useState(["13"]);     // raw strings
-  // step 4 (both model): per-machine channel assignment "b2c" | "b2b"
-  const [machineModes, setMachineModes] = useState(["b2c"]);  // default first machine to b2c
-
-  // ── Derived: step count depends on model ──────────────────────────────────────
-  // b2c: step1 → step3(count) → step3b(caps)     = 3 visual steps
-  // b2b: step1 → step2(type)  → step3(count) → step3b(caps) = 4
-  // both:step1 → step2(type)  → step3(count) → step3b(caps) = 4
-  const totalSteps = (distModel === "b2c" || distModel === null) ? 3 : 4;
-
-  // ── When machine count changes, resize machineCaps array ─────────────────────
-  const mcCount = mcInput.value;
-  useEffect(() => {
-    setMachineCaps(prev => {
-      const next = [...prev];
-      while (next.length < mcCount) next.push("13");
-      return next.slice(0, mcCount);
-    });
-    setMachineModes(prev => {
-      const next = [...prev];
-      // new machines: alternate b2c / b2b so there's always at least one of each
-      while (next.length < mcCount) next.push(next.length % 2 === 0 ? "b2c" : "b2b");
-      return next.slice(0, mcCount);
-    });
-  }, [mcCount]);
-
-  // ── Parsed machine capacities (numeric) ──────────────────────────────────────
-  const parsedCaps = machineCaps.map(s => {
-    const n = parseFloat(s);
-    return isNaN(n) || n <= 0 ? 0 : n;
-  });
-  const capsValid = parsedCaps.every(n => n > 0);
-
-  // ── Hostel/hotel pcts for current selection ───────────────────────────────────
-  const hostelPct = b2bClientType === "hostel" ? 100
-                  : b2bClientType === "hotel"  ? 0
-                  : b2bClientType === "mix"    ? hostelSplitPct
-                  : 100;
-  const hotelPct  = 100 - hostelPct;
-
-  // ── Live revenue for summary card ─────────────────────────────────────────────
-  const b2cScenarios = capsValid && (distModel === "b2c" || distModel === "both")
-    ? calcB2CLive(parsedCaps) : null;
-
-  const b2bLive = capsValid && (distModel === "b2b" || distModel === "both") && b2bClientType
-    ? calcB2BLive(parsedCaps, hostelPct, hotelPct) : null;
-
-  // ── Navigation ───────────────────────────────────────────────────────────────
-  const handleStep1Continue = () => {
-    if (!distModel) return;
-    if (distModel === "b2c") setStep(3);   // skip step 2
-    else setStep(2);
-  };
-
-  const handleBack = () => {
-    if (step === 2) { setStep(1); setB2bClientType(null); }
-    else if (step === 3) { distModel === "b2c" ? setStep(1) : setStep(2); }
-    else if (step === 4) setStep(3);
-  };
-
-  // ── Save & complete ───────────────────────────────────────────────────────────
-  const handleFinish = () => {
-    if (!capsValid) return;
-    const model     = distModel;
-    const isPremium = model !== "b2c";
-    const mMode     = model === "b2c" ? "b2c" : model === "b2b" ? "b2b" : "both";
-
-    // Build machine capacity overrides (m1cap, m2cap, … up to 5)
-    const capOverrides = {};
-    const modeOverrides = {};
-    const machineKeys = ["m1cap","m2cap","m3cap","m4cap","m5cap"];
-    const enableKeys  = ["m3enabled","m4enabled","m5enabled"];
-    parsedCaps.forEach((c, i) => {
-      capOverrides[machineKeys[i]] = c;
-      // For "both" model, use the per-machine channel assignment (b2c or b2b).
-      // For b2c/b2b only models, use the single mMode for all machines.
-      modeOverrides[`m${i+1}mode`] = model === "both" ? (machineModes[i] || "b2c") : mMode;
-    });
-    // For machines beyond the selected count, reset their mode to "b2c" (neutral default)
-    // so stale modes from a previous session don't bleed into calculations.
-    for (let i = mcCount; i < 5; i++) {
-      modeOverrides[`m${i+1}mode`] = "b2c";
-    }
-    // enable extra machines if count > 2
-    enableKeys.forEach((k, i) => {
-      capOverrides[k] = mcCount >= i + 3;
-    });
-
-    onComplete({
-      distribution_model: model,
-      b2b_client_type:    model === "b2c" ? null : b2bClientType,
-      machine_count:      mcCount,
-      is_premium:         isPremium,
-      b2b_split_percent:  model === "both" ? hotelPct : null,
-      onboarding_done:    true,
-      hostelPct,
-      hotelPct,
-      ...capOverrides,
-      ...modeOverrides,
-    });
-  };
-
-  // ── Shared styles ─────────────────────────────────────────────────────────────
-  const optCard = (active) =>
-    `w-full text-left rounded-2xl border-2 p-4 transition-all cursor-pointer
-     ${active
-       ? "border-blue-500 bg-blue-50 ring-2 ring-blue-300 ring-offset-1"
-       : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"}`;
-
-  const RadioDot = ({ active }) => (
-    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition
-      ${active ? "border-blue-500 bg-blue-500" : "border-slate-300"}`}>
-      {active && <div className="w-2 h-2 rounded-full bg-white" />}
-    </div>
-  );
-
-  const PremiumBadge = () => (
-    <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
-      ★ Premium
-    </span>
-  );
-
-  // ── Step label mapping ────────────────────────────────────────────────────────
-  const stepLabel = {
-    1: "How do you distribute?",
-    2: "What type of B2B service?",
-    3: "Machine count",
-    4: "Machine capacities",
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4"
-      style={{ fontFamily: "DM Sans, sans-serif" }}>
-      <div className="w-full max-w-lg">
-
-        {/* Progress */}
-        <div className="mb-6">
-          <div className="flex items-center gap-1.5 mb-2">
-            {Array.from({ length: totalSteps }, (_, i) => i + 1).map(n => (
-              <div key={n} className={`h-1.5 flex-1 rounded-full transition-all
-                ${n < step ? "bg-blue-600" : n === step ? "bg-blue-400" : "bg-slate-200"}`} />
-            ))}
-          </div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400 text-center">
-            Step {step} of {totalSteps} &nbsp;·&nbsp; Distribution Strategy Setup
-          </p>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-
-          {/* ════ STEP 1 — Distribution model ════ */}
-          {step === 1 && (
-            <div className="p-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step 1</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">How do you distribute?</h2>
-              <p className="text-sm text-slate-400 mb-5">Choose your primary distribution channel.</p>
-
-              <div className="space-y-3 mb-5">
-                {[
-                  { val: "b2c",  label: "B2C 100%",          desc: "Direct to end customers only" },
-                  { val: "b2b",  label: "B2B 100%",          desc: "Business clients (Hotels, Hostels)", premium: true },
-                  { val: "both", label: "B2C + B2B",         desc: "Mixed — both channels", premium: true },
-                ].map(({ val, label, desc, premium }) => (
-                  <button key={val} className={optCard(distModel === val)} onClick={() => setDistModel(val)}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-semibold text-slate-800">{label}</p>
-                          {premium && <PremiumBadge />}
-                        </div>
-                        <p className="text-xs text-slate-500">{desc}</p>
-                      </div>
-                      <RadioDot active={distModel === val} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <button onClick={handleStep1Continue} disabled={!distModel}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${distModel ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {/* ════ STEP 2 — B2B client type (for both b2b and both) ════ */}
-          {step === 2 && (
-            <div className="p-6">
-              <button onClick={handleBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-4 transition">
-                <FiArrowLeft size={13} /> Back
-              </button>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step 2</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">What type of B2B service?</h2>
-              <p className="text-sm text-slate-400 mb-5">Select the B2B client type you serve.</p>
-
-              <div className="space-y-3 mb-4">
-                {/* Hostel */}
-                <button className={optCard(b2bClientType === "hostel")} onClick={() => setB2bClientType("hostel")}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-semibold text-slate-800">Hostel</p>
-                        <PremiumBadge />
-                      </div>
-                      <p className="text-xs text-slate-500 font-mono">
-                        {B2B_CLIENTS.hostel.cycles} cycles/day · {B2B_CLIENTS.hostel.kgPerCycle} kg per cycle · Rs {B2B_CLIENTS.hostel.rate} per kg
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Cycle time: {B2B_CLIENTS.hostel.cycleMins} min · 8 hr day = {B2B_CLIENTS.hostel.cycles} full cycles</p>
-                    </div>
-                    <RadioDot active={b2bClientType === "hostel"} />
-                  </div>
-                </button>
-
-                {/* Hotel */}
-                <button className={optCard(b2bClientType === "hotel")} onClick={() => setB2bClientType("hotel")}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-semibold text-slate-800">Hotel</p>
-                        <PremiumBadge />
-                      </div>
-                      <p className="text-xs text-slate-500 font-mono">
-                        {B2B_CLIENTS.hotel.cycles} cycles/day · {B2B_CLIENTS.hotel.kgPerCycle} kg per cycle · Rs {B2B_CLIENTS.hotel.rate} per kg
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Cycle time: {B2B_CLIENTS.hotel.cycleMins} min · 8 hr day = {B2B_CLIENTS.hotel.cycles} full cycles</p>
-                    </div>
-                    <RadioDot active={b2bClientType === "hotel"} />
-                  </div>
-                </button>
-
-                {/* Hostel + Hotel mix — only for B2B 100% */}
-                {distModel === "b2b" && (
-                  <button className={optCard(b2bClientType === "mix")} onClick={() => setB2bClientType("mix")}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-semibold text-slate-800">Hostel + Hotel Mix</p>
-                          <PremiumBadge />
-                        </div>
-                        <p className="text-xs text-slate-500">Split the day between hostel and hotel clients</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">You'll set the hostel % split on next step</p>
-                      </div>
-                      <RadioDot active={b2bClientType === "mix"} />
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              {/* Hostel split slider — shown inline when mix selected */}
-              {b2bClientType === "mix" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3">Set Hostel / Hotel split</p>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex-1">
-                      <input type="range" min={0} max={100} step={5} value={hostelSplitPct}
-                        onChange={e => setHostelSplitPct(parseInt(e.target.value, 10))}
-                        className="w-full accent-blue-600" />
-                    </div>
-                    <div className="text-center w-12">
-                      <p className="text-base font-mono font-bold text-blue-700">{hostelSplitPct}%</p>
-                      <p className="text-[9px] text-slate-400">Hostel</p>
-                    </div>
-                  </div>
-                  <div className="flex rounded-xl overflow-hidden h-6 border border-blue-200">
-                    {hostelSplitPct > 0 && (
-                      <div className="bg-blue-500 flex items-center justify-center transition-all" style={{ width: `${hostelSplitPct}%` }}>
-                        <span className="text-[9px] font-bold text-white truncate px-1">Hostel {hostelSplitPct}%</span>
-                      </div>
-                    )}
-                    {(100 - hostelSplitPct) > 0 && (
-                      <div className="bg-violet-500 flex items-center justify-center transition-all" style={{ width: `${100 - hostelSplitPct}%` }}>
-                        <span className="text-[9px] font-bold text-white truncate px-1">Hotel {100 - hostelSplitPct}%</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-                    <div>Hostel: {Math.floor((hostelSplitPct / 100) * B2B_DAY_MINS / B2B_CLIENTS.hostel.cycleMins)} cycles/day ({hostelSplitPct}% of 480 min)</div>
-                    <div className="text-right">Hotel: {Math.floor(((100 - hostelSplitPct) / 100) * B2B_DAY_MINS / B2B_CLIENTS.hotel.cycleMins)} cycles/day ({100 - hostelSplitPct}% of 480 min)</div>
-                  </div>
-                </div>
-              )}
-
-              <button onClick={() => b2bClientType && setStep(3)} disabled={!b2bClientType}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${b2bClientType ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {/* ════ STEP 3 — Machine count ════ */}
-          {step === 3 && (
-            <div className="p-6">
-              <button onClick={handleBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-4 transition">
-                <FiArrowLeft size={13} /> Back
-              </button>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step {distModel === "b2c" ? 2 : 3}</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">How many machines?</h2>
-              <p className="text-sm text-slate-400 mb-5">Enter your total machine count (1–20). You'll set each machine's capacity next.</p>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Number of machines</label>
-                <input type="number" value={mcInput.raw} min={1} max={20} step={1} onChange={mcInput.onChange}
-                  className={`w-full h-11 border rounded-xl text-sm font-mono text-slate-800 bg-white px-4
-                    focus:outline-none transition
-                    ${mcInput.invalid
-                      ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-100"
-                      : "border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"}`}
-                  placeholder="Enter 1–20"
-                />
-                {mcInput.invalid && (
-                  <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
-                    <FiAlertTriangle size={11} /> Must be a whole number between 1 and 20
-                  </p>
-                )}
-              </div>
-
-              {/* Quick reference */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5 text-[10px] text-slate-500 space-y-1">
-                <p className="font-semibold text-slate-600 mb-1">Standard machine capacities (reference)</p>
-                <p>15 kg machine → effective processing = <strong>13 kg</strong></p>
-                <p>10 kg machine → effective processing = <strong>8 kg</strong></p>
-                <p className="text-slate-400">You'll enter the exact capacity for each machine on the next step.</p>
-              </div>
-
-              <button onClick={() => !mcInput.invalid && setStep(4)} disabled={mcInput.invalid}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${!mcInput.invalid ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {/* ════ STEP 4 — Machine capacities + live revenue ════ */}
-          {step === 4 && (
-            <div className="p-6 overflow-y-auto max-h-[90vh]">
-              <button onClick={handleBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-4 transition">
-                <FiArrowLeft size={13} /> Back
-              </button>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1">Step {distModel === "b2c" ? 3 : 4}</p>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">Machine capacities</h2>
-              <p className="text-sm text-slate-400 mb-5">Enter each machine's effective kg capacity per cycle.</p>
-
-              {/* Per-machine capacity inputs */}
-              <div className="space-y-3 mb-5">
-                {machineCaps.map((cap, i) => {
-                  const n = parseFloat(cap);
-                  const err = isNaN(n) || n <= 0;
-                  const modeVal = machineModes[i] || "b2c";
-                  return (
-                    <div key={i} className={`rounded-xl border p-3 ${distModel === "both" ? (modeVal === "b2c" ? "border-emerald-200 bg-emerald-50" : "border-blue-200 bg-blue-50") : "border-slate-100 bg-white"}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-20 flex-shrink-0">
-                          <p className="text-xs font-semibold text-slate-700">Machine {i + 1}</p>
-                          <p className="text-[10px] text-slate-400">kg/cycle</p>
-                        </div>
-                        <div className="flex-1">
-                          <input
-                            type="number" value={cap} min={1} max={200} step={0.5}
-                            onChange={e => {
-                              const next = [...machineCaps];
-                              next[i] = e.target.value;
-                              setMachineCaps(next);
-                            }}
-                            className={`w-full h-10 border rounded-xl text-sm font-mono text-slate-800 bg-white px-3
-                              focus:outline-none transition
-                              ${err ? "border-red-400 focus:ring-1 focus:ring-red-100" : "border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"}`}
-                            placeholder="e.g. 13"
-                          />
-                          {err && <p className="text-[10px] text-red-500 mt-0.5">Enter a positive number</p>}
-                        </div>
-                        {/* Quick-set buttons */}
-                        <div className="flex gap-1 flex-shrink-0">
-                          {[13, 8].map(q => (
-                            <button key={q} onClick={() => {
-                              const next = [...machineCaps];
-                              next[i] = String(q);
-                              setMachineCaps(next);
-                            }}
-                              className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-white text-slate-600 hover:bg-blue-100 hover:text-blue-700 transition border border-slate-200">
-                              {q}kg
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {/* Channel assignment — only shown for "both" model */}
-                      {distModel === "both" && (
-                        <div className="flex items-center gap-2 mt-2.5">
-                          <p className="text-[10px] text-slate-500 font-semibold w-20 flex-shrink-0">Channel:</p>
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => { const next = [...machineModes]; next[i] = "b2c"; setMachineModes(next); }}
-                              className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition
-                                ${modeVal === "b2c"
-                                  ? "bg-emerald-600 border-emerald-600 text-white"
-                                  : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600"}`}>
-                              B2C
-                            </button>
-                            <button
-                              onClick={() => { const next = [...machineModes]; next[i] = "b2b"; setMachineModes(next); }}
-                              className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition
-                                ${modeVal === "b2b"
-                                  ? "bg-blue-600 border-blue-600 text-white"
-                                  : "bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-600"}`}>
-                              B2B
-                            </button>
-                          </div>
-                          <span className={`text-[10px] ml-1 ${modeVal === "b2c" ? "text-emerald-600" : "text-blue-600"}`}>
-                            {modeVal === "b2c" ? "→ serves retail customers" : "→ serves business clients"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Total kg/cycle */}
-              {capsValid && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 flex items-center justify-between">
-                  <p className="text-xs text-slate-600 font-semibold">Total kg per cycle</p>
-                  <p className="text-sm font-mono font-bold text-slate-800">{totalKgPerCycle(parsedCaps).toLocaleString("en-IN")} kg</p>
-                </div>
-              )}
-
-              {/* ── B2C live revenue (3 scenarios) ── */}
-              {b2cScenarios && capsValid && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-3">
-                    B2C Revenue — 3 Scenarios
-                  </p>
-                  <div className="space-y-2">
-                    {b2cScenarios.map(sc => (
-                      <div key={sc.key} className={`rounded-xl p-3 border
-                        ${sc.color === "emerald" ? "bg-emerald-100 border-emerald-200"
-                          : sc.color === "blue" ? "bg-blue-50 border-blue-200"
-                          : "bg-amber-50 border-amber-200"}`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className={`text-xs font-bold
-                            ${sc.color === "emerald" ? "text-emerald-700"
-                              : sc.color === "blue" ? "text-blue-700" : "text-amber-700"}`}>
-                            {sc.label} · {SCENARIO_SEEDS[sc.key].cycles} cycles/day
-                          </p>
-                          <p className={`text-sm font-mono font-bold
-                            ${sc.color === "emerald" ? "text-emerald-700"
-                              : sc.color === "blue" ? "text-blue-700" : "text-amber-700"}`}>
-                            Rs {sc.totalRev.toLocaleString("en-IN")}
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 text-[10px] text-slate-500">
-                          <span>Daily: {sc.dailyKg.toLocaleString("en-IN")} kg</span>
-                          <span>Monthly: {sc.monthlyKg.toLocaleString("en-IN")} kg</span>
-                          <span>Laundry: Rs {Math.round(sc.laundryRev).toLocaleString("en-IN")}</span>
-                          <span>Dry clean: Rs {Math.round(sc.dcRev).toLocaleString("en-IN")}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-emerald-600 mt-2">
-                    Laundry {B2C_LAUNDRY_PCT}% @Rs {B2C_LAUNDRY_RATE}/kg · Dry clean {B2C_DC_PCT}% @{B2C_GPK} garments/kg @Rs {B2C_DC_RATE}/garment
-                  </p>
-                </div>
-              )}
-
-              {/* ── B2B live revenue ── */}
-              {b2bLive && capsValid && (
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-3">
-                    B2B Revenue Summary
-                    {b2bClientType === "mix" ? ` · Hostel ${hostelPct}% / Hotel ${hotelPct}%` : ` · ${b2bClientType === "hostel" ? "Hostel" : "Hotel"} 100%`}
-                  </p>
-                  <div className="space-y-2">
-                    {hostelPct > 0 && (
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-blue-700">Hostel · {b2bLive.hostelCyc} cyc/day · {b2bLive.hostelDailyKg.toLocaleString("en-IN")} kg/day</p>
-                        <p className="text-xs font-mono font-semibold text-blue-900">Rs {Math.round(b2bLive.hostelRev).toLocaleString("en-IN")}/mo</p>
-                      </div>
-                    )}
-                    {hotelPct > 0 && (
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-violet-700">Hotel · {b2bLive.hotelCyc} cyc/day · {b2bLive.hotelDailyKg.toLocaleString("en-IN")} kg/day</p>
-                        <p className="text-xs font-mono font-semibold text-violet-900">Rs {Math.round(b2bLive.hotelRev).toLocaleString("en-IN")}/mo</p>
-                      </div>
-                    )}
-                    <div className="border-t border-blue-200 pt-2 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-blue-800">Total monthly revenue</p>
-                        <p className="text-[10px] text-blue-500">{b2bLive.totalDailyKg.toLocaleString("en-IN")} kg/day · {b2bLive.totalMonthly.toLocaleString("en-IN")} kg/month</p>
-                      </div>
-                      <p className="text-lg font-mono font-bold text-emerald-600">
-                        Rs {Math.round(b2bLive.totalRev).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Channel balance warning for "both" model */}
-              {distModel === "both" && capsValid && (() => {
-                const hasB2C = machineModes.some(m => m === "b2c");
-                const hasB2B = machineModes.some(m => m === "b2b");
-                if (!hasB2C || !hasB2B) return (
-                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-                    <FiAlertTriangle size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-[11px] text-amber-700">
-                      You selected <strong>B2C + B2B</strong> but all machines are assigned to <strong>{!hasB2C ? "B2B" : "B2C"}</strong>.
-                      Assign at least one machine to each channel, or go back and choose a single-channel model.
-                    </p>
-                  </div>
-                );
-                return null;
-              })()}
-
-              <button onClick={handleFinish} disabled={!capsValid || (distModel === "both" && (!machineModes.some(m => m === "b2c") || !machineModes.some(m => m === "b2b")))}
-                className={`w-full h-11 rounded-xl text-sm font-semibold transition
-                  ${capsValid && (distModel !== "both" || (machineModes.some(m => m === "b2c") && machineModes.some(m => m === "b2b")))
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                Save & Continue →
-              </button>
-            </div>
-          )}
-
         </div>
       </div>
     </div>
@@ -1239,9 +544,10 @@ function DetailPanel({ out, assumptions }) {
     b2bActive ? `${b2bCycles} cyc B2B` : null,
   ].filter(Boolean).join(" + ") || "no machines assigned";
 
+  const mc = assumptions.machine_count || 2;
   const enabledMachines = [
     { l:"Machine 1", v:fmtKg(m1daily), sub: machineSub(assumptions.m1cap, assumptions.m1mode) },
-    { l:"Machine 2", v:fmtKg(m2daily), sub: machineSub(assumptions.m2cap, assumptions.m2mode) },
+    ...(mc >= 2 ? [{ l:"Machine 2", v:fmtKg(m2daily), sub: machineSub(assumptions.m2cap, assumptions.m2mode) }] : []),
     ...(assumptions.m3enabled ? [{ l:"Machine 3", v:fmtKg(m3daily), sub: machineSub(assumptions.m3cap, assumptions.m3mode) }] : []),
     ...(assumptions.m4enabled ? [{ l:"Machine 4", v:fmtKg(m4daily), sub: machineSub(assumptions.m4cap, assumptions.m4mode) }] : []),
     ...(assumptions.m5enabled ? [{ l:"Machine 5", v:fmtKg(m5daily), sub: machineSub(assumptions.m5cap, assumptions.m5mode) }] : []),
@@ -1300,26 +606,23 @@ function DetailPanel({ out, assumptions }) {
         </div>
         <table className="w-full text-sm">
           <tbody>
-            {b2cActive && (
-              <>
-                <tr className="border-b border-slate-100">
-                  <td className="px-4 py-2.5 text-slate-600">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400" />B2C Laundry ({fmtPct(assumptions.laundrySplit)})</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmtKg(laundryKg)}</td>
-                  <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(laundryRev)}</td>
-                </tr>
-                <tr className="border-b border-slate-100">
-                  <td className="px-4 py-2.5 text-slate-600">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400" />B2C Dry Clean ({fmtPct(assumptions.dcSplit)})</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmt(garments)} garments</td>
-                  <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(dcRev)}</td>
-                </tr>
-              </>
-            )}
+            {b2cActive && (<>
+              <tr className="border-b border-slate-100">
+                <td className="px-4 py-2.5 text-slate-600">
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400" />B2C Laundry ({fmtPct(assumptions.laundrySplit)})</span>
+                </td>
+                <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmtKg(laundryKg)}</td>
+                <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(laundryRev)}</td>
+              </tr>
+              <tr className="border-b border-slate-100">
+                <td className="px-4 py-2.5 text-slate-600">
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400" />B2C Dry Clean ({fmtPct(assumptions.dcSplit)})</span>
+                </td>
+                <td className="px-4 py-2.5 text-slate-400 font-mono text-xs text-right">{fmt(garments)} garments</td>
+                <td className="px-4 py-2.5 font-mono font-medium text-right">₹ {fmt(dcRev)}</td>
+              </tr>
+            </>)}
             {b2bActive && (<>
-              {/* Hostel sub-row (shown when hostel % > 0) */}
               {assumptions.hostelPct > 0 && (
                 <tr className="border-b border-slate-100">
                   <td className="px-4 py-2.5 text-slate-600">
@@ -1332,7 +635,6 @@ function DetailPanel({ out, assumptions }) {
                   <td className="px-4 py-2.5 font-mono font-medium text-right text-blue-700">₹ {fmt(hostelRev)}</td>
                 </tr>
               )}
-              {/* Hotel sub-row (shown when hotel % > 0) */}
               {assumptions.hotelPct > 0 && (
                 <tr className="border-b border-slate-100">
                   <td className="px-4 py-2.5 text-slate-600">
@@ -1345,7 +647,6 @@ function DetailPanel({ out, assumptions }) {
                   <td className="px-4 py-2.5 font-mono font-medium text-right text-indigo-700">₹ {fmt(hotelRev)}</td>
                 </tr>
               )}
-              {/* B2B total row */}
               <tr className="border-b border-slate-100 bg-blue-50/40">
                 <td className="px-4 py-2 text-slate-600 pl-8">
                   <span className="flex items-center gap-2">
@@ -1384,14 +685,9 @@ function DetailPanel({ out, assumptions }) {
                 <td className="px-4 py-2 font-mono text-right text-slate-700">₹ {fmt(v)}</td>
               </tr>
             ))}
-
-            {/* Electricity (auto) */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <FiZap size={11} className="text-teal-500" />
-                  Electricity <AutoBadge />
-                </span>
+                <span className="flex items-center gap-1.5"><FiZap size={11} className="text-teal-500" />Electricity <AutoBadge /></span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right leading-relaxed">
                 {b2cActive && <div>B2C: {fmt(Math.round(b2cElecUnits))} u → ₹{fmt(b2cElecCost)}</div>}
@@ -1401,49 +697,33 @@ function DetailPanel({ out, assumptions }) {
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(electricityCost)}</td>
             </tr>
-
-            {/* Water (auto) */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <FiDroplet size={11} className="text-teal-500" />
-                  Water <AutoBadge />
-                </span>
+                <span className="flex items-center gap-1.5"><FiDroplet size={11} className="text-teal-500" />Water <AutoBadge /></span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
                 {fmt(totalMonthlyCycles)} cyc × 60L × ₹0.38
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(waterCost)}</td>
             </tr>
-
-            {/* Detergent (auto) */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <FiInfo size={11} className="text-teal-500" />
-                  Detergent <AutoBadge />
-                </span>
+                <span className="flex items-center gap-1.5"><FiInfo size={11} className="text-teal-500" />Detergent <AutoBadge /></span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
                 {fmtKg(b2cMonthly + b2bMonthly)} × ₹5
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(detergentCost)}</td>
             </tr>
-
-            {/* Packaging (auto) */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <FiPackage size={11} className="text-teal-500" />
-                  Packaging <AutoBadge />
-                </span>
+                <span className="flex items-center gap-1.5"><FiPackage size={11} className="text-teal-500" />Packaging <AutoBadge /></span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
                 Laundry split {fmtPct(assumptions.laundrySplit)} tier
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(packagingCostVal)}</td>
             </tr>
-
             <tr className="bg-slate-50 font-semibold">
               <td className="px-4 py-2.5 text-slate-800">Total Expenses</td>
               <td />
@@ -1526,14 +806,6 @@ export default function Calculator() {
   const set         = (key, val) => setAssumptions(prev => ({ ...prev, [key]: val }));
   const handleReset = () => setAssumptions({ ...DEFAULT_ASSUMPTIONS });
 
-  // ── DS onboarding completion ──────────────────────────────────────────────────
-  const handleOnboardingComplete = (dsData) => {
-    setAssumptions(prev => ({ ...prev, ...dsData }));
-  };
-  // handleEditDS intentionally disabled — onboarding no longer used
-
-  // Onboarding is disabled — calculator opens directly
-
   const outputs   = Object.fromEntries(Object.keys(SCENARIO_SEEDS).map(k => [k, calcScenario(k, assumptions)]));
   const activeOut = outputs[activeScenario];
   const activeSt  = SS[SCENARIO_SEEDS[activeScenario].color];
@@ -1543,10 +815,14 @@ export default function Calculator() {
     ["delivery","Delivery"],["maintenance","Maintenance"],["overtime","Overtime"],["misc","Miscellaneous"],
   ];
 
-  const modes  = [assumptions.m1mode, assumptions.m2mode,
+  const mc     = assumptions.machine_count || 2;
+  const modes  = [
+    assumptions.m1mode,
+    ...(mc >= 2 ? [assumptions.m2mode] : []),
     ...(assumptions.m3enabled ? [assumptions.m3mode] : []),
     ...(assumptions.m4enabled ? [assumptions.m4mode] : []),
-    ...(assumptions.m5enabled ? [assumptions.m5mode] : [])];
+    ...(assumptions.m5enabled ? [assumptions.m5mode] : []),
+  ];
   const hasB2C = modes.some(machineDoesB2C);
   const hasB2B = modes.some(machineDoesB2B);
 
@@ -1581,7 +857,6 @@ export default function Calculator() {
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiRefreshCw size={12} /> Reset
               </button>
-
               <button onClick={() => navigate("/admin")}
                 className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-white/20 transition">
                 <FiArrowLeft size={12} /> Back
@@ -1607,26 +882,6 @@ export default function Calculator() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
 
-              {/* DS config summary */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400 mb-1">Distribution Strategy</p>
-                  <p className="text-xs font-semibold text-blue-800">
-                    {assumptions.distribution_model === "b2c" ? "B2C 100%"
-                     : assumptions.distribution_model === "b2b" && assumptions.b2b_client_type === "mix"
-                       ? `B2B 100% · Hostel ${assumptions.hostelPct}% / Hotel ${assumptions.hotelPct}%`
-                     : assumptions.distribution_model === "b2b" ? `B2B 100% · ${assumptions.b2b_client_type === "hotel" ? "Hotel" : "Hostel"}`
-                     : assumptions.distribution_model === "both" ? `B2C + B2B · ${assumptions.b2b_client_type === "hotel" ? "Hotel" : "Hostel"}`
-                     : "—"}
-                  </p>
-                  <p className="text-[10px] text-blue-600 mt-0.5">
-                    {assumptions.machine_count} machine{assumptions.machine_count > 1 ? "s" : ""}
-                    {assumptions.is_premium ? " · ★ Premium" : ""}
-                  </p>
-                </div>
-
-              </div>
-
               {/* Machine specs */}
               <SectionDivider>Machine specifications</SectionDivider>
               <FieldRow label="Machine 1 capacity" unit="kg/cycle">
@@ -1635,14 +890,12 @@ export default function Calculator() {
               <FieldRow label="Machine 1 channel" unit="assign to">
                 <ModeToggle value={assumptions.m1mode} onChange={v => set("m1mode", v)} />
               </FieldRow>
-              {assumptions.machine_count >= 2 && (<>
-                <FieldRow label="Machine 2 capacity" unit="kg/cycle">
-                  <NI value={assumptions.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
-                </FieldRow>
-                <FieldRow label="Machine 2 channel" unit="assign to">
-                  <ModeToggle value={assumptions.m2mode} onChange={v => set("m2mode", v)} />
-                </FieldRow>
-              </>)}
+              <FieldRow label="Machine 2 capacity" unit="kg/cycle">
+                <NI value={assumptions.m2cap} min={1} max={50} step={0.5} onChange={v => set("m2cap", v)} />
+              </FieldRow>
+              <FieldRow label="Machine 2 channel" unit="assign to">
+                <ModeToggle value={assumptions.m2mode} onChange={v => set("m2mode", v)} />
+              </FieldRow>
 
               <FieldRow label="Machine 3" unit="add new machine">
                 <Toggle enabled={assumptions.m3enabled} onToggle={() => set("m3enabled", !assumptions.m3enabled)}
@@ -1691,7 +944,7 @@ export default function Calculator() {
                 <NI value={assumptions.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
               </FieldRow>
 
-              {/* B2B client mix — only shown when at least one machine is B2B or Both */}
+              {/* B2B client mix */}
               {hasB2B && (<>
                 <SectionDivider>B2B client mix</SectionDivider>
                 <div className="mb-3">
