@@ -979,8 +979,8 @@ export default function Calculator() {
                       <NI value={assumptions.hostelPct} min={0} max={100} step={1}
                         onChange={v => {
                           const c = Math.min(100, Math.max(0, v));
-                          set("hostelPct", c); set("hotelPct", 100 - c);
-                          set("b2bClientType", c >= 50 ? "hostel" : "hotel");
+                          set("hostelPct", c);
+                          set("b2bClientType", c >= assumptions.hotelPct ? "hostel" : "hotel");
                         }} />
                     </div>
                     <div>
@@ -988,14 +988,19 @@ export default function Calculator() {
                       <NI value={assumptions.hotelPct} min={0} max={100} step={1}
                         onChange={v => {
                           const c = Math.min(100, Math.max(0, v));
-                          set("hotelPct", c); set("hostelPct", 100 - c);
-                          set("b2bClientType", (100 - c) >= 50 ? "hostel" : "hotel");
+                          set("hotelPct", c);
+                          set("b2bClientType", assumptions.hostelPct >= c ? "hostel" : "hotel");
                         }} />
                     </div>
                   </div>
-                  {Math.abs(assumptions.hostelPct + assumptions.hotelPct - 100) > 0.1 && (
+                  {(assumptions.hostelPct + assumptions.hotelPct > 100) && (
                     <p className="text-[10px] text-red-500 flex items-center gap-1 mb-2">
-                      <FiAlertTriangle size={10} /> Must sum to 100% (currently {assumptions.hostelPct + assumptions.hotelPct}%)
+                      <FiAlertTriangle size={10} /> Total exceeds 100% (currently {assumptions.hostelPct + assumptions.hotelPct}%) — reduce one value
+                    </p>
+                  )}
+                  {(assumptions.hostelPct + assumptions.hotelPct < 100) && (assumptions.hostelPct + assumptions.hotelPct > 0) && (
+                    <p className="text-[10px] text-amber-500 flex items-center gap-1 mb-2">
+                      <FiAlertTriangle size={10} /> Total is {assumptions.hostelPct + assumptions.hotelPct}% — remaining {100 - assumptions.hostelPct - assumptions.hotelPct}% won't be counted
                     </p>
                   )}
                   <div className="flex rounded-xl overflow-hidden h-7 border border-slate-200 mb-1">
