@@ -6,17 +6,18 @@ import { db } from "../firebase";
 // Default metrics shape must match what InvestorMetrics.jsx expects.
 // Default metrics shape must match what InvestorMetrics.jsx expects.
 const DEFAULT_METRICS = {
-    reportVersion: "2026.2", // Used to trigger force-updates on old DB docs
+    reportVersion: "2026.3", // Used to trigger force-updates on old DB docs
     reportTitle: "Andes Net Profits & Monthly Revenue",
     reportUpdatedOn: "May 2026",
-    summaryPeriod: "Jan–Apr 2026",
     growthComparisonPeriod: "Q4 2025 vs Q1 2026",
+    summaryPeriod: "Jan-May 2026",
+    ltdPeriodNote: "LTD Period: Nov 2024 - May 2026",
 
     // Snapshot KPIs
-    totalRevenue: 469438,
+    totalRevenue: 1070000,
     qoqGrowthPct: 80.3,
     arrr: 1640000,
-    gmv: 955157,
+    gmv: 1070000,
 
     // Revenue mix
     b2bShare: 88.7,
@@ -63,6 +64,7 @@ const DEFAULT_METRICS = {
         { month: "Feb 2026", b2cRevenue: 18233, b2bRevenue: 147510, totalRevenue: 165743, b2cShare: 11.0, b2bShare: 89.0 },
         { month: "Mar 2026", b2cRevenue: 15585, b2bRevenue: 102872, totalRevenue: 118457, b2cShare: 13.2, b2bShare: 86.8 },
         { month: "Apr 2026", b2cRevenue: 18911, b2bRevenue: 107166, totalRevenue: 126077, b2cShare: 15.0, b2bShare: 85.0 },
+        { month: "May 2026", b2cRevenue: 0,     b2bRevenue: 114843, totalRevenue: 114843, b2cShare: 0,    b2bShare: 100 },
     ],
 };
 
@@ -110,7 +112,7 @@ export function useInvestorMetrics() {
                     const data = docSnap.data();
                     
                     if (data.reportVersion !== DEFAULT_METRICS.reportVersion || data.reportTitle !== DEFAULT_METRICS.reportTitle) {
-                        console.log("Upgrading investor dashboard to version 2026.1...");
+                        console.log(`Upgrading investor dashboard to version ${DEFAULT_METRICS.reportVersion}...`);
                         await setDoc(docRef, DEFAULT_METRICS);
                         setMetrics(DEFAULT_METRICS);
                     } else {

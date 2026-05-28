@@ -18,6 +18,25 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
+const MONTHLY_CAPACITY_KG = 5980;
+
+function formatKg(value) {
+  const rounded = Math.round(Number(value) || 0);
+  return rounded.toLocaleString("en-IN");
+}
+
+function getServiceMixKey(order) {
+  const serviceText = [
+    order.service,
+    order.serviceBreakdownSummary,
+    ...(order.serviceBreakdown || []).map((line) => line.name || line.serviceType),
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if (serviceText.includes("dry clean") || serviceText.includes("dryclean")) return "dryClean";
+  if (serviceText.includes("iron")) return "washIron";
+  return "washFold";
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MOCK DATA: Andes Mandatory Data Analysis
 // ═══════════════════════════════════════════════════════════════════
@@ -371,6 +390,42 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       hasData: b2cOrders.length > 0,
     };
   }, [orders]);
+
+  const livePhase3 = useMemo(() => {
+    const monthStart = `${todayStr.slice(0, 7)}-01`;
+    const capacityOrders = orders.filter((order) =>
+      order.category !== "ISSUES"
+      && order.type !== "issue"
+      && order.status !== "Cancelled"
+      && order.date >= monthStart
+      && order.date <= todayStr
+    );
+
+    const processedKg = capacityOrders.reduce((sum, order) => sum + (Number(order.weight) || 0), 0);
+    const totalOrders = capacityOrders.length;
+    const remainingKg = Math.max(0, MONTHLY_CAPACITY_KG - processedKg);
+    const utilizationPct = Math.min(100, Math.round((processedKg / MONTHLY_CAPACITY_KG) * 100));
+    const avgKgPerOrder = totalOrders > 0 ? processedKg / totalOrders : 0;
+    const mixTotals = capacityOrders.reduce((mix, order) => {
+      const key = getServiceMixKey(order);
+      mix[key] += Number(order.weight) || 0;
+      return mix;
+    }, { washFold: 0, washIron: 0, dryClean: 0 });
+    const mixKg = Object.values(mixTotals).reduce((sum, value) => sum + value, 0);
+    const serviceMix = Object.fromEntries(
+      Object.entries(mixTotals).map(([key, value]) => [key, mixKg > 0 ? Math.round((value / mixKg) * 100) : 0])
+    );
+
+    return {
+      avgKgPerOrder,
+      fullCapacity: MONTHLY_CAPACITY_KG,
+      processedKg,
+      remainingKg,
+      serviceMix,
+      totalOrders,
+      utilizationPct,
+    };
+  }, [orders, todayStr]);
 
   // ── Expenses listener (b2b_expenses) ──────────────────────────
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -776,31 +831,31 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-1">
-                  <span>Kg Processed</span>
-                  <span className="text-slate-800">{d.phase3.capacity.processedKg} / {d.phase3.capacity.fullCapacity} kg</span>
+                  <span>Current Occupied</span>
+                  <span className="text-slate-800">{formatKg(livePhase3.processedKg)} / {formatKg(livePhase3.fullCapacity)} kg</span>
                 </div>
                 <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${d.phase3.capacity.utilizationPct}%` }} />
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${livePhase3.utilizationPct}%` }} />
                 </div>
-                <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{d.phase3.capacity.utilizationPct}% Utilized · {d.phase3.capacity.idleKg}kg Idle</p>
+                <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{livePhase3.utilizationPct}% Utilized · {formatKg(livePhase3.remainingKg)} kg Remaining</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <StatCard label="Total Orders" value={d.phase3.capacity.totalOrders} />
-                <StatCard label="Avg Kg/Order" value={d.phase3.capacity.avgKgPerOrder} />
+                <StatCard label="Total Orders" value={livePhase3.totalOrders} />
+                <StatCard label="Avg Kg/Order" value={livePhase3.avgKgPerOrder.toFixed(1)} />
               </div>
 
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Service Mix</p>
                 <div className="flex h-3 rounded-full overflow-hidden mb-2">
-                  <div className="bg-blue-500" style={{ width: `${d.phase3.capacity.serviceMix.washFold}%` }} />
-                  <div className="bg-purple-500" style={{ width: `${d.phase3.capacity.serviceMix.washIron}%` }} />
-                  <div className="bg-emerald-500" style={{ width: `${d.phase3.capacity.serviceMix.dryClean}%` }} />
+                  <div className="bg-blue-500" style={{ width: `${livePhase3.serviceMix.washFold}%` }} />
+                  <div className="bg-purple-500" style={{ width: `${livePhase3.serviceMix.washIron}%` }} />
+                  <div className="bg-emerald-500" style={{ width: `${livePhase3.serviceMix.dryClean}%` }} />
                 </div>
                 <div className="flex justify-between text-[9px] font-bold text-slate-500">
-                  <span className="text-blue-600">W&F {d.phase3.capacity.serviceMix.washFold}%</span>
-                  <span className="text-purple-600">W&I {d.phase3.capacity.serviceMix.washIron}%</span>
-                  <span className="text-emerald-600">DC {d.phase3.capacity.serviceMix.dryClean}%</span>
+                  <span className="text-blue-600">W&F {livePhase3.serviceMix.washFold}%</span>
+                  <span className="text-purple-600">W&I {livePhase3.serviceMix.washIron}%</span>
+                  <span className="text-emerald-600">DC {livePhase3.serviceMix.dryClean}%</span>
                 </div>
               </div>
             </div>

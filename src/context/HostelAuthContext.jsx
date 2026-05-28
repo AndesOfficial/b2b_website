@@ -7,6 +7,18 @@ import { normalizeOrder, normalizePropertyName } from "../utils/orderNormalizati
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
 
 const HostelAuthContext = createContext(null);
+const EXTERNAL_ORDER_SOURCES = new Set(["website", "cartdetails"]);
+
+function isVisibleMergedOrder(order) {
+  if (order.isDeleted) return false;
+
+  if (!EXTERNAL_ORDER_SOURCES.has(order.source)) return true;
+
+  const isRegularRetailOrder = order.type === ORDER_TYPES.REGULAR || order.category === ORDER_CATEGORIES.B2C_RETAIL;
+  if (!isRegularRetailOrder) return true;
+
+  return Number(order.amount) > 0;
+}
 
 export function HostelAuthProvider({ children }) {
   const [client, setClient] = useState(() => {
@@ -232,7 +244,7 @@ export function HostelAuthProvider({ children }) {
     });
 
     const merged = [...primaryRecordsMap.values()];
-    return merged.filter((order) => !order.isDeleted);
+    return merged.filter(isVisibleMergedOrder);
   }, [cartOrders, b2bOrders, firestoreEdits, websiteOrders]);
 
   const orders = useMemo(() => {
