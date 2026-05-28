@@ -121,6 +121,7 @@ function SectionHeading({ eyebrow, title, titleTooltip, description, aside }) {
 
 function SnapshotMetric({ label, tooltip, value, note, icon: Icon, tone = "slate" }) {
   const theme = SNAPSHOT_TONES[tone] || SNAPSHOT_TONES.slate;
+  const displayNote = label === "Total Revenue" ? (note || "LTD Period: Nov 2024 - May 2026") : note;
 
   return (
     <div className={`rounded-[28px] border p-4 shadow-sm lg:p-5 ${theme.panel}`}>
@@ -130,7 +131,7 @@ function SnapshotMetric({ label, tooltip, value, note, icon: Icon, tone = "slate
             <LabelWithInfo text={label} tooltip={tooltip} />
           </div>
           <p className="mt-1.5 text-[1.95rem] font-extrabold tracking-tight leading-none text-slate-950 lg:text-[2.1rem]">{value}</p>
-          {note ? <p className="mt-2 text-sm leading-6 text-slate-600">{note}</p> : null}
+          {displayNote ? <p className="mt-2 text-sm leading-6 text-slate-600">{displayNote}</p> : null}
         </div>
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${theme.icon}`}>
           <Icon size={18} />
@@ -283,8 +284,8 @@ export default function InvestorMetrics() {
             <SnapshotMetric
               label="Total Revenue"
               tooltip="Cumulative revenue generated since operations began in Nov 2024."
-              value={formatCurrencyCompact(metrics.gmv)}
-              note="LTD Period: Nov 2024 – Apr 2026"
+              value={formatCurrencyCompact(metrics.totalRevenue)}
+              note={metrics.ltdPeriodNote}
               icon={IndianRupee}
               tone="blue"
             />
@@ -359,7 +360,7 @@ export default function InvestorMetrics() {
         <SectionHeading
           eyebrow="Revenue Trend"
           title="Monthly growth trajectory"
-          titleTooltip="Monthly B2C and B2B revenue trend from Nov 2024 to Mar 2026, with a line for total revenue."
+          titleTooltip="Monthly B2C and B2B revenue trend from Nov 2024 to May 2026, with a line for total revenue."
           description="The main chart is the hero visual so investors can read the business momentum before drilling into detailed rows."
           aside={
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -562,7 +563,7 @@ export default function InvestorMetrics() {
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl bg-white px-4 py-4 text-left shadow-sm">
             <div>
               <p className="text-sm font-extrabold tracking-tight text-slate-950">Detailed monthly data</p>
-              <p className="mt-1 text-sm text-slate-500">Open to review the full Nov 2024 to Mar 2026 table.</p>
+              <p className="mt-1 text-sm text-slate-500">Open to review the full Nov 2024 to May 2026 table.</p>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 group-open:bg-blue-50 group-open:text-blue-600">
               Expand

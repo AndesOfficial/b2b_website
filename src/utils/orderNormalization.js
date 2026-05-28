@@ -136,6 +136,15 @@ function normalizeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function firstPositiveNumber(...values) {
+  for (const value of values) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+
+  return 0;
+}
+
 export function normalizePropertyName(value) {
   const trimmed = String(value || "").trim();
   if (!trimmed) return "Unknown Property";
@@ -274,7 +283,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     ...(rawOrder.createdAt !== undefined ? { createdAtRaw: rawOrder.createdAt } : {}),
     ...(rawOrder.updatedAt !== undefined ? { updatedAtRaw: rawOrder.updatedAt } : {}),
     date: normalizeDate(rawOrder.date || rawOrder.createdAt),
-    amount: normalizeNumber(rawOrder.amount ?? rawOrder.totalPrice),
+    amount: firstPositiveNumber(rawOrder.amount, rawOrder.totalPrice),
     items: normalizeNumber(rawOrder.items, itemsFromPartnerMap),
     weight: normalizeNumber(rawOrder.weight),
     studentCount: normalizeNumber(rawOrder.studentCount),
@@ -326,11 +335,17 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.property = "Regular Customers";
     normalized.channel = mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel);
     normalized.serviceBreakdown = breakdown;
-  normalized.serviceBreakdownSummary = summaryParts.join(", ");
-  const firstService = breakdown[0]?.name || "Regular Service";
-  normalized.service = breakdown.length <= 1 ? firstService : `${firstService} + ${breakdown.length - 1} more`;
-  normalized.amount = normalizeNumber(rawOrder.totalCost ?? rawOrder.totalWithFee ?? rawOrder.originalTotalCost ?? rawOrder.originalAmount);
-  const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    normalized.serviceBreakdownSummary = summaryParts.join(", ");
+    const firstService = breakdown[0]?.name || "Regular Service";
+    normalized.service = breakdown.length <= 1 ? firstService : `${firstService} + ${breakdown.length - 1} more`;
+    normalized.amount = firstPositiveNumber(
+      rawOrder.totalCost,
+      rawOrder.totalWithFee,
+      rawOrder.originalTotalCost,
+      rawOrder.originalAmount,
+      rawOrder.amount,
+    );
+    const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
     normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
     normalized.weight = normalizeNumber(rawOrder.clothesWeightKg ?? normalized.weight);
     normalized.status = normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus || rawOrder.paymentStatus);

@@ -64,6 +64,11 @@ const ServiceCard = ({ label, count }) => (
 export default function AdminAnalyticsTab({ orders, screens = [], searches = [], totalUsers = 0 }) {
     const [subTab, setSubTab] = useState("stats");
 
+    // Filter to exclude issues and cancelled orders (consistent with Overview dashboard)
+    const activeOrders = orders.filter(o => 
+        o.category !== "ISSUES" && o.type !== "issue" && o.status !== "Cancelled"
+    );
+
     // Calculate real data from orders for "Services Ordered"
     const serviceStats = useMemo(() => {
         const stats = {
@@ -81,7 +86,7 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
             "Other": 0
         };
 
-        orders.forEach(o => {
+        activeOrders.forEach(o => {
             const service = (o.service || "").toLowerCase();
             if (service.includes("wash") && service.includes("fold")) stats["Wash & Fold"]++;
             else if (service.includes("wash") && service.includes("iron")) stats["Wash & Iron"]++;
@@ -100,11 +105,11 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
         return Object.entries(stats)
             .filter(([_, count]) => count > 0)
             .sort((a, b) => b[1] - a[1]);
-    }, [orders]);
+    }, [activeOrders]);
 
     const totalRevenue = useMemo(() => {
-        return orders.filter(o => o.type === "regular").reduce((acc, o) => acc + (parseFloat(o.amount) || 0), 0);
-    }, [orders]);
+        return activeOrders.filter(o => o.type === "regular").reduce((acc, o) => acc + (parseFloat(o.amount) || 0), 0);
+    }, [activeOrders]);
 
     return (
         <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -158,7 +163,7 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <StatCard 
                                 label="Total Orders" 
-                                value={orders.length} 
+                                value={activeOrders.length} 
                                 icon={<FiShoppingBag />} 
                                 color="indigo"
                                 subValue="Overall Total"
