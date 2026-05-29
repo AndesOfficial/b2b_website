@@ -297,7 +297,6 @@ function calcScenario(scenarioKey, a) {
   const pkgBreakdown     = b2cActive ? calcPackagingBreakdown(laundryKg, dcKg, a, pkgDcPerGarment) : null;
   const packagingCostVal = b2cActive ? (pkgBreakdown ? pkgBreakdown.total : 0) : 0;
 
-  // ── Updated: uses deliveryVehicleRent instead of delivery ──
   const totalSalaries = (a.workers || []).reduce((sum, w) => sum + (w.salary || 0), 0);
   const totalExp = a.rent + totalSalaries + electricityCost + waterCost +
                    packagingCostVal + detergentCost + a.deliveryVehicleRent + a.maintenance + a.overtime + a.misc;
@@ -433,6 +432,109 @@ function DerivedRow({ label, formula, value }) {
         {formula && <p className="text-[9px] text-slate-300 font-mono">{formula}</p>}
       </div>
       <p className="text-[10px] font-mono font-semibold text-teal-700 ml-2 whitespace-nowrap">{value}</p>
+    </div>
+  );
+}
+
+// ─── Machine Setup Panel (inline in left panel) ───────────────────────────────
+function MachineSetupPanel({ assumptions, set }) {
+  const a = assumptions;
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden mb-1">
+      <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-100">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Machine setup</p>
+      </div>
+      <div className="px-3 py-3 space-y-3">
+        {/* Machine 1 — always shown */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Machine 1</p>
+          <FieldRow label="Capacity" unit="kg/cycle">
+            <NI value={a.m1cap} min={0} max={50} step={0.5} onChange={v => set("m1cap", v)} />
+          </FieldRow>
+          <FieldRow label="Channel" unit="assign to">
+            <ModeToggle value={a.m1mode} onChange={v => set("m1mode", v)} />
+          </FieldRow>
+        </div>
+
+        {/* Machine 2 — always shown */}
+        <div className="space-y-1.5 pt-2 border-t border-slate-100">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Machine 2</p>
+          <FieldRow label="Capacity" unit="kg/cycle">
+            <NI value={a.m2cap} min={0} max={50} step={0.5} onChange={v => set("m2cap", v)} />
+          </FieldRow>
+          <FieldRow label="Channel" unit="assign to">
+            <ModeToggle value={a.m2mode} onChange={v => set("m2mode", v)} />
+          </FieldRow>
+        </div>
+
+        {/* Machine 3 */}
+        <div className="pt-2 border-t border-slate-100">
+          <FieldRow label="Machine 3" unit="add new machine">
+            <Toggle enabled={a.m3enabled} onToggle={() => set("m3enabled", !a.m3enabled)}
+              labelOn="Added ✓" labelOff="+ Add Machine 3"
+              colorOn="bg-violet-600 border-violet-600 text-white" />
+          </FieldRow>
+          {a.m3enabled && (
+            <div className="space-y-1.5 mt-1">
+              <FieldRow label="Capacity" unit="kg/cycle">
+                <NI value={a.m3cap} min={0} max={50} step={0.5} onChange={v => set("m3cap", v)} />
+              </FieldRow>
+              <FieldRow label="Channel" unit="assign to">
+                <ModeToggle value={a.m3mode} onChange={v => set("m3mode", v)} />
+              </FieldRow>
+            </div>
+          )}
+        </div>
+
+        {/* Machine 4 — only if M3 enabled */}
+        {a.m3enabled && (
+          <div className="pt-2 border-t border-slate-100">
+            <FieldRow label="Machine 4" unit="add new machine">
+              <Toggle enabled={a.m4enabled} onToggle={() => set("m4enabled", !a.m4enabled)}
+                labelOn="Added ✓" labelOff="+ Add Machine 4"
+                colorOn="bg-violet-600 border-violet-600 text-white" />
+            </FieldRow>
+            {a.m4enabled && (
+              <div className="space-y-1.5 mt-1">
+                <FieldRow label="Capacity" unit="kg/cycle">
+                  <NI value={a.m4cap} min={0} max={50} step={0.5} onChange={v => set("m4cap", v)} />
+                </FieldRow>
+                <FieldRow label="Channel" unit="assign to">
+                  <ModeToggle value={a.m4mode} onChange={v => set("m4mode", v)} />
+                </FieldRow>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Machine 5 — only if M4 enabled */}
+        {a.m4enabled && (
+          <div className="pt-2 border-t border-slate-100">
+            <FieldRow label="Machine 5" unit="add new machine">
+              <Toggle enabled={a.m5enabled} onToggle={() => set("m5enabled", !a.m5enabled)}
+                labelOn="Added ✓" labelOff="+ Add Machine 5"
+                colorOn="bg-violet-600 border-violet-600 text-white" />
+            </FieldRow>
+            {a.m5enabled && (
+              <div className="space-y-1.5 mt-1">
+                <FieldRow label="Capacity" unit="kg/cycle">
+                  <NI value={a.m5cap} min={0} max={50} step={0.5} onChange={v => set("m5cap", v)} />
+                </FieldRow>
+                <FieldRow label="Channel" unit="assign to">
+                  <ModeToggle value={a.m5mode} onChange={v => set("m5mode", v)} />
+                </FieldRow>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Working days */}
+        <div className="pt-2 border-t border-slate-100">
+          <FieldRow label="Working days / month" unit="days">
+            <NI value={a.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
+          </FieldRow>
+        </div>
+      </div>
     </div>
   );
 }
@@ -683,7 +785,7 @@ function MachineRecommendation({ assumptions }) {
   );
 }
 
-// ─── Edit Configuration Modal ─────────────────────────────────────────────────
+// ─── Edit Configuration Modal (pricing & rates only) ─────────────────────────
 function ConfigModal({ assumptions, set, onClose, hasB2B }) {
   const a = assumptions;
   const splitTotal = a.laundrySplit + a.dcSplit;
@@ -700,7 +802,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
   const m10_costPerKg     = (a.water10kg / a.practicalLoad10kg * a.waterRate).toFixed(2);
   const m15_waterPerKg    = (a.water15kg / a.practicalLoad15kg).toFixed(3);
   const m15_costPerKg     = (a.water15kg / a.practicalLoad15kg * a.waterRate).toFixed(2);
-  const pkgDcPerGarment   = (a.pkgDcPolythene + a.pkgDcCollar + a.pkgDcCardboard + a.pkgDcClipping + a.pkgDcWhitePaper).toFixed(1);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -719,43 +820,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
-
-          {/* ── MACHINE SETUP ── */}
-          <SectionDivider>Machine setup</SectionDivider>
-          <FieldRow label="Machine 1 capacity" unit="kg/cycle"><NI value={a.m1cap} min={0} max={50} step={0.5} onChange={v => set("m1cap", v)}/></FieldRow>
-          <FieldRow label="Machine 1 channel" unit="assign to"><ModeToggle value={a.m1mode} onChange={v => set("m1mode", v)}/></FieldRow>
-          <FieldRow label="Machine 2 capacity" unit="kg/cycle"><NI value={a.m2cap} min={0} max={50} step={0.5} onChange={v => set("m2cap", v)}/></FieldRow>
-          <FieldRow label="Machine 2 channel" unit="assign to"><ModeToggle value={a.m2mode} onChange={v => set("m2mode", v)}/></FieldRow>
-
-          <FieldRow label="Machine 3" unit="add new machine">
-            <Toggle enabled={a.m3enabled} onToggle={() => set("m3enabled", !a.m3enabled)} labelOn="Added ✓" labelOff="+ Add Machine 3" colorOn="bg-violet-600 border-violet-600 text-white"/>
-          </FieldRow>
-          {a.m3enabled && (<>
-            <FieldRow label="Machine 3 capacity" unit="kg/cycle"><NI value={a.m3cap} min={0} max={50} step={0.5} onChange={v => set("m3cap", v)}/></FieldRow>
-            <FieldRow label="Machine 3 channel" unit="assign to"><ModeToggle value={a.m3mode} onChange={v => set("m3mode", v)}/></FieldRow>
-          </>)}
-          {a.m3enabled && (
-            <FieldRow label="Machine 4" unit="add new machine">
-              <Toggle enabled={a.m4enabled} onToggle={() => set("m4enabled", !a.m4enabled)} labelOn="Added ✓" labelOff="+ Add Machine 4" colorOn="bg-violet-600 border-violet-600 text-white"/>
-            </FieldRow>
-          )}
-          {a.m4enabled && (<>
-            <FieldRow label="Machine 4 capacity" unit="kg/cycle"><NI value={a.m4cap} min={0} max={50} step={0.5} onChange={v => set("m4cap", v)}/></FieldRow>
-            <FieldRow label="Machine 4 channel" unit="assign to"><ModeToggle value={a.m4mode} onChange={v => set("m4mode", v)}/></FieldRow>
-          </>)}
-          {a.m4enabled && (
-            <FieldRow label="Machine 5" unit="add new machine">
-              <Toggle enabled={a.m5enabled} onToggle={() => set("m5enabled", !a.m5enabled)} labelOn="Added ✓" labelOff="+ Add Machine 5" colorOn="bg-violet-600 border-violet-600 text-white"/>
-            </FieldRow>
-          )}
-          {a.m5enabled && (<>
-            <FieldRow label="Machine 5 capacity" unit="kg/cycle"><NI value={a.m5cap} min={0} max={50} step={0.5} onChange={v => set("m5cap", v)}/></FieldRow>
-            <FieldRow label="Machine 5 channel" unit="assign to"><ModeToggle value={a.m5mode} onChange={v => set("m5mode", v)}/></FieldRow>
-          </>)}
-
-          <FieldRow label="Working days / month" unit="days">
-            <NI value={a.workdays} min={1} max={31} onChange={v => set("workdays", v)}/>
-          </FieldRow>
 
           {/* ── B2C PRICING ── */}
           <SectionDivider>B2C pricing</SectionDivider>
@@ -1009,7 +1073,6 @@ function DetailPanel({ out, assumptions }) {
     { l:"Combined daily", v:fmtKg(b2cDailyKg+b2bDailyKg), sub: combinedSub },
   ];
 
-  // ── Updated: split salaries row into dynamic workers, use deliveryVehicleRent ──
   const fixedExpRows = [
     ["Rent", a.rent],
     ...(a.workers || []).map(w => [w.name, w.salary]),
@@ -1237,7 +1300,6 @@ export default function Calculator() {
   const activeOut = outputs[activeScenario];
   const activeSt  = SS[SCENARIO_SEEDS[activeScenario].color];
 
-  // ── Updated: deliveryVehicleRent replaces delivery; misc → Petty Expenses ──
   const expFields = [
     ["rent",                "Rent"],
     ["deliveryVehicleRent", "Delivery Vehicle Rent"],
@@ -1309,6 +1371,11 @@ export default function Calculator() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
 
+              {/* ── MACHINE SETUP (moved here from modal) ── */}
+              <SectionDivider>Machine setup</SectionDivider>
+              <MachineSetupPanel assumptions={assumptions} set={set} />
+
+              {/* ── B2B CLIENT MIX ── */}
               {hasB2B && (<>
                 <SectionDivider>B2B client mix</SectionDivider>
                 <div className="mb-3">
@@ -1338,6 +1405,7 @@ export default function Calculator() {
                 </div>
               </>)}
 
+              {/* ── PRICING CONFIGURATION ── */}
               <SectionDivider>Pricing configuration</SectionDivider>
               <div className="flex gap-2 mb-2.5">
                 <div className={`flex-1 rounded-lg px-2.5 py-2 border text-center ${hasB2C?"bg-emerald-50 border-emerald-200":"bg-slate-50 border-slate-200"}`}>
@@ -1351,7 +1419,7 @@ export default function Calculator() {
               </div>
               <button onClick={() => setShowConfig(true)}
                 className="w-full h-9 bg-slate-800 text-white rounded-xl text-xs font-semibold hover:bg-slate-700 transition flex items-center justify-center gap-1.5 mb-1">
-                <FiSettings size={13}/> Edit Configuration
+                <FiSettings size={13}/> Edit Pricing & Rates
               </button>
 
               <SectionDivider>Auto-calculated costs</SectionDivider>
