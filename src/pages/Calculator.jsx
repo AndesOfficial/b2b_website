@@ -527,13 +527,7 @@ function MachineSetupPanel({ assumptions, set }) {
             )}
           </div>
         )}
-
-        {/* Working days */}
-        <div className="pt-2 border-t border-slate-100">
-          <FieldRow label="Working days / month" unit="days">
-            <NI value={a.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
-          </FieldRow>
-        </div>
+        {/* Working days intentionally removed — now lives in Edit Configuration modal */}
       </div>
     </div>
   );
@@ -820,6 +814,12 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
+
+          {/* ── OPERATIONS (Working days) ── */}
+          <SectionDivider>Operations</SectionDivider>
+          <FieldRow label="Working days / month" unit="days">
+            <NI value={a.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
+          </FieldRow>
 
           {/* ── B2C PRICING ── */}
           <SectionDivider>B2C pricing</SectionDivider>
@@ -1371,7 +1371,7 @@ export default function Calculator() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
 
-              {/* ── MACHINE SETUP (moved here from modal) ── */}
+              {/* ── MACHINE SETUP ── */}
               <SectionDivider>Machine setup</SectionDivider>
               <MachineSetupPanel assumptions={assumptions} set={set} />
 
