@@ -11,69 +11,125 @@ const SCENARIO_SEEDS = {
   conservative: { cycles: 10, label: "Conservative", color: "amber",   icon: "down", desc: "6h 40m · 10 cycles/day — conservative" },
 };
 
+// ─── LG Machine Specs (from PDF) ─────────────────────────────────────────────
+// Cycle duration: 40 min = 40/60 hr = 0.6667 hr
+const CYCLE_HOURS = 40 / 60;
+
+const LG_KWH = {
+  "10kg": {
+    washerCold_kwh:    0.333,   // 0.5 kW  × 0.6667 hr
+    washerHot_kwh:     1.400,   // 2.1 kW  × 0.6667 hr
+    dryer_kwh:         0.167,   // 0.25 kW × 0.6667 hr
+    combined_cold_kwh: 0.500,   // washer(cold) + dryer
+    combined_hot_kwh:  1.567,   // washer(hot)  + dryer
+  },
+  "15kg": {
+    washerCold_kwh:    0.333,   // 0.5 kW  × 0.6667 hr
+    washerHot_kwh:     1.467,   // 2.2 kW  × 0.6667 hr
+    dryer_kwh:         0.233,   // 0.35 kW × 0.6667 hr
+    combined_cold_kwh: 0.566,   // washer(cold) + dryer
+    combined_hot_kwh:  1.700,   // washer(hot)  + dryer
+  },
+};
+
+// ─── Water specs (from PDF + image) ──────────────────────────────────────────
+// 10 KG machine: 65 L/cycle, 8 KG practical load  → 8.125 L/KG → ₹3.09/KG
+// 15 KG machine: 95 L/cycle, 13 KG practical load → 7.31 L/KG  → ₹2.78/KG
+const LG_WATER          = { "10kg": 65, "15kg": 95 };
+const LG_PRACTICAL_LOAD = { "10kg": 8,  "15kg": 13 };
+
+function getSpecKey(cap) { return cap <= 10 ? "10kg" : "15kg"; }
+
+function getLGSpec(cap) {
+  const k = getSpecKey(cap);
+  return {
+    waterLitres:   LG_WATER[k],
+    practicalLoad: LG_PRACTICAL_LOAD[k],
+    // Derived water metrics (mirrors PDF calculation chain)
+    waterPerKg:    LG_WATER[k] / LG_PRACTICAL_LOAD[k],                      // litres per KG
+    waterCostPerKg:(LG_WATER[k] / LG_PRACTICAL_LOAD[k]) * WATER_RATE,       // ₹ per KG
+  };
+}
+
+function calcMachineElecKwh(cap) {
+  const k   = getSpecKey(cap);
+  const kwh = LG_KWH[k];
+  return {
+    washerCold_kwh:    kwh.washerCold_kwh,
+    washerHot_kwh:     kwh.washerHot_kwh,
+    dryer_kwh:         kwh.dryer_kwh,
+    combined_cold_kwh: kwh.combined_cold_kwh,
+    combined_hot_kwh:  kwh.combined_hot_kwh,
+  };
+}
+
 // ─── Auto-cost constants ──────────────────────────────────────────────────────
-const ELEC_RATE           = 13.80; // ₹/unit (kWh)
-const B2C_UNITS_PER_CYCLE = 8;    // units per cycle
-const B2B_KWH_PER_KG      = 0.331; // kWh per kg (washing machine)
-const DRYER_KWH_PER_KG    = 0.415; // kWh per kg (dryer)
-const WATER_LITRES_CYCLE  = 60;   // litres per cycle
-const WATER_RATE          = 0.38; // ₹/litre
-const DETERGENT_RATE      = 5;    // ₹/kg
+const ELEC_RATE      = 13.80;
+const WATER_RATE     = 0.38;
+const DETERGENT_RATE = 5;
 
-// Packaging: tiered by utilisation % of B2C monthly kg capacity
-const PKG_TIERS = [
-  { upto: 25,  cost: 3920  },
-  { upto: 35,  cost: 5236  },
-  { upto: 80,  cost: 12514 },
-  { upto: 100, cost: 15760 },
-];
+// ─── Packaging constants (from PDF — B2C ONLY) ────────────────────────────────
+const PKG_WASH_IRON_BAG_COST        = 5;
+const PKG_WASH_IRON_CLOTHES_PER_BAG = 12;
+const PKG_WASH_IRON_CLOTHES_PER_KG  = 4;
+const PKG_WASH_FOLD_PER_KG          = 0.83;
+const PKG_DC_POLYTHENE   = 4.6;
+const PKG_DC_COLLAR      = 1.0;
+const PKG_DC_CARDBOARD   = 4.0;
+const PKG_DC_CLIPPING    = 1.0;
+const PKG_DC_WHITE_PAPER = 0.5;
+const PKG_DC_PER_GARMENT = PKG_DC_POLYTHENE + PKG_DC_COLLAR + PKG_DC_CARDBOARD + PKG_DC_CLIPPING + PKG_DC_WHITE_PAPER;
+const PKG_DC_GARMENTS_PER_KG = 3;
 
-function packagingCost(laundrySplitPct) {
-  const pct = Math.min(100, Math.max(0, laundrySplitPct));
-  for (const tier of PKG_TIERS) {
-    if (pct <= tier.upto) return tier.cost;
-  }
-  return PKG_TIERS[PKG_TIERS.length - 1].cost;
+function packagingCost(laundryKg, dcKg) {
+  const totalClothes = laundryKg * PKG_WASH_IRON_CLOTHES_PER_KG;
+  const bagsNeeded   = Math.ceil(totalClothes / PKG_WASH_IRON_CLOTHES_PER_BAG);
+  const washIronCost = bagsNeeded * PKG_WASH_IRON_BAG_COST;
+  const dcGarments   = dcKg * PKG_DC_GARMENTS_PER_KG;
+  const dcCost       = dcGarments * PKG_DC_PER_GARMENT;
+  return Math.round(washIronCost + dcCost);
+}
+
+function packagingBreakdown(laundryKg, dcKg) {
+  const totalClothes = laundryKg * PKG_WASH_IRON_CLOTHES_PER_KG;
+  const bagsNeeded   = Math.ceil(totalClothes / PKG_WASH_IRON_CLOTHES_PER_BAG);
+  const washIronCost = bagsNeeded * PKG_WASH_IRON_BAG_COST;
+  const dcGarments   = dcKg * PKG_DC_GARMENTS_PER_KG;
+  const dcCost       = dcGarments * PKG_DC_PER_GARMENT;
+  return {
+    totalClothes:  Math.round(totalClothes),
+    bagsNeeded,
+    washIronCost:  Math.round(washIronCost),
+    dcGarments:    Math.round(dcGarments),
+    dcCost:        Math.round(dcCost),
+    total:         Math.round(washIronCost + dcCost),
+  };
 }
 
 // ─── B2B client presets ───────────────────────────────────────────────────────
-// cycles/day are for a standard 21 kg machine (8 hr day).
-// Cycle durations are used to time-split machines with mixed hostel/hotel loads.
 const B2B_CLIENTS = {
   hostel: { label: "Hostel", cycles: 12, cycleMins: 40, kgPerCycle: 21, rate: 55, is_premium: true },
   hotel:  { label: "Hotel",  cycles: 6,  cycleMins: 75, kgPerCycle: 21, rate: 60, is_premium: true },
 };
 
-// Total operating minutes in a standard B2B day = 8 hours = 480 min
 const B2B_DAY_MINS = 480;
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
-  // Machines — machine_count drives which machines are active in calculations
   machine_count: 2,
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
   m4enabled: false, m4cap: 8,
   m5enabled: false, m5cap: 8,
-  // Per-machine channel mode: "b2c" | "b2b" | "both"
   m1mode: "b2c", m2mode: "b2c", m3mode: "b2c", m4mode: "b2c", m5mode: "b2c",
-  // B2B client type: "hostel" | "hotel"
   b2bClientType: "hostel",
-  // B2B split: hostel vs hotel (must sum to 100)
   hostelPct: 100, hotelPct: 0,
-  // Daily kg demand (for machine recommendation)
   dailyKgDemand: 0,
-  // Operational
   workdays: 30,
-  // Pricing
   b2bPrice: 55, b2cPrice: 81, dcPrice: 100, gpkg: 3,
-  // B2C splits
   laundrySplit: 83.33, dcSplit: 16.67,
-  // Auto-cost rate overrides
   elecRate: ELEC_RATE,
-  // Dryer
   dryerMonthlyKg: 0,
-  // Fixed expenses
   rent: 30000, salaries: 80000,
   delivery: 8000, maintenance: 5000, overtime: 4000, misc: 5000,
 };
@@ -84,29 +140,22 @@ const fmtL   = n => (n / 100000).toFixed(2);
 const fmtKg  = n => `${fmt(n)} kg`;
 const fmtPct = n => `${n.toFixed(1)}%`;
 const fmtR   = n => `₹ ${fmt(n)}`;
+const fmtDec = (n, d = 3) => n.toFixed(d);
 
-// ─── Channel helpers ──────────────────────────────────────────────────────────
 function machineDoesB2C(mode) { return mode === "b2c" || mode === "both"; }
 function machineDoesB2B(mode) { return mode === "b2b" || mode === "both"; }
 
-// ─── Core calculation (from File 2 — most accurate) ───────────────────────────
+// ─── Core calculation ─────────────────────────────────────────────────────────
 function calcScenario(scenarioKey, a) {
   const seed = SCENARIO_SEEDS[scenarioKey];
 
-  // ── Blended B2B from hostel/hotel split ──────────────────────────────────────
-  // Cycles are computed by time-splitting the operating day, NOT by averaging.
-  // B2B_DAY_MINS = total daily operating minutes (480 min = 8 hr day).
-  // Each channel gets (its % × B2B_DAY_MINS) minutes, divided by its cycle duration.
   const hostelW      = (a.hostelPct || 0) / 100;
   const hotelW       = (a.hotelPct  || 0) / 100;
   const hostel       = B2B_CLIENTS.hostel;
   const hotel        = B2B_CLIENTS.hotel;
-  // Use Math.floor so only complete cycles are counted (partial cycles aren't processed)
-  const hostelCycles = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins); // e.g. 50% → floor(240/40) = 6
-  const hotelCycles  = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);  // e.g. 50% → floor(240/75) = 3
-  const b2bCycles    = Math.round((hostelCycles + hotelCycles) * 2) / 2; // rounded to 0.5
-  // kgPerCycle is per-machine (machine capacity), NOT hardcoded to 21.
-  // This is resolved per-machine in the mDetails loop below.
+  const hostelCycles = Math.floor((hostelW * B2B_DAY_MINS) / hostel.cycleMins);
+  const hotelCycles  = Math.floor((hotelW  * B2B_DAY_MINS) / hotel.cycleMins);
+  const b2bCycles    = Math.round((hostelCycles + hotelCycles) * 2) / 2;
   const b2bRate      = hostel.rate * hostelW + hotel.rate * hotelW;
   const b2bClient = {
     label:        hostelW === 1 ? "Hostel" : hotelW === 1 ? "Hotel" : `Hostel ${a.hostelPct}% / Hotel ${a.hotelPct}%`,
@@ -116,8 +165,6 @@ function calcScenario(scenarioKey, a) {
     is_premium:   true,
   };
 
-  // ── Machine daily kg per channel ─────────────────────────────────────────────
-  // Machine 2 is only active when machine_count >= 2
   const machines = [
     { cap: a.m1cap, mode: a.m1mode, enabled: true },
     { cap: a.m2cap, mode: a.m2mode, enabled: (a.machine_count || 2) >= 2 },
@@ -130,10 +177,8 @@ function calcScenario(scenarioKey, a) {
   let b2cDailyCycles = 0, b2bDailyCycles = 0;
 
   const mDetails = machines.map(m => {
-    if (!m.enabled) return { b2cKg: 0, b2bKg: 0, b2cCyc: 0, b2bCyc: 0 };
-    // B2C: machine capacity × scenario cycles
+    if (!m.enabled || m.cap <= 0) return { b2cKg: 0, b2bKg: 0, b2cCyc: 0, b2bCyc: 0 };
     const b2cKg  = machineDoesB2C(m.mode) ? m.cap * seed.cycles : 0;
-    // B2B: blended time-split cycles × this machine's actual capacity (not hardcoded 21)
     const b2bKg  = machineDoesB2B(m.mode) ? b2bCycles * m.cap : 0;
     const b2cCyc = machineDoesB2C(m.mode) ? seed.cycles : 0;
     const b2bCyc = machineDoesB2B(m.mode) ? b2bCycles  : 0;
@@ -145,16 +190,11 @@ function calcScenario(scenarioKey, a) {
   const [m1daily, m2daily, m3daily, m4daily, m5daily] =
     mDetails.map(m => m.b2cKg + m.b2bKg);
 
-  // ── Monthly volumes ──────────────────────────────────────────────────────────
   const b2cMonthly = b2cDailyKg * a.workdays;
   const b2bMonthly = b2bDailyKg * a.workdays;
   const b2cActive  = b2cDailyKg > 0;
   const b2bActive  = b2bDailyKg > 0;
 
-  // ── B2B hostel/hotel kg & revenue split ──────────────────────────────────────
-  // Computed BEFORE revenue so hostelRev/hotelRev can feed into totalRev correctly.
-  // Each client type's daily kg = their cycle count × total machine capacity.
-  // We do NOT blend rates — each segment is billed at its own rate independently.
   const totalB2BCycles = hostelCycles + hotelCycles;
   const hostelFrac     = totalB2BCycles > 0 ? hostelCycles / totalB2BCycles : 0;
   const hotelFrac      = totalB2BCycles > 0 ? hotelCycles  / totalB2BCycles : 0;
@@ -165,55 +205,120 @@ function calcScenario(scenarioKey, a) {
   const hostelRev      = hostelMonthly * hostel.rate;
   const hotelRev       = hotelMonthly  * hotel.rate;
 
-  // ── Revenue ──────────────────────────────────────────────────────────────────
   const laundryKg  = b2cMonthly * (a.laundrySplit / 100);
   const dcKg       = b2cMonthly * (a.dcSplit / 100);
   const garments   = dcKg * a.gpkg;
   const laundryRev = laundryKg * a.b2cPrice;
   const dcRev      = garments  * a.dcPrice;
-  // B2B revenue = hostel rev + hotel rev (billed at separate rates, NOT blended average).
-  // For 100% hostel: hostelRev = b2bMonthly×₹55, hotelRev=0 → correct.
-  // For 100% hotel:  hostelRev = 0, hotelRev = b2bMonthly×₹60 → correct.
   const b2bRev     = hostelRev + hotelRev;
   const totalRev   = laundryRev + dcRev + b2bRev;
   const dailyRev   = a.workdays > 0 ? totalRev / a.workdays : 0;
 
-  // ── AUTO-CALCULATED EXPENSES ─────────────────────────────────────────────────
-
-  // 1. Electricity
-  const b2cMonthlyCycles = b2cDailyCycles * a.workdays;
-  const b2cElecUnits     = b2cMonthlyCycles * B2C_UNITS_PER_CYCLE;
-  const b2cElecCost      = b2cElecUnits * a.elecRate;
-
-  const b2bElecUnits      = b2bMonthly * B2B_KWH_PER_KG;
-  const b2bElecCost       = b2bElecUnits * a.elecRate;
-  const dryerElecUnits    = b2bMonthly * DRYER_KWH_PER_KG;
-  const dryerElecCost     = dryerElecUnits * a.elecRate;
-  const b2bTotalElecUnits = b2bElecUnits + dryerElecUnits;
-  const b2bTotalElecCost  = b2bElecCost + dryerElecCost;
-  const electricityCost   = Math.round(b2cElecCost + b2bTotalElecCost);
-
-  // 2. Water: total monthly cycles × 60 L × ₹0.38
+  const b2cMonthlyCycles   = b2cDailyCycles * a.workdays;
   const b2bMonthlyCycles   = b2bDailyCycles * a.workdays;
   const totalMonthlyCycles = b2cMonthlyCycles + b2bMonthlyCycles;
-  const waterCost          = Math.round(totalMonthlyCycles * WATER_LITRES_CYCLE * WATER_RATE);
 
-  // 3. Detergent: total monthly kg × ₹5
-  const detergentCost = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
+  let elec_cold_total = 0;
+  let elec_hot_total  = 0;
+  let waterCostTotal  = 0;
 
-  // 4. Packaging: tiered by laundry split % (B2C only)
-  const packagingCostVal = b2cActive ? packagingCost(a.laundrySplit) : 0;
+  const machineElecBreakdown = [];
 
-  // ── Total expenses ───────────────────────────────────────────────────────────
+  machines.forEach((m, i) => {
+    if (!m.enabled || m.cap <= 0) {
+      machineElecBreakdown.push(null);
+      return;
+    }
+
+    const spec = getLGSpec(m.cap);
+    const kwh  = calcMachineElecKwh(m.cap);
+
+    const b2cCyc   = mDetails[i].b2cCyc * a.workdays;
+    const b2bCyc   = mDetails[i].b2bCyc * a.workdays;
+    const totalCyc = b2cCyc + b2bCyc;
+
+    // ── Electricity ──────────────────────────────────────────────────────────
+    const machineKwh_cold = kwh.combined_cold_kwh * totalCyc;
+    const machineKwh_hot  = kwh.combined_hot_kwh  * totalCyc;
+    const machineCost_cold = machineKwh_cold * a.elecRate;
+    const machineCost_hot  = machineKwh_hot  * a.elecRate;
+    const costPerKg_cold   = (kwh.combined_cold_kwh * a.elecRate) / spec.practicalLoad;
+    const costPerKg_hot    = (kwh.combined_hot_kwh  * a.elecRate) / spec.practicalLoad;
+
+    // ── Water — full PDF calculation chain ───────────────────────────────────
+    // Step 1: Water used per cycle (from spec)
+    const waterPerCycle = spec.waterLitres;                          // 65L or 95L
+    // Step 2: Water per KG = waterPerCycle ÷ practicalLoad
+    const waterPerKg    = waterPerCycle / spec.practicalLoad;        // 8.125 or 7.308 L/KG
+    // Step 3: Water cost per KG = waterPerKg × ₹0.38
+    const waterCostPerKg = waterPerKg * WATER_RATE;                  // ₹3.09 or ₹2.78
+    // Step 4: Daily water usage = waterPerCycle × cycles/day
+    const dailyCycles   = mDetails[i].b2cCyc + mDetails[i].b2bCyc; // today's cycles
+    const dailyWaterL   = waterPerCycle * dailyCycles;               // litres/day
+    // Step 5: Daily water cost = dailyWaterL × ₹0.38
+    const dailyWaterCost = dailyWaterL * WATER_RATE;
+    // Step 6: Monthly water usage = dailyWaterL × workdays
+    const monthlyWaterL  = waterPerCycle * totalCyc;                 // totalCyc = monthly cycles
+    // Step 7: Monthly water cost = monthlyWaterL × ₹0.38
+    const machineWaterCost = monthlyWaterL * WATER_RATE;
+
+    elec_cold_total += machineCost_cold;
+    elec_hot_total  += machineCost_hot;
+    waterCostTotal  += machineWaterCost;
+
+    machineElecBreakdown.push({
+      cap:               m.cap,
+      mode:              m.mode,
+      specLabel:         m.cap <= 10 ? "10 KG spec (8 kg load)" : "15 KG spec (13 kg load)",
+      practicalLoad:     spec.practicalLoad,
+      // Water chain (mirrors PDF steps 1-7)
+      waterPerCycle,
+      waterPerKg,
+      waterCostPerKg,
+      dailyCycles,
+      dailyWaterL,
+      dailyWaterCost,
+      monthlyWaterL,
+      machineWaterCost,
+      totalCyc,
+      b2cCyc,
+      b2bCyc,
+      // Electricity
+      washerCold_kwh:    kwh.washerCold_kwh,
+      washerHot_kwh:     kwh.washerHot_kwh,
+      combined_cold_kwh: kwh.combined_cold_kwh,
+      combined_hot_kwh:  kwh.combined_hot_kwh,
+      dryer_kwh:         kwh.dryer_kwh,
+      machineKwh_cold,   machineKwh_hot,
+      machineCost_cold,  machineCost_hot,
+      costPerKg_cold,    costPerKg_hot,
+    });
+  });
+
+  const electricityCost_cold = Math.round(elec_cold_total);
+  const electricityCost_hot  = Math.round(elec_hot_total);
+  const electricityCost      = electricityCost_cold;
+  const waterCost            = Math.round(waterCostTotal);
+  const detergentCost        = Math.round((b2cMonthly + b2bMonthly) * DETERGENT_RATE);
+
+  const pkgBreakdown     = b2cActive ? packagingBreakdown(laundryKg, dcKg) : null;
+  const packagingCostVal = b2cActive ? (pkgBreakdown ? pkgBreakdown.total : 0) : 0;
+
   const totalExp = a.rent + a.salaries + electricityCost + waterCost +
                    packagingCostVal + detergentCost + a.delivery +
                    a.maintenance + a.overtime + a.misc;
 
-  const totalKg  = b2cMonthly + b2bMonthly;
-  const profit   = totalRev - totalExp;
-  const margin   = totalRev > 0 ? (profit / totalRev) * 100 : 0;
-  const revPerKg = totalKg  > 0 ? totalRev / totalKg : 0;
-  const expPerKg = totalKg  > 0 ? totalExp / totalKg : 0;
+  const totalExp_hot = a.rent + a.salaries + electricityCost_hot + waterCost +
+                       packagingCostVal + detergentCost + a.delivery +
+                       a.maintenance + a.overtime + a.misc;
+
+  const totalKg    = b2cMonthly + b2bMonthly;
+  const profit     = totalRev - totalExp;
+  const profit_hot = totalRev - totalExp_hot;
+  const margin     = totalRev > 0 ? (profit     / totalRev) * 100 : 0;
+  const margin_hot = totalRev > 0 ? (profit_hot / totalRev) * 100 : 0;
+  const revPerKg   = totalKg  > 0 ? totalRev / totalKg : 0;
+  const expPerKg   = totalKg  > 0 ? totalExp / totalKg : 0;
 
   return {
     seed, b2bClient, is_premium: b2bClient.is_premium,
@@ -229,10 +334,18 @@ function calcScenario(scenarioKey, a) {
     hostelDailyKg, hotelDailyKg,
     hostelMonthly, hotelMonthly,
     hostelRev, hotelRev,
-    electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
-    dryerElecUnits, dryerElecCost, b2bTotalElecUnits, b2bTotalElecCost,
-    waterCost, detergentCost, packagingCostVal,
-    totalExp, profit, margin, revPerKg, expPerKg,
+    electricityCost,
+    electricityCost_cold,
+    electricityCost_hot,
+    machineElecBreakdown,
+    waterCost,
+    detergentCost,
+    packagingCostVal,
+    pkgBreakdown,
+    totalExp, totalExp_hot,
+    profit, profit_hot,
+    margin, margin_hot,
+    revPerKg, expPerKg,
   };
 }
 
@@ -266,12 +379,24 @@ function FieldRow({ label, unit, children }) {
 }
 
 function NI({ value, onChange, min = 0, max, step = 1, prefix, disabled }) {
+  const [local, setLocal] = useState(String(value));
+  useEffect(() => { setLocal(String(value)); }, [value]);
+  const commit = (raw) => {
+    let n = parseFloat(raw);
+    if (isNaN(n) || raw === "") n = (min !== undefined && min > 0) ? min : 0;
+    if (min !== undefined) n = Math.max(min, n);
+    if (max !== undefined) n = Math.min(max, n);
+    setLocal(String(n));
+    onChange(n);
+  };
   return (
     <div className={`relative ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       {prefix && <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{prefix}</span>}
       <input
-        type="number" value={value} min={min} max={max} step={step}
-        onChange={e => onChange(parseFloat(e.target.value) || 0)}
+        type="number" value={local} min={min} max={max} step={step}
+        onChange={e => { setLocal(e.target.value); const n = parseFloat(e.target.value); if (!isNaN(n)) onChange(n); }}
+        onBlur={e => commit(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter") commit(e.target.value); }}
         className={`w-full h-8 border border-slate-200 rounded-lg text-sm font-mono text-slate-800 bg-white
           focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100 transition
           ${prefix ? "pl-6 pr-2" : "px-3"}`}
@@ -318,6 +443,162 @@ function AutoBadge() {
   );
 }
 
+// ─── Water Consumption Panel ──────────────────────────────────────────────────
+// Mirrors the PDF calculation chain for a single machine or all machines.
+// Steps: Cycle usage → Per-KG → Cost/KG → Daily → Monthly
+function WaterConsumptionPanel({ machineElecBreakdown, workdays }) {
+  const enabledMachines = machineElecBreakdown
+    .map((mb, i) => mb ? { ...mb, index: i } : null)
+    .filter(Boolean);
+
+  // "all" = combined view; number = machine index
+  const [selectedMachine, setSelectedMachine] = useState("all");
+
+  if (enabledMachines.length === 0) return null;
+
+  // Determine which machines to show data for
+  const viewMachines = selectedMachine === "all"
+    ? enabledMachines
+    : enabledMachines.filter(m => m.index === selectedMachine);
+
+  // Aggregate totals across viewed machines
+  const agg = viewMachines.reduce((acc, mb) => ({
+    totalCyc:        acc.totalCyc        + mb.totalCyc,
+    dailyCycles:     acc.dailyCycles     + mb.dailyCycles,
+    dailyWaterL:     acc.dailyWaterL     + mb.dailyWaterL,
+    dailyWaterCost:  acc.dailyWaterCost  + mb.dailyWaterCost,
+    monthlyWaterL:   acc.monthlyWaterL   + mb.monthlyWaterL,
+    machineWaterCost:acc.machineWaterCost + mb.machineWaterCost,
+  }), { totalCyc: 0, dailyCycles: 0, dailyWaterL: 0, dailyWaterCost: 0, monthlyWaterL: 0, machineWaterCost: 0 });
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      {/* Header with machine filter tabs */}
+      <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <FiDroplet size={13} className="text-teal-500" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Water Consumption</p>
+          <AutoBadge />
+        </div>
+        {/* Machine selector — "All" + one tab per enabled machine */}
+        <div className="flex rounded-lg overflow-hidden border border-slate-200 h-7">
+          <button
+            onClick={() => setSelectedMachine("all")}
+            className={`px-3 text-[10px] font-bold uppercase tracking-wide border-r border-slate-200 transition
+              ${selectedMachine === "all" ? "bg-teal-500 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}>
+            All
+          </button>
+          {enabledMachines.map(mb => (
+            <button
+              key={mb.index}
+              onClick={() => setSelectedMachine(mb.index)}
+              className={`px-3 text-[10px] font-bold uppercase tracking-wide border-r last:border-r-0 border-slate-200 transition
+                ${selectedMachine === mb.index ? "bg-teal-500 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}>
+              M{mb.index + 1}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Per-machine spec cards — show individual breakdown always */}
+      <div className="px-4 pt-3 pb-1 space-y-3">
+        {viewMachines.map(mb => (
+          <div key={mb.index} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Machine {mb.index + 1} — {mb.specLabel}
+              </p>
+              <span className="text-[9px] bg-blue-50 text-blue-500 border border-blue-100 rounded px-1.5 py-0.5 font-semibold uppercase tracking-wide">
+                {mb.cap} KG cap · {mb.practicalLoad} KG load
+              </span>
+            </div>
+
+            {/* PDF calculation chain: 7 steps */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
+              {/* Step 1 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1 mb-0.5">
+                <span className="text-slate-400">Step 1 · Water per cycle</span>
+                <span className="font-mono font-semibold text-slate-700">{mb.waterPerCycle} L</span>
+              </div>
+              {/* Step 2 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1">
+                <span className="text-slate-400">Step 2 · Water per KG ({mb.waterPerCycle} ÷ {mb.practicalLoad})</span>
+                <span className="font-mono font-semibold text-slate-700">{fmtDec(mb.waterPerKg, 3)} L/KG</span>
+              </div>
+              {/* Step 3 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1">
+                <span className="text-slate-400">Step 3 · Water cost per KG ({fmtDec(mb.waterPerKg, 3)} × ₹{WATER_RATE})</span>
+                <span className="font-mono font-semibold text-teal-700">₹{fmtDec(mb.waterCostPerKg, 2)}/KG</span>
+              </div>
+              {/* Step 4 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1">
+                <span className="text-slate-400">Step 4 · Daily water ({mb.waterPerCycle}L × {mb.dailyCycles} cycles)</span>
+                <span className="font-mono font-semibold text-slate-700">{fmtDec(mb.dailyWaterL, 0)} L/day</span>
+              </div>
+              {/* Step 5 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1">
+                <span className="text-slate-400">Step 5 · Daily water cost ({fmtDec(mb.dailyWaterL, 0)} × ₹{WATER_RATE})</span>
+                <span className="font-mono font-semibold text-teal-700">₹{fmtDec(mb.dailyWaterCost, 2)}/day</span>
+              </div>
+              {/* Step 6 */}
+              <div className="flex justify-between col-span-2 border-b border-slate-200 pb-1">
+                <span className="text-slate-400">Step 6 · Monthly water ({mb.waterPerCycle}L × {mb.totalCyc} cycles)</span>
+                <span className="font-mono font-semibold text-slate-700">{fmt(mb.monthlyWaterL)} L/month</span>
+              </div>
+              {/* Step 7 */}
+              <div className="flex justify-between col-span-2">
+                <span className="text-slate-400">Step 7 · Monthly water cost ({fmt(mb.monthlyWaterL)}L × ₹{WATER_RATE})</span>
+                <span className="font-mono font-bold text-teal-700">₹{fmt(mb.machineWaterCost)}/month</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Aggregate summary row — shown when "All" is selected and >1 machine */}
+      {selectedMachine === "all" && viewMachines.length > 1 && (
+        <div className="mx-4 mb-3 mt-1 bg-teal-50 border border-teal-200 rounded-xl p-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-2">Combined — All Machines</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {[
+              { l: "Total monthly cycles",    v: `${fmt(agg.totalCyc)} cyc`         },
+              { l: "Daily cycles",            v: `${fmt(agg.dailyCycles)} cyc/day`  },
+              { l: "Daily water usage",       v: `${fmt(agg.dailyWaterL)} L/day`    },
+              { l: "Daily water cost",        v: `₹${fmtDec(agg.dailyWaterCost, 2)}/day` },
+              { l: "Monthly water usage",     v: `${fmt(agg.monthlyWaterL)} L/mo`   },
+              { l: "Monthly water cost",      v: fmtR(agg.machineWaterCost), highlight: true },
+            ].map(({ l, v, highlight }) => (
+              <div key={l} className="flex justify-between col-span-2 border-b border-teal-100 last:border-0 py-1">
+                <span className="text-[10px] text-teal-600">{l}</span>
+                <span className={`text-[10px] font-mono font-semibold ${highlight ? "text-teal-800" : "text-slate-700"}`}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Single-machine summary footer */}
+      {selectedMachine !== "all" && viewMachines.length === 1 && (() => {
+        const mb = viewMachines[0];
+        return (
+          <div className="mx-4 mb-3 mt-1 grid grid-cols-3 gap-2">
+            {[
+              { l: "Water/KG",     v: `${fmtDec(mb.waterPerKg, 3)} L` },
+              { l: "Cost/KG",      v: `₹${fmtDec(mb.waterCostPerKg, 2)}` },
+              { l: "Monthly cost", v: fmtR(mb.machineWaterCost) },
+            ].map(({ l, v }) => (
+              <div key={l} className="bg-teal-50 border border-teal-100 rounded-lg p-2 text-center">
+                <p className="text-[9px] uppercase tracking-widest text-teal-500 mb-0.5">{l}</p>
+                <p className="text-xs font-mono font-bold text-teal-800">{v}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 // ─── Machine Recommendation ───────────────────────────────────────────────────
 function MachineRecommendation({ assumptions }) {
   const demand = assumptions.dailyKgDemand || 0;
@@ -330,7 +611,6 @@ function MachineRecommendation({ assumptions }) {
   const hostelCycles  = (hostelW * B2B_DAY_MINS) / B2B_CLIENTS.hostel.cycleMins;
   const hotelCycles   = (hotelW  * B2B_DAY_MINS) / B2B_CLIENTS.hotel.cycleMins;
   const blendedCycles = hostelCycles + hotelCycles;
-  // Use machine 1 capacity as the representative machine for recommendation
   const kgPerMachineDay = Math.round(blendedCycles * assumptions.m1cap);
   const machinesNeeded  = demand > 0 ? Math.ceil(demand / kgPerMachineDay) : 0;
 
@@ -477,18 +757,33 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
           <SectionDivider>Auto-calculated cost rates</SectionDivider>
           <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 mb-3">
             <p className="text-[10px] text-teal-700 font-semibold mb-1">These rates drive automatic expense calculation</p>
-            <p className="text-[10px] text-teal-600">Electricity, water, detergent and packaging are computed from your machine output — not manual inputs.</p>
+            <p className="text-[10px] text-teal-600">Electricity and water are computed from LG machine specs — not manual inputs.</p>
           </div>
           <FieldRow label="Electricity rate" unit="₹ / unit (kWh)">
             <NI value={assumptions.elecRate} min={1} step={0.1} prefix="₹" onChange={v => set("elecRate", v)} />
           </FieldRow>
           <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-[10px] text-slate-500 space-y-1">
-            <p><span className="font-semibold text-slate-600">B2C electricity:</span> cycles/month × 8 units × rate</p>
-            <p><span className="font-semibold text-slate-600">B2B electricity:</span> kg/month × 0.331 kWh × rate</p>
-            <p><span className="font-semibold text-slate-600">Dryer electricity:</span> dryer kg/month × 0.415 kWh × rate</p>
-            <p><span className="font-semibold text-slate-600">Water:</span> cycles/month × 60 L × ₹0.38</p>
-            <p><span className="font-semibold text-slate-600">Detergent:</span> total kg/month × ₹5</p>
-            <p><span className="font-semibold text-slate-600">Packaging:</span> tiered by laundry split % (25%→₹3,920 · 35%→₹5,236 · 80%→₹12,514 · 100%→₹15,760)</p>
+            <p className="font-semibold text-slate-600 mb-1">LG Spec-based formulas (cycle = 40 min = 0.6667 hr)</p>
+            <p><span className="font-semibold text-slate-600">10 KG washer cold:</span> 0.5 kW × 0.6667 = 0.333 kWh/cycle</p>
+            <p><span className="font-semibold text-slate-600">10 KG washer hot:</span> 2.1 kW × 0.6667 = 1.400 kWh/cycle</p>
+            <p><span className="font-semibold text-slate-600">10 KG dryer:</span> 0.25 kW × 0.6667 = 0.167 kWh/cycle</p>
+            <p><span className="font-semibold text-slate-600">15 KG washer cold:</span> 0.5 kW × 0.6667 = 0.333 kWh/cycle</p>
+            <p><span className="font-semibold text-slate-600">15 KG washer hot:</span> 2.2 kW × 0.6667 = 1.467 kWh/cycle</p>
+            <p><span className="font-semibold text-slate-600">15 KG dryer:</span> 0.35 kW × 0.6667 = 0.233 kWh/cycle</p>
+            <div className="pt-1 border-t border-slate-200 space-y-0.5">
+              <p className="font-semibold text-slate-600">Water (PDF calculation chain):</p>
+              <p><span className="font-semibold text-slate-600">10 KG:</span> 65L/cycle ÷ 8 KG = 8.125 L/KG × ₹0.38 = ₹3.09/KG</p>
+              <p><span className="font-semibold text-slate-600">15 KG:</span> 95L/cycle ÷ 13 KG = 7.308 L/KG × ₹0.38 = ₹2.78/KG</p>
+              <p><span className="font-semibold text-slate-600">Daily:</span> L/cycle × cycles/day × ₹0.38</p>
+              <p><span className="font-semibold text-slate-600">Monthly:</span> Daily × {assumptions.workdays} days</p>
+            </div>
+            <p className="pt-1 border-t border-slate-200"><span className="font-semibold text-slate-600">Detergent:</span> total kg/month × ₹5 (B2C + B2B)</p>
+            <div className="pt-1 border-t border-slate-200 space-y-0.5">
+              <p className="font-semibold text-slate-600">Packaging — B2C only (B2B excluded):</p>
+              <p><span className="font-semibold text-slate-600">Wash &amp; Iron:</span> ₹5/bag · 12 clothes/bag · ~4 clothes/kg</p>
+              <p><span className="font-semibold text-slate-600">Dry Clean:</span> ₹11.1/garment (₹4.6+₹1+₹4+₹1+₹0.5) · 3 garments/kg</p>
+              <p className="text-slate-400 italic">B2B clients manage their own bulk packaging — not charged here.</p>
+            </div>
           </div>
         </div>
 
@@ -505,7 +800,7 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
 
 // ─── Scenario card ────────────────────────────────────────────────────────────
 function ScenarioCard({ scenarioKey, out, active, onClick }) {
-  const { seed, totalRev, totalExp, profit, margin, b2cDailyKg, b2cMonthly, dailyRev } = out;
+  const { seed, totalRev, totalExp, totalExp_hot, profit, profit_hot, margin, margin_hot, b2cDailyKg, b2cMonthly, dailyRev } = out;
   const st = SS[seed.color];
   const Icon = seed.icon === "up" ? FiTrendingUp : seed.icon === "down" ? FiTrendingDown : FiMinus;
 
@@ -528,9 +823,9 @@ function ScenarioCard({ scenarioKey, out, active, onClick }) {
           { l:"Daily B2C output", v: fmtKg(b2cDailyKg) },
           { l:"Monthly B2C kg",   v: fmtKg(b2cMonthly)  },
           { l:"Daily revenue",    v: fmtR(dailyRev)      },
-          { l:"Expenses",         v: fmtR(totalExp)      },
-          { l:"Net profit",       v: fmtR(profit),  cls: profit >= 0 ? "text-emerald-600" : "text-red-500" },
-          { l:"Profit margin",    v: fmtPct(margin), cls: margin >= 20 ? "text-emerald-600" : margin >= 0 ? "text-amber-600" : "text-red-500" },
+          { l:"Expenses (cold / hot)", v: `${fmtR(totalExp)} – ${fmtR(totalExp_hot)}` },
+          { l:"Net profit (cold / hot)", v: `${fmtR(profit)} – ${fmtR(profit_hot)}`, cls: profit >= 0 ? "text-emerald-600" : "text-red-500" },
+          { l:"Profit margin (cold)", v: fmtPct(margin), cls: margin >= 20 ? "text-emerald-600" : margin >= 0 ? "text-amber-600" : "text-red-500" },
         ].map(({ l, v, cls }) => (
           <div key={l}>
             <p className="text-[10px] text-slate-400">{l}</p>
@@ -554,10 +849,10 @@ function DetailPanel({ out, assumptions }) {
     hostelDailyKg, hotelDailyKg,
     hostelMonthly, hotelMonthly,
     hostelRev, hotelRev,
-    electricityCost, b2cElecUnits, b2bElecUnits, b2cElecCost, b2bElecCost,
-    dryerElecUnits, dryerElecCost, b2bTotalElecUnits, b2bTotalElecCost,
-    waterCost, detergentCost, packagingCostVal,
-    totalExp, profit, margin, revPerKg, expPerKg,
+    electricityCost, electricityCost_cold, electricityCost_hot,
+    machineElecBreakdown,
+    waterCost, detergentCost, packagingCostVal, pkgBreakdown,
+    totalExp, totalExp_hot, profit, profit_hot, margin, margin_hot, revPerKg, expPerKg,
   } = out;
   const st = SS[seed.color];
   const b2bCycles = out.b2bClient.cycles;
@@ -605,10 +900,12 @@ function DetailPanel({ out, assumptions }) {
         </p>
         <div className="flex flex-wrap gap-6 mt-3">
           {[
-            { l:"In Lakhs",      v:`₹ ${fmtL(totalRev)} L` },
-            { l:"Daily revenue", v:fmtR(dailyRev) },
-            { l:"Net profit",    v:fmtR(profit)   },
-            { l:"Margin",        v:fmtPct(margin)  },
+            { l:"In Lakhs",         v:`₹ ${fmtL(totalRev)} L` },
+            { l:"Daily revenue",    v:fmtR(dailyRev) },
+            { l:"Profit (no heat)", v:fmtR(profit) },
+            { l:"Profit (w/ heat)", v:fmtR(profit_hot) },
+            { l:"Margin (no heat)", v:fmtPct(margin)  },
+            { l:"Margin (w/ heat)", v:fmtPct(margin_hot)  },
           ].map(({ l, v }) => (
             <div key={l}>
               <p className="text-[9px] uppercase tracking-widest text-white/40 mb-0.5">{l}</p>
@@ -628,6 +925,12 @@ function DetailPanel({ out, assumptions }) {
           </div>
         ))}
       </div>
+
+      {/* ── WATER CONSUMPTION PANEL (filterable by machine) ── */}
+      <WaterConsumptionPanel
+        machineElecBreakdown={machineElecBreakdown}
+        workdays={assumptions.workdays}
+      />
 
       {/* Revenue breakdown */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -704,7 +1007,7 @@ function DetailPanel({ out, assumptions }) {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Expense breakdown</p>
-          <span className="text-[9px] bg-teal-50 text-teal-600 border border-teal-200 rounded px-1.5 py-0.5 font-bold uppercase tracking-wider">4 costs auto-calculated</span>
+          <span className="text-[9px] bg-teal-50 text-teal-600 border border-teal-200 rounded px-1.5 py-0.5 font-bold uppercase tracking-wider">LG spec auto-calc</span>
         </div>
         <table className="w-full text-sm">
           <tbody>
@@ -715,49 +1018,120 @@ function DetailPanel({ out, assumptions }) {
                 <td className="px-4 py-2 font-mono text-right text-slate-700">₹ {fmt(v)}</td>
               </tr>
             ))}
+
+            {/* ELECTRICITY */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5"><FiZap size={11} className="text-teal-500" />Electricity <AutoBadge /></span>
+                <span className="flex items-center gap-1.5">
+                  <FiZap size={11} className="text-teal-500" />
+                  Electricity <AutoBadge />
+                </span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right leading-relaxed">
-                {b2cActive && <div>B2C: {fmt(Math.round(b2cElecUnits))} u → ₹{fmt(b2cElecCost)}</div>}
-                {b2bActive && <div>B2B machine: {fmt(Math.round(b2bElecUnits))} u → ₹{fmt(b2bElecCost)}</div>}
-                {b2bActive && <div>B2B dryer: {fmt(Math.round(dryerElecUnits))} u → ₹{fmt(dryerElecCost)}</div>}
-                {b2bActive && <div className="font-semibold">B2B total: {fmt(Math.round(b2bTotalElecUnits))} u → ₹{fmt(b2bTotalElecCost)}</div>}
+                {machineElecBreakdown.map((mb, i) => {
+                  if (!mb) return null;
+                  return (
+                    <div key={i} className="mb-1 pb-1 border-b border-slate-100 last:border-0">
+                      <div className="font-semibold text-slate-500">M{i+1} ({mb.specLabel} · {mb.totalCyc} cyc/mo)</div>
+                      <div>Washer cold: {mb.washerCold_kwh.toFixed(4)} kWh/cyc</div>
+                      <div>Dryer: {mb.dryer_kwh.toFixed(4)} kWh/cyc</div>
+                      <div>Combined (no heat): {mb.combined_cold_kwh.toFixed(4)} kWh/cyc → {mb.machineKwh_cold.toFixed(1)} kWh/mo → ₹{fmt(mb.machineCost_cold)}</div>
+                      <div>Combined (w/ heat): {mb.combined_hot_kwh.toFixed(4)} kWh/cyc → {mb.machineKwh_hot.toFixed(1)} kWh/mo → ₹{fmt(mb.machineCost_hot)}</div>
+                    </div>
+                  );
+                })}
               </td>
-              <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(electricityCost)}</td>
+              <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700 align-top">
+                <div className="text-[11px] text-slate-400 font-normal">No heater</div>
+                <div>₹ {fmt(electricityCost_cold)}</div>
+                <div className="text-[11px] text-slate-400 font-normal mt-1">With heater</div>
+                <div>₹ {fmt(electricityCost_hot)}</div>
+              </td>
             </tr>
+
+            {/* WATER — compact row; full breakdown is in WaterConsumptionPanel above */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
                 <span className="flex items-center gap-1.5"><FiDroplet size={11} className="text-teal-500" />Water <AutoBadge /></span>
+                <p className="text-[9px] text-teal-500 ml-4 mt-0.5">See Water Consumption panel above for full breakdown</p>
               </td>
-              <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
-                {fmt(totalMonthlyCycles)} cyc × 60L × ₹0.38
+              <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right leading-relaxed">
+                {machineElecBreakdown.map((mb, i) => {
+                  if (!mb) return null;
+                  return (
+                    <div key={i}>
+                      M{i+1}: {mb.totalCyc} cyc × {mb.waterPerCycle}L × ₹{WATER_RATE} = ₹{fmt(mb.machineWaterCost)}
+                    </div>
+                  );
+                })}
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(waterCost)}</td>
             </tr>
+
+            {/* DETERGENT */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
               <td className="px-4 py-2 text-slate-600">
                 <span className="flex items-center gap-1.5"><FiInfo size={11} className="text-teal-500" />Detergent <AutoBadge /></span>
               </td>
               <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
-                {fmtKg(b2cMonthly + b2bMonthly)} × ₹5
+                {fmtKg(b2cMonthly + b2bMonthly)} × ₹5 (B2C + B2B)
               </td>
               <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(detergentCost)}</td>
             </tr>
+
+            {/* PACKAGING */}
             <tr className="border-b border-slate-100 bg-teal-50/40">
-              <td className="px-4 py-2 text-slate-600">
-                <span className="flex items-center gap-1.5"><FiPackage size={11} className="text-teal-500" />Packaging <AutoBadge /></span>
+              <td className="px-4 py-2 text-slate-600 align-top">
+                <span className="flex items-center gap-1.5">
+                  <FiPackage size={11} className="text-teal-500" />
+                  Packaging <AutoBadge />
+                </span>
+                <p className="text-[9px] text-orange-500 font-semibold mt-0.5 ml-4">B2C only</p>
               </td>
-              <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right">
-                Laundry split {fmtPct(assumptions.laundrySplit)} tier
+              <td className="px-4 py-2 text-slate-400 font-mono text-[10px] text-right leading-relaxed align-top">
+                {b2cActive && pkgBreakdown ? (
+                  <>
+                    <div className="mb-1 pb-1 border-b border-slate-100">
+                      <div className="font-semibold text-slate-500">Wash &amp; Iron (B2C laundry kg)</div>
+                      <div>{fmtKg(laundryKg)} × {PKG_WASH_IRON_CLOTHES_PER_KG} clothes/kg = {fmt(pkgBreakdown.totalClothes)} clothes</div>
+                      <div>ceil({fmt(pkgBreakdown.totalClothes)} ÷ {PKG_WASH_IRON_CLOTHES_PER_BAG}) = {fmt(pkgBreakdown.bagsNeeded)} bags × ₹{PKG_WASH_IRON_BAG_COST} = ₹{fmt(pkgBreakdown.washIronCost)}</div>
+                    </div>
+                    <div className="mb-1 pb-1 border-b border-slate-100">
+                      <div className="font-semibold text-slate-500">Dry Clean (B2C DC kg)</div>
+                      <div>{fmtKg(dcKg)} × {PKG_DC_GARMENTS_PER_KG} garments/kg = {fmt(pkgBreakdown.dcGarments)} garments</div>
+                      <div>{fmt(pkgBreakdown.dcGarments)} × ₹{PKG_DC_PER_GARMENT} = ₹{fmt(pkgBreakdown.dcCost)}</div>
+                    </div>
+                    <div className="text-slate-400 italic">B2B excluded — clients handle own packaging</div>
+                  </>
+                ) : (
+                  <span className="text-slate-300 italic">No B2C active</span>
+                )}
               </td>
-              <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700">₹ {fmt(packagingCostVal)}</td>
+              <td className="px-4 py-2 font-mono font-semibold text-right text-teal-700 align-top">
+                {b2cActive && pkgBreakdown ? (
+                  <>
+                    <div className="text-[10px] text-slate-400 font-normal">W&amp;I + DC</div>
+                    <div>₹ {fmt(pkgBreakdown.washIronCost)}</div>
+                    <div className="text-[10px] text-slate-400 font-normal mt-1">+ DC pkg</div>
+                    <div>₹ {fmt(pkgBreakdown.dcCost)}</div>
+                    <div className="text-[10px] text-slate-400 font-normal mt-1 border-t border-teal-200 pt-1">Total</div>
+                    <div>₹ {fmt(packagingCostVal)}</div>
+                  </>
+                ) : (
+                  <span className="text-slate-300">₹ 0</span>
+                )}
+              </td>
             </tr>
+
             <tr className="bg-slate-50 font-semibold">
               <td className="px-4 py-2.5 text-slate-800">Total Expenses</td>
-              <td />
-              <td className="px-4 py-2.5 font-mono text-right text-red-500">₹ {fmt(totalExp)}</td>
+              <td className="px-4 py-2.5 text-slate-400 font-mono text-[10px] text-right">
+                <div>no heater / with heater</div>
+              </td>
+              <td className="px-4 py-2.5 font-mono text-right text-red-500">
+                <div>₹ {fmt(totalExp)}</div>
+                <div className="text-[11px] font-normal text-red-400">₹ {fmt(totalExp_hot)}</div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -766,10 +1140,12 @@ function DetailPanel({ out, assumptions }) {
       {/* Profit + per-kg */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { l:"Net Profit / Month", v:fmtR(profit),   cls: profit >= 0 ? "text-emerald-600" : "text-red-500" },
-          { l:"Profit Margin",      v:fmtPct(margin),  cls: margin >= 20 ? "text-emerald-600" : margin >= 0 ? "text-amber-600" : "text-red-500" },
-          { l:"Revenue per kg",     v:fmtR(revPerKg),  cls:"text-slate-800" },
-          { l:"Expense per kg",     v:fmtR(expPerKg),  cls:"text-slate-800" },
+          { l:"Net Profit (no heater)",   v:fmtR(profit),      cls: profit >= 0 ? "text-emerald-600" : "text-red-500" },
+          { l:"Net Profit (with heater)", v:fmtR(profit_hot),  cls: profit_hot >= 0 ? "text-emerald-600" : "text-red-500" },
+          { l:"Margin (no heater)",       v:fmtPct(margin),    cls: margin >= 20 ? "text-emerald-600" : margin >= 0 ? "text-amber-600" : "text-red-500" },
+          { l:"Margin (with heater)",     v:fmtPct(margin_hot),cls: margin_hot >= 20 ? "text-emerald-600" : margin_hot >= 0 ? "text-amber-600" : "text-red-500" },
+          { l:"Revenue per kg",           v:fmtR(revPerKg),    cls:"text-slate-800" },
+          { l:"Expense per kg",           v:fmtR(expPerKg),    cls:"text-slate-800" },
         ].map(({ l, v, cls }) => (
           <div key={l} className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-400 mb-1">{l}</p>
@@ -783,16 +1159,18 @@ function DetailPanel({ out, assumptions }) {
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Intermediate calculations</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { l:"Monthly B2C processing", v:fmtKg(b2cMonthly),                          dim:!b2cActive },
-            { l:"Monthly B2B processing", v:fmtKg(b2bMonthly),                          dim:!b2bActive },
-            { l:"B2C monthly cycles",     v:`${fmt(b2cMonthlyCycles)} cyc`,              dim:!b2cActive },
-            { l:"B2B monthly cycles",     v:`${fmt(b2bMonthlyCycles)} cyc`,              dim:!b2bActive },
-            { l:"Laundry quantity",        v:fmtKg(laundryKg),                           dim:!b2cActive },
-            { l:"Dry clean garments",      v:`${fmt(garments)} pcs`,                     dim:!b2cActive },
-            { l:"B2C elec units",          v:`${fmt(Math.round(b2cElecUnits))} kWh`,     dim:!b2cActive },
-            { l:"B2B machine units",       v:`${fmt(Math.round(b2bElecUnits))} kWh`,     dim:!b2bActive },
-            { l:"B2B dryer units",         v:`${fmt(Math.round(dryerElecUnits))} kWh`,   dim:!b2bActive },
-            { l:"B2B total elec units",    v:`${fmt(Math.round(b2bTotalElecUnits))} kWh`,dim:!b2bActive },
+            { l:"Monthly B2C processing", v:fmtKg(b2cMonthly),                dim:!b2cActive },
+            { l:"Monthly B2B processing", v:fmtKg(b2bMonthly),                dim:!b2bActive },
+            { l:"B2C monthly cycles",     v:`${fmt(b2cMonthlyCycles)} cyc`,   dim:!b2cActive },
+            { l:"B2B monthly cycles",     v:`${fmt(b2bMonthlyCycles)} cyc`,   dim:!b2bActive },
+            { l:"Total monthly cycles",   v:`${fmt(totalMonthlyCycles)} cyc`, dim:false },
+            { l:"Elec cost (no heater)",  v:`₹ ${fmt(electricityCost_cold)}`, dim:false },
+            { l:"Elec cost (w/ heater)",  v:`₹ ${fmt(electricityCost_hot)}`,  dim:false },
+            { l:"Water cost (all machines)", v:`₹ ${fmt(waterCost)}`,         dim:false },
+            { l:"Laundry quantity (B2C)", v:fmtKg(laundryKg),                 dim:!b2cActive },
+            { l:"Dry clean garments (B2C)",v:`${fmt(garments)} pcs`,          dim:!b2cActive },
+            { l:"Pkg: W&I bags",          v:pkgBreakdown ? `${fmt(pkgBreakdown.bagsNeeded)} bags` : "—", dim:!b2cActive },
+            { l:"Pkg: DC garments",       v:pkgBreakdown ? `${fmt(pkgBreakdown.dcGarments)} pcs`  : "—", dim:!b2cActive },
           ].map(({ l, v, dim }) => (
             <div key={l} className={`bg-white border border-slate-200 rounded-xl p-3.5 ${dim ? "opacity-30" : ""}`}>
               <p className="text-[10px] text-slate-400 mb-1">{l}</p>
@@ -845,8 +1223,8 @@ export default function Calculator() {
     ["delivery","Delivery"],["maintenance","Maintenance"],["overtime","Overtime"],["misc","Miscellaneous"],
   ];
 
-  const mc     = assumptions.machine_count || 2;
-  const modes  = [
+  const mc    = assumptions.machine_count || 2;
+  const modes = [
     assumptions.m1mode,
     ...(mc >= 2 ? [assumptions.m2mode] : []),
     ...(assumptions.m3enabled ? [assumptions.m3mode] : []),
@@ -912,7 +1290,6 @@ export default function Calculator() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
 
-              {/* Machine specs */}
               <SectionDivider>Machine specifications</SectionDivider>
               <FieldRow label="Machine 1 capacity" unit="kg/cycle">
                 <NI value={assumptions.m1cap} min={1} max={50} step={0.5} onChange={v => set("m1cap", v)} />
@@ -974,7 +1351,6 @@ export default function Calculator() {
                 <NI value={assumptions.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
               </FieldRow>
 
-              {/* B2B client mix */}
               {hasB2B && (<>
                 <SectionDivider>B2B client mix</SectionDivider>
                 <div className="mb-3">
@@ -1049,7 +1425,6 @@ export default function Calculator() {
                 </div>
               </>)}
 
-              {/* Daily kg demand */}
               <SectionDivider>Daily kg demand</SectionDivider>
               <FieldRow label="Total daily kg to process" unit="kg / day">
                 <NI value={assumptions.dailyKgDemand} min={0} max={9999} step={10}
@@ -1058,7 +1433,6 @@ export default function Calculator() {
               <p className="text-[10px] text-slate-400 mb-2">Enter your expected B2B demand — we'll recommend how many machines to assign.</p>
               <MachineRecommendation assumptions={assumptions} />
 
-              {/* Pricing configuration */}
               <SectionDivider>Pricing configuration</SectionDivider>
               <div className="flex gap-2 mb-2.5">
                 <div className={`flex-1 rounded-lg px-2.5 py-2 border text-center ${hasB2C ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200"}`}>
@@ -1076,25 +1450,37 @@ export default function Calculator() {
                 <FiSettings size={13} /> Edit Configuration
               </button>
 
-              {/* Auto-costs info */}
               <SectionDivider>Auto-calculated costs</SectionDivider>
               <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 mb-2.5">
-                <p className="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1"><FiZap size={10} /> Automatically computed</p>
-                {[
-                  { l:"Electricity", v: fmtR(activeOut.electricityCost) },
-                  { l:"Water",       v: fmtR(activeOut.waterCost)       },
-                  { l:"Detergent",   v: fmtR(activeOut.detergentCost)   },
-                  { l:"Packaging",   v: fmtR(activeOut.packagingCostVal)},
-                ].map(({ l, v }) => (
-                  <div key={l} className="flex items-center justify-between mb-1 last:mb-0">
-                    <p className="text-[10px] text-teal-600">{l}</p>
-                    <p className="text-[10px] font-mono font-semibold text-teal-800">{v}</p>
-                  </div>
-                ))}
-                <p className="text-[9px] text-teal-500 mt-1.5">Based on {SCENARIO_SEEDS[activeScenario].label} scenario · rate ₹{assumptions.elecRate}/unit</p>
+                <p className="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1"><FiZap size={10} /> LG Spec — Heater OFF / Heater ON</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-teal-600">Electricity (no heater)</p>
+                  <p className="text-[10px] font-mono font-semibold text-teal-800">{fmtR(activeOut.electricityCost_cold)}</p>
+                </div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-teal-600">Electricity (with heater)</p>
+                  <p className="text-[10px] font-mono font-semibold text-teal-800">{fmtR(activeOut.electricityCost_hot)}</p>
+                </div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-teal-600">Water (all machines)</p>
+                  <p className="text-[10px] font-mono font-semibold text-teal-800">{fmtR(activeOut.waterCost)}</p>
+                </div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-teal-600">Detergent (B2C + B2B)</p>
+                  <p className="text-[10px] font-mono font-semibold text-teal-800">{fmtR(activeOut.detergentCost)}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-teal-600">
+                    Packaging
+                    <span className="ml-1 text-[9px] text-orange-500 font-semibold">(B2C only)</span>
+                  </p>
+                  <p className="text-[10px] font-mono font-semibold text-teal-800">{fmtR(activeOut.packagingCostVal)}</p>
+                </div>
+                <p className="text-[9px] text-teal-500 mt-1.5">
+                  {SCENARIO_SEEDS[activeScenario].label} · ₹{assumptions.elecRate}/unit · cycle=40min
+                </p>
               </div>
 
-              {/* Fixed expenses */}
               <SectionDivider>Fixed monthly expenses</SectionDivider>
               {expFields.map(([key, label]) => (
                 <FieldRow key={key} label={label} unit="₹ / month">
@@ -1147,19 +1533,23 @@ export default function Calculator() {
                         </thead>
                         <tbody>
                           {[
-                            { l:"B2C cycles/day",  fn: o => o.seed.cycles },
-                            { l:"Daily B2C kg",    fn: o => fmtKg(o.b2cDailyKg) },
-                            { l:"Daily B2B kg",    fn: o => fmtKg(o.b2bDailyKg) },
-                            { l:"Monthly B2C",     fn: o => fmtKg(o.b2cMonthly) },
-                            { l:"Monthly B2B",     fn: o => fmtKg(o.b2bMonthly) },
-                            { l:"Electricity",     fn: o => fmtR(o.electricityCost) },
-                            { l:"Water",           fn: o => fmtR(o.waterCost) },
-                            { l:"Detergent",       fn: o => fmtR(o.detergentCost) },
-                            { l:"Packaging",       fn: o => fmtR(o.packagingCostVal) },
-                            { l:"Total revenue",   fn: o => fmtR(o.totalRev) },
-                            { l:"Total expenses",  fn: o => fmtR(o.totalExp) },
-                            { l:"Net profit",      fn: o => fmtR(o.profit) },
-                            { l:"Profit margin",   fn: o => fmtPct(o.margin) },
+                            { l:"B2C cycles/day",           fn: o => o.seed.cycles },
+                            { l:"Daily B2C kg",             fn: o => fmtKg(o.b2cDailyKg) },
+                            { l:"Daily B2B kg",             fn: o => fmtKg(o.b2bDailyKg) },
+                            { l:"Monthly B2C",              fn: o => fmtKg(o.b2cMonthly) },
+                            { l:"Monthly B2B",              fn: o => fmtKg(o.b2bMonthly) },
+                            { l:"Elec (no heater)",         fn: o => fmtR(o.electricityCost_cold) },
+                            { l:"Elec (with heater)",       fn: o => fmtR(o.electricityCost_hot)  },
+                            { l:"Water (all machines)",     fn: o => fmtR(o.waterCost) },
+                            { l:"Detergent",                fn: o => fmtR(o.detergentCost) },
+                            { l:"Packaging (B2C only)",     fn: o => fmtR(o.packagingCostVal) },
+                            { l:"Total revenue",            fn: o => fmtR(o.totalRev) },
+                            { l:"Expenses (no heater)",     fn: o => fmtR(o.totalExp) },
+                            { l:"Expenses (w/ heater)",     fn: o => fmtR(o.totalExp_hot) },
+                            { l:"Profit (no heater)",       fn: o => fmtR(o.profit) },
+                            { l:"Profit (w/ heater)",       fn: o => fmtR(o.profit_hot) },
+                            { l:"Margin (no heater)",       fn: o => fmtPct(o.margin) },
+                            { l:"Margin (w/ heater)",       fn: o => fmtPct(o.margin_hot) },
                           ].map(({ l, fn }) => (
                             <tr key={l} className="border-b border-slate-100 last:border-0">
                               <td className="px-4 py-2.5 text-slate-500">{l}</td>
