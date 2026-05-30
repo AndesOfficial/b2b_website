@@ -18,9 +18,8 @@ const B2B_CLIENTS = {
 };
 const B2B_DAY_MINS = 480;
 
-// ─── All defaults (including previously hardcoded spec constants) ─────────────
+// ─── All defaults ─────────────────────────────────────────────────────────────
 const DEFAULT_ASSUMPTIONS = {
-  // Machine setup
   machine_count: 2,
   m1cap: 13, m2cap: 8,
   m3enabled: false, m3cap: 8,
@@ -33,34 +32,27 @@ const DEFAULT_ASSUMPTIONS = {
   demandB2CPct: 50,
   workdays: 30,
 
-  // Pricing
   b2bPrice: 55, b2cPrice: 81, dcPrice: 100, gpkg: 3,
   laundrySplit: 83.33, dcSplit: 16.67,
   heaterColdPct: 83.33, heaterHotPct: 16.67,
 
-  // ── Now-editable: Electricity spec ──────────────────────────────────────────
   elecRate: 13.80,
   cycleMins: 40,
-  // 10 KG machine kW ratings
   m10_washerColdKw: 0.5,
   m10_washerHotKw:  2.1,
   m10_dryerKw:      0.25,
-  // 15 KG machine kW ratings
   m15_washerColdKw: 0.5,
   m15_washerHotKw:  2.2,
   m15_dryerKw:      0.35,
 
-  // ── Now-editable: Water spec ─────────────────────────────────────────────────
   waterRate:          0.38,
   water10kg:          65,
   water15kg:          95,
   practicalLoad10kg:  8,
   practicalLoad15kg:  13,
 
-  // ── Now-editable: Detergent ──────────────────────────────────────────────────
   detergentRate: 6,
 
-  // ── Now-editable: Packaging (B2C only) ──────────────────────────────────────
   pkgWashIronBagCost:      5,
   pkgWashIronClothesPerBag:12,
   pkgWashIronClothesPerKg: 4,
@@ -71,13 +63,11 @@ const DEFAULT_ASSUMPTIONS = {
   pkgDcWhitePaper:         0.5,
   pkgDcGarmentsPerKg:      3,
 
-  // ── Avg packaging cost per order (editable reference) ───────────────────────
   pkgWashIronOrderCost: 10,
   pkgWashFoldOrderCost: 5,
   pkgDcOrderCost:       22.2,
   pkgDcShoeOrderCost:   9.6,
 
-  // Fixed monthly expenses — updated to match Monthly Operating Costs sheet
   rent: 20000,
   workers: [
     { id: 1, name: "Worker 1 – Washing",  salary: 20000 },
@@ -247,6 +237,18 @@ function calcScenario(scenarioKey, a) {
     const b2bCyc   = mDetails[i].b2bCyc * a.workdays;
     const totalCyc = b2cCyc + b2bCyc;
 
+    const washerCold_kwh = spec.washerCold_kwh;
+    const washerHot_kwh  = spec.washerHot_kwh;
+    const dryer_kwh      = spec.dryer_kwh;
+
+    const washerKwh_cold   = washerCold_kwh * totalCyc;
+    const washerKwh_hot    = washerHot_kwh  * totalCyc;
+    const dryerKwh_monthly = dryer_kwh      * totalCyc;
+
+    const washerCost_cold   = washerKwh_cold   * a.elecRate;
+    const washerCost_hot    = washerKwh_hot    * a.elecRate;
+    const dryerCost_monthly = dryerKwh_monthly * a.elecRate;
+
     const machineKwh_cold  = spec.combined_cold_kwh * totalCyc;
     const machineKwh_hot   = spec.combined_hot_kwh  * totalCyc;
     const machineCost_cold = machineKwh_cold * a.elecRate;
@@ -274,11 +276,17 @@ function calcScenario(scenarioKey, a) {
       washerColdKw:  m.cap <= 10 ? a.m10_washerColdKw : a.m15_washerColdKw,
       washerHotKw:   m.cap <= 10 ? a.m10_washerHotKw  : a.m15_washerHotKw,
       dryerKw:       m.cap <= 10 ? a.m10_dryerKw      : a.m15_dryerKw,
-      washerCold_kwh: spec.washerCold_kwh,
-      washerHot_kwh:  spec.washerHot_kwh,
-      dryer_kwh:      spec.dryer_kwh,
+      washerCold_kwh,
+      washerHot_kwh,
+      dryer_kwh,
       combined_cold_kwh: spec.combined_cold_kwh,
       combined_hot_kwh:  spec.combined_hot_kwh,
+      washerKwh_cold,
+      washerKwh_hot,
+      dryerKwh_monthly,
+      washerCost_cold,
+      washerCost_hot,
+      dryerCost_monthly,
       machineKwh_cold, machineKwh_hot,
       machineCost_cold, machineCost_hot,
       costPerKg_cold, costPerKg_hot,
@@ -444,7 +452,7 @@ function DerivedRow({ label, formula, value }) {
   );
 }
 
-// ─── Machine Setup Panel (inline in left panel) ───────────────────────────────
+// ─── Machine Setup Panel ──────────────────────────────────────────────────────
 function MachineSetupPanel({ assumptions, set }) {
   const a = assumptions;
   return (
@@ -453,7 +461,6 @@ function MachineSetupPanel({ assumptions, set }) {
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Machine setup</p>
       </div>
       <div className="px-3 py-3 space-y-3">
-        {/* Machine 1 — always shown */}
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Machine 1</p>
           <FieldRow label="Capacity" unit="kg/cycle">
@@ -464,7 +471,6 @@ function MachineSetupPanel({ assumptions, set }) {
           </FieldRow>
         </div>
 
-        {/* Machine 2 — always shown */}
         <div className="space-y-1.5 pt-2 border-t border-slate-100">
           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Machine 2</p>
           <FieldRow label="Capacity" unit="kg/cycle">
@@ -475,7 +481,6 @@ function MachineSetupPanel({ assumptions, set }) {
           </FieldRow>
         </div>
 
-        {/* Machine 3 */}
         <div className="pt-2 border-t border-slate-100">
           <FieldRow label="Machine 3" unit="add new machine">
             <Toggle enabled={a.m3enabled} onToggle={() => set("m3enabled", !a.m3enabled)}
@@ -494,7 +499,6 @@ function MachineSetupPanel({ assumptions, set }) {
           )}
         </div>
 
-        {/* Machine 4 — only if M3 enabled */}
         {a.m3enabled && (
           <div className="pt-2 border-t border-slate-100">
             <FieldRow label="Machine 4" unit="add new machine">
@@ -515,7 +519,6 @@ function MachineSetupPanel({ assumptions, set }) {
           </div>
         )}
 
-        {/* Machine 5 — only if M4 enabled */}
         {a.m4enabled && (
           <div className="pt-2 border-t border-slate-100">
             <FieldRow label="Machine 5" unit="add new machine">
@@ -535,7 +538,6 @@ function MachineSetupPanel({ assumptions, set }) {
             )}
           </div>
         )}
-        {/* Working days intentionally removed — now lives in Edit Configuration modal */}
       </div>
     </div>
   );
@@ -643,7 +645,7 @@ function WaterConsumptionPanel({ machineElecBreakdown, workdays, waterRate }) {
   );
 }
 
-// ─── Electricity Consumption Panel ───────────────────────────────────────────
+// ─── Electricity Consumption Panel ────────────────────────────────────────────
 function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
   const enabledMachines = machineElecBreakdown.map((mb, i) => mb ? { ...mb, index: i } : null).filter(Boolean);
   const [selectedMachine, setSelectedMachine] = useState("all");
@@ -651,7 +653,6 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
 
   const viewMachines = selectedMachine === "all" ? enabledMachines : enabledMachines.filter(m => m.index === selectedMachine);
 
-  // Aggregate totals across selected machines
   const agg = viewMachines.reduce((acc, mb) => ({
     totalCyc:          acc.totalCyc          + mb.totalCyc,
     washerKwh_cold:    acc.washerKwh_cold    + mb.washerKwh_cold,
@@ -662,12 +663,14 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
     dryerCost_monthly: acc.dryerCost_monthly + mb.dryerCost_monthly,
     machineCost_cold:  acc.machineCost_cold  + mb.machineCost_cold,
     machineCost_hot:   acc.machineCost_hot   + mb.machineCost_hot,
-  }), { totalCyc:0, washerKwh_cold:0, washerKwh_hot:0, dryerKwh_monthly:0,
-        washerCost_cold:0, washerCost_hot:0, dryerCost_monthly:0, machineCost_cold:0, machineCost_hot:0 });
+  }), {
+    totalCyc: 0, washerKwh_cold: 0, washerKwh_hot: 0, dryerKwh_monthly: 0,
+    washerCost_cold: 0, washerCost_hot: 0, dryerCost_monthly: 0,
+    machineCost_cold: 0, machineCost_hot: 0,
+  });
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      {/* Header */}
       <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <FiZap size={13} className="text-amber-500" />
@@ -690,11 +693,9 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
         </div>
       </div>
 
-      {/* Per-machine breakdown */}
       <div className="px-4 pt-3 pb-2 space-y-4">
         {viewMachines.map(mb => (
           <div key={mb.index}>
-            {/* Machine label */}
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Machine {mb.index + 1} — {mb.specLabel}</p>
               <span className="text-[9px] bg-amber-50 text-amber-600 border border-amber-100 rounded px-1.5 py-0.5 font-semibold uppercase tracking-wide">
@@ -703,16 +704,15 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {/* ── Washer ── */}
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-2">🫧 Washer</p>
                 <div className="space-y-0">
-                  <DerivedRow label="Cold kW"       value={`${mb.washerColdKw} kW`} />
-                  <DerivedRow label="Hot kW"         value={`${mb.washerHotKw} kW`} />
-                  <DerivedRow label="kWh/cycle (cold)" formula={`${mb.washerColdKw} × cycleHr`} value={`${fmtDec(mb.washerCold_kwh,4)} kWh`} />
-                  <DerivedRow label="kWh/cycle (hot)"  formula={`${mb.washerHotKw} × cycleHr`}  value={`${fmtDec(mb.washerHot_kwh,4)} kWh`} />
-                  <DerivedRow label="Monthly kWh (cold)" formula={`${fmtDec(mb.washerCold_kwh,4)} × ${mb.totalCyc}`} value={`${fmtDec(mb.washerKwh_cold,1)} kWh`} />
-                  <DerivedRow label="Monthly kWh (hot)"  formula={`${fmtDec(mb.washerHot_kwh,4)} × ${mb.totalCyc}`}  value={`${fmtDec(mb.washerKwh_hot,1)} kWh`} />
+                  <DerivedRow label="Cold kW"               value={`${mb.washerColdKw} kW`} />
+                  <DerivedRow label="Hot kW"                value={`${mb.washerHotKw} kW`} />
+                  <DerivedRow label="kWh/cycle (cold)"      formula={`${mb.washerColdKw} × cycleHr`} value={`${fmtDec(mb.washerCold_kwh, 4)} kWh`} />
+                  <DerivedRow label="kWh/cycle (hot)"       formula={`${mb.washerHotKw} × cycleHr`}  value={`${fmtDec(mb.washerHot_kwh, 4)} kWh`} />
+                  <DerivedRow label="Monthly kWh (cold)"    formula={`${fmtDec(mb.washerCold_kwh,4)} × ${mb.totalCyc}`} value={`${fmtDec(mb.washerKwh_cold, 1)} kWh`} />
+                  <DerivedRow label="Monthly kWh (hot)"     formula={`${fmtDec(mb.washerHot_kwh,4)} × ${mb.totalCyc}`}  value={`${fmtDec(mb.washerKwh_hot, 1)} kWh`} />
                 </div>
                 <div className="mt-2 pt-2 border-t border-blue-200 grid grid-cols-2 gap-1">
                   <div className="bg-white rounded-lg p-1.5 text-center">
@@ -726,13 +726,12 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
                 </div>
               </div>
 
-              {/* ── Dryer ── */}
               <div className="bg-orange-50 border border-orange-100 rounded-xl p-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500 mb-2">🌀 Dryer</p>
                 <div className="space-y-0">
-                  <DerivedRow label="kW rating"        value={`${mb.dryerKw} kW`} />
-                  <DerivedRow label="kWh/cycle"         formula={`${mb.dryerKw} × cycleHr`} value={`${fmtDec(mb.dryer_kwh,4)} kWh`} />
-                  <DerivedRow label="Monthly kWh"        formula={`${fmtDec(mb.dryer_kwh,4)} × ${mb.totalCyc}`} value={`${fmtDec(mb.dryerKwh_monthly,1)} kWh`} />
+                  <DerivedRow label="kW rating"    value={`${mb.dryerKw} kW`} />
+                  <DerivedRow label="kWh/cycle"    formula={`${mb.dryerKw} × cycleHr`} value={`${fmtDec(mb.dryer_kwh, 4)} kWh`} />
+                  <DerivedRow label="Monthly kWh"  formula={`${fmtDec(mb.dryer_kwh,4)} × ${mb.totalCyc}`} value={`${fmtDec(mb.dryerKwh_monthly, 1)} kWh`} />
                 </div>
                 <div className="mt-2 pt-2 border-t border-orange-200">
                   <div className="bg-white rounded-lg p-1.5 text-center">
@@ -744,7 +743,6 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
               </div>
             </div>
 
-            {/* Combined summary for this machine */}
             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 grid grid-cols-2 gap-2">
               <div className="text-center">
                 <p className="text-[9px] uppercase tracking-widest text-amber-600 mb-0.5">Total (cold water)</p>
@@ -761,25 +759,21 @@ function ElectricityConsumptionPanel({ machineElecBreakdown, elecRate }) {
         ))}
       </div>
 
-      {/* Combined all-machines summary */}
       {viewMachines.length > 1 && (
         <div className="mx-4 mb-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-2">Combined — All Machines</p>
           <div className="grid grid-cols-2 gap-2 mb-2">
-            {/* Washer total */}
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-2">
               <p className="text-[9px] font-bold uppercase tracking-widest text-blue-500 mb-1">🫧 Washer</p>
               <div className="flex justify-between"><span className="text-[9px] text-blue-600">Cold cost</span><span className="text-[9px] font-mono font-semibold text-blue-700">{fmtR(agg.washerCost_cold)}</span></div>
               <div className="flex justify-between"><span className="text-[9px] text-orange-500">Hot cost</span><span className="text-[9px] font-mono font-semibold text-orange-600">{fmtR(agg.washerCost_hot)}</span></div>
             </div>
-            {/* Dryer total */}
             <div className="bg-orange-50 border border-orange-100 rounded-lg p-2">
               <p className="text-[9px] font-bold uppercase tracking-widest text-orange-500 mb-1">🌀 Dryer</p>
               <div className="flex justify-between"><span className="text-[9px] text-orange-600">Monthly cost</span><span className="text-[9px] font-mono font-semibold text-orange-700">{fmtR(agg.dryerCost_monthly)}</span></div>
-              <div className="flex justify-between"><span className="text-[9px] text-orange-400">Monthly kWh</span><span className="text-[9px] font-mono text-orange-500">{fmtDec(agg.dryerKwh_monthly,1)} kWh</span></div>
+              <div className="flex justify-between"><span className="text-[9px] text-orange-400">Monthly kWh</span><span className="text-[9px] font-mono text-orange-500">{fmtDec(agg.dryerKwh_monthly, 1)} kWh</span></div>
             </div>
           </div>
-          {/* Grand totals */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-200">
             <div className="text-center">
               <p className="text-[9px] uppercase tracking-widest text-amber-600">Grand total (cold)</p>
@@ -835,7 +829,7 @@ function MachineRecommendation({ assumptions }) {
   );
 }
 
-// ─── Edit Configuration Modal (pricing & rates only) ─────────────────────────
+// ─── Edit Configuration Modal ─────────────────────────────────────────────────
 function ConfigModal({ assumptions, set, onClose, hasB2B }) {
   const a = assumptions;
   const splitTotal = a.laundrySplit + a.dcSplit;
@@ -871,13 +865,11 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
 
-          {/* ── OPERATIONS (Working days) ── */}
           <SectionDivider>Operations</SectionDivider>
           <FieldRow label="Working days / month" unit="days">
             <NI value={a.workdays} min={1} max={31} onChange={v => set("workdays", v)} />
           </FieldRow>
 
-          {/* ── B2C PRICING ── */}
           <SectionDivider>B2C pricing</SectionDivider>
           <FieldRow label="B2C laundry price" unit="₹ / kg">
             <NI value={a.b2cPrice} min={1} prefix="₹" onChange={v => set("b2cPrice", v)} />
@@ -908,7 +900,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </div>
 
-          {/* ── B2B PRICING ── */}
           {hasB2B && (<>
             <SectionDivider>B2B pricing</SectionDivider>
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-3 mb-2">
@@ -931,7 +922,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </>)}
 
-          {/* ── ELECTRICITY SPEC ── */}
           <SectionDivider>Electricity spec</SectionDivider>
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
             <p className="text-[10px] text-amber-700 font-semibold">All kWh values are auto-derived from kW × cycle duration. Edit the power ratings and cycle time below.</p>
@@ -941,7 +931,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             <NI value={a.elecRate} min={1} step={0.1} prefix="₹" onChange={v => set("elecRate", v)} />
           </FieldRow>
 
-          {/* ── HEATER SPLIT ── */}
           <div className="bg-slate-50 rounded-xl p-3 mb-2 border border-slate-100">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Washer heater usage split</p>
             <p className="text-[10px] text-slate-400 mb-2">What % of wash cycles run cold vs hot water?</p>
@@ -955,7 +944,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
                 <NI value={a.heaterHotPct} min={0} max={100} step={0.01} onChange={v => set("heaterHotPct", v)} />
               </div>
             </div>
-            {/* visual bar */}
             <div className="flex rounded-lg overflow-hidden h-5 mt-2 mb-1">
               {a.heaterColdPct > 0 && <div className="bg-blue-400 flex items-center justify-center transition-all" style={{width:`${a.heaterColdPct}%`}}><span className="text-[9px] font-bold text-white truncate px-1">Cold {a.heaterColdPct}%</span></div>}
               {a.heaterHotPct  > 0 && <div className="bg-orange-400 flex items-center justify-center transition-all" style={{width:`${a.heaterHotPct}%`}}><span className="text-[9px] font-bold text-white truncate px-1">Hot {a.heaterHotPct}%</span></div>}
@@ -964,7 +952,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
               <p className="text-[10px] text-slate-400">Total: <span className={`font-mono font-semibold ${Math.abs((a.heaterColdPct+a.heaterHotPct)-100)<0.1?"text-emerald-600":(a.heaterColdPct+a.heaterHotPct)>100?"text-red-500":"text-amber-500"}`}>{(a.heaterColdPct+a.heaterHotPct).toFixed(2)}%</span></p>
               {Math.abs((a.heaterColdPct+a.heaterHotPct)-100)>0.1 && <p className="text-[10px] text-amber-600 flex items-center gap-1"><FiAlertTriangle size={10}/>{(a.heaterColdPct+a.heaterHotPct)>100?"Over 100%":"Under 100%"}</p>}
             </div>
-            {/* presets */}
             <div className="flex gap-1.5 flex-wrap mt-2">
               {[[100,0],[83.33,16.67],[70,30],[50,50],[0,100]].map(([cold,hot]) => (
                 <button key={cold} onClick={() => { set("heaterColdPct", cold); set("heaterHotPct", hot); }}
@@ -1022,7 +1009,6 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </div>
 
-          {/* ── WATER SPEC ── */}
           <SectionDivider>Water spec</SectionDivider>
           <FieldRow label="Water rate" unit="₹ / litre">
             <NI value={a.waterRate} min={0.01} step={0.01} prefix="₹" onChange={v => set("waterRate", v)} />
@@ -1057,13 +1043,11 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
             </div>
           </div>
 
-          {/* ── DETERGENT ── */}
           <SectionDivider>Detergent</SectionDivider>
           <FieldRow label="Detergent cost" unit="₹ / kg of laundry">
             <NI value={a.detergentRate} min={0} step={0.5} prefix="₹" onChange={v => set("detergentRate", v)} />
           </FieldRow>
 
-          {/* ── PACKAGING ── */}
           <SectionDivider>Packaging — B2C only</SectionDivider>
           <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 mb-3">
             <p className="text-[10px] text-orange-600 font-semibold">B2B clients handle their own bulk packaging — not charged here.</p>
@@ -1099,7 +1083,7 @@ function ConfigModal({ assumptions, set, onClose, hasB2B }) {
 
 // ─── Scenario card ────────────────────────────────────────────────────────────
 function ScenarioCard({ scenarioKey, out, active, onClick }) {
-  const { seed, totalRev, totalExp, totalExp_hot, totalExp_blended, profit, profit_hot, profit_blended, margin, margin_hot, margin_blended, b2cDailyKg, b2cMonthly, dailyRev } = out;
+  const { seed, totalRev, totalExp_blended, profit_blended, margin_blended, b2cDailyKg, b2cMonthly, dailyRev } = out;
   const st = SS[seed.color];
   const Icon = seed.icon === "up" ? FiTrendingUp : seed.icon === "down" ? FiTrendingDown : FiMinus;
   return (
@@ -1121,7 +1105,7 @@ function ScenarioCard({ scenarioKey, out, active, onClick }) {
           { l:"Daily B2C output",        v: fmtKg(b2cDailyKg) },
           { l:"Monthly B2C kg",          v: fmtKg(b2cMonthly) },
           { l:"Daily revenue",           v: fmtR(dailyRev) },
-          { l:"Monthly expenses",         v: fmtR(totalExp_blended) },
+          { l:"Monthly expenses",        v: fmtR(totalExp_blended) },
           { l:"Net profit (blended)",    v: fmtR(profit_blended), cls: profit_blended >= 0 ? "text-emerald-600" : "text-red-500" },
           { l:"Profit margin (blended)", v: fmtPct(margin_blended), cls: margin_blended >= 20 ? "text-emerald-600" : margin_blended >= 0 ? "text-amber-600" : "text-red-500" },
         ].map(({ l, v, cls }) => (
@@ -1141,7 +1125,7 @@ function DetailPanel({ out, assumptions }) {
     laundryKg, dcKg, garments, laundryRev, dcRev, b2bRev, totalRev, dailyRev,
     hostelCycles, hotelCycles, hostelMonthly, hotelMonthly, hostelRev, hotelRev,
     electricityCost, electricityCost_cold, electricityCost_hot, electricityCost_blended,
-    machineElecBreakdown, waterCost, detergentCost, packagingCostVal, pkgBreakdown, pkgDcPerGarment,
+    machineElecBreakdown, waterCost, detergentCost, packagingCostVal, pkgBreakdown,
     totalExp, totalExp_hot, totalExp_blended, profit, profit_hot, profit_blended, margin, margin_hot, margin_blended, revPerKg, expPerKg,
   } = out;
   const a  = assumptions;
@@ -1178,18 +1162,20 @@ function DetailPanel({ out, assumptions }) {
   return (
     <div className="space-y-4">
 
-      {/* Hero */}
+      {/* ── Hero — only Net Profit + Margin ── */}
       <div className={`${st.hero} rounded-2xl p-5 relative overflow-hidden`}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
         <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Total monthly revenue — {seed.label}</p>
         <p className="text-4xl font-light font-mono text-white"><span className="text-xl align-top mt-1.5 inline-block opacity-60">₹</span>{fmt(totalRev)}</p>
         <div className="flex flex-wrap gap-6 mt-3">
           {[
-            { l:"In Lakhs",v:`₹ ${fmtL(totalRev)} L` }, { l:"Daily revenue",v:fmtR(dailyRev) },
-            { l:"Profit (blended)",v:fmtR(profit_blended) },   { l:"Margin (blended)",v:fmtPct(margin_blended) },
-            { l:"Profit (cold only)",v:fmtR(profit) },             { l:"Profit (hot only)",v:fmtR(profit_hot) },
-          ].map(({ l, v }) => (
-            <div key={l}><p className="text-[9px] uppercase tracking-widest text-white/40 mb-0.5">{l}</p><p className="text-sm font-mono font-medium text-white/90">{v}</p></div>
+            { l:"Net Profit",  v: fmtR(profit_blended),   cls: profit_blended  >= 0  ? "text-white/90" : "text-red-300" },
+            { l:"Margin",      v: fmtPct(margin_blended),  cls: margin_blended  >= 20 ? "text-white/90" : margin_blended >= 0 ? "text-amber-200" : "text-red-300" },
+          ].map(({ l, v, cls }) => (
+            <div key={l}>
+              <p className="text-[9px] uppercase tracking-widest text-white/40 mb-0.5">{l}</p>
+              <p className={`text-sm font-mono font-medium ${cls}`}>{v}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -1319,8 +1305,8 @@ function DetailPanel({ out, assumptions }) {
           { l:"Margin (blended)",         v:fmtPct(margin_blended), cls: margin_blended>=20?"text-emerald-600":margin_blended>=0?"text-amber-600":"text-red-500" },
           { l:"Net Profit (cold only)",   v:fmtR(profit),           cls: profit>=0?"text-emerald-600":"text-red-500" },
           { l:"Net Profit (hot only)",    v:fmtR(profit_hot),       cls: profit_hot>=0?"text-emerald-600":"text-red-500" },
-          { l:"Revenue per kg",           v:fmtR(revPerKg),     cls:"text-slate-800" },
-          { l:"Expense per kg",           v:fmtR(expPerKg),     cls:"text-slate-800" },
+          { l:"Revenue per kg",           v:fmtR(revPerKg),         cls:"text-slate-800" },
+          { l:"Expense per kg",           v:fmtR(expPerKg),         cls:"text-slate-800" },
         ].map(({ l, v, cls }) => (
           <div key={l} className="bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs text-slate-400 mb-1">{l}</p>
@@ -1465,11 +1451,9 @@ export default function Calculator() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Editable assumptions</p>
               <p className="text-[11px] text-slate-400 mb-3">All values update all 3 scenarios live</p>
 
-              {/* ── MACHINE SETUP ── */}
               <SectionDivider>Machine setup</SectionDivider>
               <MachineSetupPanel assumptions={assumptions} set={set} />
 
-              {/* ── B2B CLIENT MIX ── */}
               {hasB2B && (<>
                 <SectionDivider>B2B client mix</SectionDivider>
                 <div className="mb-3">
@@ -1499,7 +1483,6 @@ export default function Calculator() {
                 </div>
               </>)}
 
-              {/* ── PRICING CONFIGURATION ── */}
               <SectionDivider>Pricing configuration</SectionDivider>
               <div className="flex gap-2 mb-2.5">
                 <div className={`flex-1 rounded-lg px-2.5 py-2 border text-center ${hasB2C?"bg-emerald-50 border-emerald-200":"bg-slate-50 border-slate-200"}`}>
@@ -1539,7 +1522,6 @@ export default function Calculator() {
 
               <SectionDivider>Fixed monthly expenses</SectionDivider>
 
-              {/* Workers – dynamic list */}
               <div className="mb-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-xs text-slate-600">Workers</p>
@@ -1553,7 +1535,7 @@ export default function Calculator() {
                     + Add Worker
                   </button>
                 </div>
-                {(assumptions.workers || []).map((worker, idx) => (
+                {(assumptions.workers || []).map((worker) => (
                   <div key={worker.id} className="grid grid-cols-[1fr_auto_auto] gap-1.5 items-center mb-1.5">
                     <input
                       type="text"
@@ -1614,7 +1596,6 @@ export default function Calculator() {
               </FieldRow>
               <p className="text-[10px] text-slate-400 mb-3">Enter your expected total demand — set B2C/B2B split and we'll recommend machines.</p>
 
-              {/* B2C / B2B split */}
               {(assumptions.dailyKgDemand > 0) && (() => {
                 const totalKg = assumptions.dailyKgDemand;
                 const b2cPct  = assumptions.demandB2CPct !== undefined ? assumptions.demandB2CPct : 50;
@@ -1624,7 +1605,6 @@ export default function Calculator() {
                 return (
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">B2C / B2B Demand Split</p>
-
                     <div className="relative h-5 rounded-full overflow-hidden flex mb-2">
                       <div className="bg-emerald-500 transition-all duration-200" style={{ width: `${b2cPct}%` }} />
                       <div className="bg-blue-500 flex-1 transition-all duration-200" />
@@ -1633,7 +1613,6 @@ export default function Calculator() {
                       <span className="text-emerald-600">B2C {b2cPct}% · {b2cKg} kg/day</span>
                       <span className="text-blue-600">B2B {b2bPct}% · {b2bKg} kg/day</span>
                     </div>
-
                     <div className="mb-3">
                       <p className="text-[10px] text-slate-400 mb-1">Drag to adjust split</p>
                       <input
@@ -1647,7 +1626,6 @@ export default function Calculator() {
                         <span>0% B2C</span><span>50/50</span><span>100% B2C</span>
                       </div>
                     </div>
-
                     <div className="flex gap-1.5 flex-wrap mb-1">
                       {[[100,0],[75,25],[50,50],[25,75],[0,100]].map(([b2c]) => (
                         <button key={b2c} onClick={() => set("demandB2CPct", b2c)}
@@ -1660,7 +1638,6 @@ export default function Calculator() {
                       ))}
                     </div>
                     <p className="text-[9px] text-slate-300 italic mb-3">B2C : B2B ratio presets</p>
-
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-2 text-center">
                         <p className="text-[9px] uppercase tracking-widest text-emerald-500 mb-0.5">B2C daily</p>
