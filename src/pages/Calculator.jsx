@@ -1162,19 +1162,20 @@ function DetailPanel({ out, assumptions }) {
   return (
     <div className="space-y-4">
 
-      {/* ── Hero — only Net Profit + Margin ── */}
+      {/* ── Hero — In Lakhs · Daily Revenue · Net Profit · Margin ── */}
       <div className={`${st.hero} rounded-2xl p-5 relative overflow-hidden`}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
-        <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Total monthly revenue — {seed.label}</p>
-        <p className="text-4xl font-light font-mono text-white"><span className="text-xl align-top mt-1.5 inline-block opacity-60">₹</span>{fmt(totalRev)}</p>
-        <div className="flex flex-wrap gap-6 mt-3">
+        <p className="text-[10px] uppercase tracking-widest text-white/50 mb-3">Total monthly revenue — {seed.label}</p>
+        <div className="flex flex-wrap gap-6">
           {[
-            { l:"Net Profit",  v: fmtR(profit_blended),   cls: profit_blended  >= 0  ? "text-white/90" : "text-red-300" },
-            { l:"Margin",      v: fmtPct(margin_blended),  cls: margin_blended  >= 20 ? "text-white/90" : margin_blended >= 0 ? "text-amber-200" : "text-red-300" },
+            { l:"In Lakhs",      v: `₹ ${fmtL(totalRev)} L`,       cls: "text-white" },
+            { l:"Daily Revenue", v: `₹ ${fmtL(dailyRev)} L`,       cls: "text-white/90" },
+            { l:"Net Profit",    v: `₹ ${fmtL(profit_blended)} L`,  cls: profit_blended  >= 0  ? "text-white/90" : "text-red-300" },
+            { l:"Margin",        v: fmtPct(margin_blended),          cls: margin_blended  >= 20 ? "text-white/90" : margin_blended >= 0 ? "text-amber-200" : "text-red-300" },
           ].map(({ l, v, cls }) => (
             <div key={l}>
               <p className="text-[9px] uppercase tracking-widest text-white/40 mb-0.5">{l}</p>
-              <p className={`text-sm font-mono font-medium ${cls}`}>{v}</p>
+              <p className={`text-lg font-mono font-semibold ${cls}`}>{v}</p>
             </div>
           ))}
         </div>
