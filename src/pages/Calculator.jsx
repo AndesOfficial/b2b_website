@@ -247,6 +247,15 @@ function calcScenario(scenarioKey, a) {
     const b2bCyc   = mDetails[i].b2bCyc * a.workdays;
     const totalCyc = b2cCyc + b2bCyc;
 
+    const washerCold_kwh    = spec.washerCold_kwh;
+    const washerHot_kwh     = spec.washerHot_kwh;
+    const dryer_kwh         = spec.dryer_kwh;
+    const washerKwh_cold    = washerCold_kwh * totalCyc;
+    const washerKwh_hot     = washerHot_kwh  * totalCyc;
+    const dryerKwh_monthly  = dryer_kwh      * totalCyc;
+    const washerCost_cold   = washerKwh_cold   * a.elecRate;
+    const washerCost_hot    = washerKwh_hot    * a.elecRate;
+    const dryerCost_monthly = dryerKwh_monthly * a.elecRate;
     const machineKwh_cold  = spec.combined_cold_kwh * totalCyc;
     const machineKwh_hot   = spec.combined_hot_kwh  * totalCyc;
     const machineCost_cold = machineKwh_cold * a.elecRate;
@@ -274,11 +283,13 @@ function calcScenario(scenarioKey, a) {
       washerColdKw:  m.cap <= 10 ? a.m10_washerColdKw : a.m15_washerColdKw,
       washerHotKw:   m.cap <= 10 ? a.m10_washerHotKw  : a.m15_washerHotKw,
       dryerKw:       m.cap <= 10 ? a.m10_dryerKw      : a.m15_dryerKw,
-      washerCold_kwh: spec.washerCold_kwh,
-      washerHot_kwh:  spec.washerHot_kwh,
-      dryer_kwh:      spec.dryer_kwh,
+      washerCold_kwh,
+      washerHot_kwh,
+      dryer_kwh,
       combined_cold_kwh: spec.combined_cold_kwh,
       combined_hot_kwh:  spec.combined_hot_kwh,
+      washerKwh_cold, washerKwh_hot, dryerKwh_monthly,
+      washerCost_cold, washerCost_hot, dryerCost_monthly,
       machineKwh_cold, machineKwh_hot,
       machineCost_cold, machineCost_hot,
       costPerKg_cold, costPerKg_hot,
