@@ -115,7 +115,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
     const getQty = (order, propertyName) => {
         const name = propertyName?.toLowerCase() || "";
         // Use items (clothes count) for Hostel 99 and Airbnbs
-        const isItemBased = name.includes("hostel 99") || 
+        const isItemBased = name.includes("hostel 99") ||
                            name.includes("hostel99") ||
                            name.includes("airbnb") ||
                            groupIncludesProperty(HOSTEL_GROUPS.GROUP_99.properties, propertyName);
