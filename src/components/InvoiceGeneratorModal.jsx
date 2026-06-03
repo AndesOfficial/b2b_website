@@ -3,10 +3,12 @@ import { FiX, FiDownload, FiFileText } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
+import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
+import { normalizePropertyName } from "../utils/orderNormalization";
 import signatureImage from "../assets/signature.jpeg";
 
 
-export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
+export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) {
     // Form State
     const [invoiceNo, setInvoiceNo] = useState("");
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
@@ -44,23 +46,70 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
         }
     };
 
+    const normalizePropertyKey = (value) =>
+        String(value || "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .replace(/[._-]/g, " ")
+            .replace(/\s+/g, " ")
+            .toLowerCase();
+
+    const INVOICE_PROPERTY_CATALOG = Array.from(
+        new Map(
+            Object.values(HOSTEL_GROUPS)
+                .flatMap((group) => group.properties)
+                .map((property) => {
+                    const canonicalName = normalizePropertyName(property);
+                    return [normalizePropertyKey(canonicalName), canonicalName];
+                })
+        ).values()
+    );
+
+    const getOrderPropertyCandidates = (order) =>
+        [order.property, order.linkedHostel, order.tenant, order.partnerName, order.propertyName, order.hostelName, order.hotelName]
+            .filter(Boolean);
+
+    const canonicalInvoiceProperty = (value) => {
+        const normalizedName = normalizePropertyName(value);
+        const normalizedKey = normalizePropertyKey(normalizedName);
+        return INVOICE_PROPERTY_CATALOG.find((property) => normalizePropertyKey(property) === normalizedKey) || "";
+    };
+
+    const getOrderProperty = (order) => {
+        const candidates = getOrderPropertyCandidates(order);
+        return candidates.map(canonicalInvoiceProperty).find(Boolean) || "";
+    };
+
+    const propertyMatches = (orderProperty, targetProperty) =>
+        normalizePropertyKey(canonicalInvoiceProperty(orderProperty) || orderProperty) === normalizePropertyKey(targetProperty);
+
+    const groupIncludesProperty = (groupProperties, orderProperty) => {
+        const orderKey = normalizePropertyKey(canonicalInvoiceProperty(orderProperty) || orderProperty);
+        return groupProperties.some((property) => normalizePropertyKey(normalizePropertyName(property)) === orderKey);
+    };
+
+    const isInvoiceEligibleOrder = (order) => {
+        if (order.category === ORDER_CATEGORIES.ISSUES || order.type === ORDER_TYPES.ISSUE) return false;
+        if (order.category === ORDER_CATEGORIES.B2C_RETAIL || order.type === ORDER_TYPES.REGULAR) return false;
+        return Boolean(getOrderProperty(order));
+    };
+
     // Extract unique properties from orders for the dropdown
     const uniqueProperties = useMemo(() => {
-        const exclusionList = ["Issues", "Regular Customers", "Aakansha Hostel Kothurd", "Tara Hostel Kothrud"];
-        const propMap = new Map(); // Lowercase Name -> Original Name
-        
-        orders.forEach(o => {
-            const name = o.property || o.linkedHostel;
-            if (name && !exclusionList.includes(name)) {
-                const lowerName = name.toLowerCase().trim();
-                // If we haven't seen this name (case-insensitive), add it
-                if (!propMap.has(lowerName)) {
-                    propMap.set(lowerName, name);
-                }
-            }
-        });
+        const propertiesWithOrders = new Set(
+            orders
+                .filter(isInvoiceEligibleOrder)
+                .map(getOrderProperty)
+                .filter(Boolean)
+                .map(normalizePropertyKey)
+        );
 
-        return Array.from(propMap.values()).sort((a, b) => a.localeCompare(b));
+        const activeProperties = INVOICE_PROPERTY_CATALOG.filter((property) =>
+            propertiesWithOrders.has(normalizePropertyKey(property))
+        );
+
+        return (activeProperties.length > 0 ? activeProperties : INVOICE_PROPERTY_CATALOG)
+            .sort((a, b) => a.localeCompare(b));
     }, [orders]);
 
     const getQty = (order, propertyName) => {
@@ -69,9 +118,12 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
         const isItemBased = name.includes("hostel 99") || 
                            name.includes("hostel99") ||
                            name.includes("airbnb") ||
-                           HOSTEL_GROUPS.GROUP_99.properties.some(p => p.toLowerCase() === name);
+                           groupIncludesProperty(HOSTEL_GROUPS.GROUP_99.properties, propertyName);
+        const detailItems = order.details && typeof order.details === "object"
+            ? Object.values(order.details).reduce((sum, value) => sum + (Number(value) || 0), 0)
+            : 0;
         
-        return Number(isItemBased ? (order.items || 0) : (order.weight || 0));
+        return Number(isItemBased ? (order.items || detailItems || 0) : (order.weight || 0));
     };
 
     const getUnitLabel = (selection) => {
@@ -80,7 +132,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
         const isItemBased = name.includes("hostel 99") || 
                            name.includes("hostel99") ||
                            name.includes("airbnb") ||
-                           HOSTEL_GROUPS.GROUP_99.properties.some(p => p.toLowerCase() === name);
+                           groupIncludesProperty(HOSTEL_GROUPS.GROUP_99.properties, selection);
         return isItemBased ? "Pcs" : "Kg";
     };
 
@@ -90,8 +142,8 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
         return name.includes("hostel 99") || 
                name.includes("hostel99") ||
                name.includes("airbnb") || 
-               HOSTEL_GROUPS.GROUP_99.properties.some(p => p.toLowerCase() === name) ||
-               HOSTEL_GROUPS.GROUP_AIRBNB.properties.some(p => p.toLowerCase() === name);
+               groupIncludesProperty(HOSTEL_GROUPS.GROUP_99.properties, propertyName) ||
+               groupIncludesProperty(HOSTEL_GROUPS.GROUP_AIRBNB.properties, propertyName);
     };
 
     const numberToIndianWords = (num) => {
@@ -154,12 +206,14 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
         } else if (isGroup) {
             const groupProps = HOSTEL_GROUPS[selectedProperty].properties;
             targetOrders = dateFiltered.filter(o => {
-                const prop = o.property || o.linkedHostel;
-                return groupProps.includes(prop);
+                const prop = getOrderProperty(o);
+                return groupIncludesProperty(groupProps, prop);
             });
         } else {
             targetOrders = dateFiltered.filter(o => {
-                return (o.property === selectedProperty || o.linkedHostel === selectedProperty);
+                return [o.property, o.linkedHostel, o.tenant, o.partnerName].some((property) =>
+                    propertyMatches(property, selectedProperty)
+                );
             });
         }
 
@@ -178,7 +232,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
             // Aggregated by Property
             const propertyTotals = {};
             targetOrders.forEach(o => {
-                const prop = o.property || o.linkedHostel || "Unknown Property";
+                const prop = getOrderProperty(o) || "Unknown Property";
                 if (!propertyTotals[prop]) propertyTotals[prop] = { qty: 0, amount: 0 };
                 
                 const qty = getQty(o, prop);
@@ -192,7 +246,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
             });
 
             tableData = Object.entries(propertyTotals)
-                .filter(([_, data]) => data.qty > 0)
+                .filter(([_, data]) => data.qty > 0 || data.amount > 0)
                 .map(([prop, data]) => {
                     const amount = data.amount;
                     totalAmount += amount;
@@ -224,7 +278,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
             });
 
             const sortedDates = Object.keys(dateTotals)
-                .filter(dateStr => dateTotals[dateStr].qty > 0)
+                .filter(dateStr => dateTotals[dateStr].qty > 0 || dateTotals[dateStr].amount > 0)
                 .sort((a, b) => {
                     const [d1, m1, y1] = a.split("/");
                     const [d2, m2, y2] = b.split("/");
@@ -244,6 +298,11 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders }) {
                     amount.toFixed(2)
                 ];
             });
+        }
+
+        if (tableData.length === 0) {
+            alert("No billable quantity or amount found for the selected criteria.");
+            return;
         }
 
         // 3. Initialize jsPDF

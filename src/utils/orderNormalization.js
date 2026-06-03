@@ -14,9 +14,13 @@ const CANONICAL_PROPERTY_NAMES = {
 
   // Adarsha
   adarsha: "Adarsha",
+  adarsa: "Adarsha",
   "adarsha hostel": "Adarsha",
+  "adarsa hostel": "Adarsha",
   "adarsha hostel bhavdan": "Adarsha",
+  "adarsa hostel bhavdan": "Adarsha",
   "adarsha hostel bavdhan": "Adarsha",
+  "adarsa hostel bavdhan": "Adarsha",
 
   // Aaradhana (previously "Aardhana" in UI)
   aardhana: "Aaradhana",
@@ -90,11 +94,15 @@ const CANONICAL_PROPERTY_NAMES = {
   "hostel99 yerwada 2": "Hostel99 Yerwada 2",
   "hostel 99 no-88": "Hostel 99 no-88",
   "hostel99 no. 88": "Hostel 99 no-88",
+  "hostel99 no.88": "Hostel 99 no-88",
+  "hostel99 no88": "Hostel 99 no-88",
   "hostel99 no 88": "Hostel 99 no-88",
   "hostel 99 no. 88": "Hostel 99 no-88",
   "hostel 99 no 88": "Hostel 99 no-88",
   "hostel 99 no-3": "Hostel 99 no-3",
   "hostel99 no. 3": "Hostel 99 no-3",
+  "hostel99 no.3": "Hostel 99 no-3",
+  "hostel99 no3": "Hostel 99 no-3",
   "hostel99 no 3": "Hostel 99 no-3",
   "hostel 99 no. 3": "Hostel 99 no-3",
   "hostel 99 no 3": "Hostel 99 no-3",
