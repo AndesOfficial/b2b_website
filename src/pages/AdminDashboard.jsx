@@ -210,7 +210,7 @@ export default function AdminDashboard() {
       <InvoiceGeneratorModal
         isOpen={showInvoiceModal}
         onClose={() => setShowInvoiceModal(false)}
-        orders={orders}
+        orders={baseOrders}
       />
 
       <AdminAddOrderModal

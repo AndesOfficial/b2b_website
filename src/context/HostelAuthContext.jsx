@@ -72,7 +72,6 @@ export function HostelAuthProvider({ children }) {
           const rawPartnernames = userData.partnernames || userData.properties || [];
           const partnernames = rawPartnernames.map(name => normalizePropertyName(name));
           const clientData = {
-            uid: firebaseUser.uid,
             email: userData.email || firebaseUser.email || "",
             name: userData.name || (userData.email || firebaseUser.email || "Client"),
             ...userData,
