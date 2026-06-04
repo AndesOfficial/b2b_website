@@ -22,7 +22,7 @@ const CANONICAL_PROPERTY_NAMES = {
   "adarsha hostel bavdhan": "Adarsha",
   "adarsa hostel bavdhan": "Adarsha",
 
-  // Aaradhana (previously "Aardhana" in UI)
+  // Aaradhana
   aardhana: "Aaradhana",
   ardhana: "Aaradhana",
   "aardhana hostel": "Aaradhana",
@@ -41,13 +41,12 @@ const CANONICAL_PROPERTY_NAMES = {
   gurukul: "Gurukul",
   "gurukul hostel": "Gurukul",
 
-  // Keerti (previously "Kirti" in UI)
+  // Keerti
   kirti: "Keerti",
   "kirti hostel": "Keerti",
   keerti: "Keerti",
   "keerti hostel": "Keerti",
   "keerti hostel karve nagar": "Keerti",
-  "kirti hostel karve nagar": "Keerti",
 
   // Meera
   meera: "Meera",
@@ -72,6 +71,8 @@ const CANONICAL_PROPERTY_NAMES = {
   "samshursti hostel": "Samshrushti",
   "samshursti hostel karve nagar": "Samshrushti",
   "samshrushti hostel karve nagar": "Samshrushti",
+  samsrushti: "Samshrushti",
+  "samsrushti hostel": "Samshrushti",
 
   // Tara
   tara: "Tara",
@@ -99,6 +100,7 @@ const CANONICAL_PROPERTY_NAMES = {
   "hostel99 no 88": "Hostel 99 no-88",
   "hostel 99 no. 88": "Hostel 99 no-88",
   "hostel 99 no 88": "Hostel 99 no-88",
+  "hostel 99 no88": "Hostel 99 no-88",
   "hostel 99 no-3": "Hostel 99 no-3",
   "hostel99 no. 3": "Hostel 99 no-3",
   "hostel99 no.3": "Hostel 99 no-3",
@@ -106,12 +108,18 @@ const CANONICAL_PROPERTY_NAMES = {
   "hostel99 no 3": "Hostel 99 no-3",
   "hostel 99 no. 3": "Hostel 99 no-3",
   "hostel 99 no 3": "Hostel 99 no-3",
+  "hostel 99 no3": "Hostel 99 no-3",
+  "hostel 99 n0 3": "Hostel 99 no-3",
+  "hostel 99 n03": "Hostel 99 no-3",
+  "hostel99 n0 3": "Hostel 99 no-3",
+  "hostel99 n03": "Hostel 99 no-3",
   "regular customers": "Regular Customers",
   issues: "Issues",
   "airbnb viman nagar": "Airbnb Viman Nagar",
   "airbnb viman nagar ": "Airbnb Viman Nagar",
   "airbnb viman nagar, pune": "Airbnb Viman Nagar",
   "treebo trend hotel": "Treebo Trend Hotel",
+  "treebo trend hotel camp": "Treebo Trend Hotel",
 };
 
 // getTodayString imported from ./dateUtils

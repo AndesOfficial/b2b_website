@@ -41,7 +41,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
         },
         "GROUP_AIRBNB": {
             label: "Airbnb Group",
-            properties: ["Airbnb Viman Nagar", "Airbnb viman nagar"],
+            properties: ["Airbnb Viman Nagar", "Treebo Trend Hotel"],
             unit: "Pcs"
         }
     };
@@ -54,37 +54,21 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
             .replace(/\s+/g, " ")
             .toLowerCase();
 
-    const INVOICE_PROPERTY_CATALOG = Array.from(
-        new Map(
-            Object.values(HOSTEL_GROUPS)
-                .flatMap((group) => group.properties)
-                .map((property) => {
-                    const canonicalName = normalizePropertyName(property);
-                    return [normalizePropertyKey(canonicalName), canonicalName];
-                })
-        ).values()
-    );
-
     const getOrderPropertyCandidates = (order) =>
         [order.property, order.linkedHostel, order.tenant, order.partnerName, order.propertyName, order.hostelName, order.hotelName]
             .filter(Boolean);
 
-    const canonicalInvoiceProperty = (value) => {
-        const normalizedName = normalizePropertyName(value);
-        const normalizedKey = normalizePropertyKey(normalizedName);
-        return INVOICE_PROPERTY_CATALOG.find((property) => normalizePropertyKey(property) === normalizedKey) || "";
-    };
-
     const getOrderProperty = (order) => {
         const candidates = getOrderPropertyCandidates(order);
-        return candidates.map(canonicalInvoiceProperty).find(Boolean) || "";
+        const prop = candidates.find(Boolean);
+        return prop ? normalizePropertyName(prop) : "";
     };
 
     const propertyMatches = (orderProperty, targetProperty) =>
-        normalizePropertyKey(canonicalInvoiceProperty(orderProperty) || orderProperty) === normalizePropertyKey(targetProperty);
+        normalizePropertyKey(normalizePropertyName(orderProperty)) === normalizePropertyKey(targetProperty);
 
     const groupIncludesProperty = (groupProperties, orderProperty) => {
-        const orderKey = normalizePropertyKey(canonicalInvoiceProperty(orderProperty) || orderProperty);
+        const orderKey = normalizePropertyKey(normalizePropertyName(orderProperty));
         return groupProperties.some((property) => normalizePropertyKey(normalizePropertyName(property)) === orderKey);
     };
 
@@ -96,20 +80,14 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
 
     // Extract unique properties from orders for the dropdown
     const uniqueProperties = useMemo(() => {
-        const propertiesWithOrders = new Set(
+        const propertiesWithOrders = Array.from(new Set(
             orders
                 .filter(isInvoiceEligibleOrder)
                 .map(getOrderProperty)
                 .filter(Boolean)
-                .map(normalizePropertyKey)
-        );
+        ));
 
-        const activeProperties = INVOICE_PROPERTY_CATALOG.filter((property) =>
-            propertiesWithOrders.has(normalizePropertyKey(property))
-        );
-
-        return (activeProperties.length > 0 ? activeProperties : INVOICE_PROPERTY_CATALOG)
-            .sort((a, b) => a.localeCompare(b));
+        return propertiesWithOrders.sort((a, b) => a.localeCompare(b));
     }, [orders]);
 
     const getQty = (order, propertyName) => {
@@ -510,6 +488,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
                             <label className="block text-xs font-bold text-gray-700 mb-1">Property / Grouping</label>
                             <select value={selectedProperty} onChange={e => setSelectedProperty(e.target.value)}
                                 className="w-full p-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="ALL">All Properties</option>
                                 <optgroup label="Custom Groups">
                                     {Object.entries(HOSTEL_GROUPS).map(([key, group]) => (
                                         <option key={key} value={key}>{group.label}</option>
