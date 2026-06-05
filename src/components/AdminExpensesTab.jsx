@@ -166,10 +166,36 @@ export default function AdminExpensesTab() {
 
   const pieData = useMemo(() => {
     const map = {};
+    let total = 0;
     filtered.forEach((e) => {
-      map[e.category] = (map[e.category] || 0) + (e.amount || 0);
+      const amt = e.amount || 0;
+      map[e.category] = (map[e.category] || 0) + amt;
+      total += amt;
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
+    
+    let sorted = Object.entries(map)
+      .map(([name, value]) => ({ name, value, percentage: total > 0 ? (value / total) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+
+    // Limit to Top 5 + "All Others" to handle drastic category increases
+    const MAX_VISIBLE = 6;
+    if (sorted.length > MAX_VISIBLE) {
+      const topItems = sorted.slice(0, MAX_VISIBLE - 1);
+      const remainingItems = sorted.slice(MAX_VISIBLE - 1);
+      
+      const otherValue = remainingItems.reduce((sum, item) => sum + item.value, 0);
+      const otherPercentage = remainingItems.reduce((sum, item) => sum + item.percentage, 0);
+      
+      topItems.push({
+        name: "All Others",
+        value: otherValue,
+        percentage: otherPercentage
+      });
+      
+      sorted = topItems;
+    }
+    
+    return sorted;
   }, [filtered]);
 
   /* ─── Form helpers ─── */
@@ -376,8 +402,8 @@ export default function AdminExpensesTab() {
           )}
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0">
-          <div className="flex items-center justify-between mb-8">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0 flex flex-col">
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight flex items-center gap-2">
               <PieChartIcon size={18} className="text-amber-500" /> Sector Allocation
             </h3>
@@ -385,20 +411,34 @@ export default function AdminExpensesTab() {
           {pieData.length === 0 ? (
             <div className="h-[280px] flex items-center justify-center text-slate-300 font-bold">Waiting for input...</div>
           ) : (
-            <ResponsiveContainer width="100%" height={280} debounce={100}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={4} dataKey="value" nameKey="name" cornerRadius={6}>
-                  {pieData.map((entry) => (
-                    <Cell key={entry.name} fill={CAT_COLORS[entry.name] || "#94a3b8"} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                  itemStyle={{ fontWeight: 800, fontSize: '12px' }}
-                  formatter={(v) => `₹${v.toLocaleString()}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col gap-5 h-[280px] overflow-y-auto pr-1 scrollbar-hide">
+              {pieData.map((item) => (
+                <div key={item.name} className="flex flex-col gap-1.5 group">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[13px] font-bold text-slate-700 truncate pr-4 group-hover:text-slate-900 transition-colors" title={item.name}>
+                      {item.name}
+                    </span>
+                    <span className="text-[13px] font-black text-[#0F172A] shrink-0">
+                      ₹{item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${item.percentage}%`,
+                          backgroundColor: CAT_COLORS[item.name] || "#94a3b8"
+                        }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-400 w-8 text-right shrink-0">
+                      {item.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
