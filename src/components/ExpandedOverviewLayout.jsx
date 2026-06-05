@@ -12,6 +12,8 @@ import {
   FiUsers,
   FiPieChart,
   FiTrendingUp,
+  FiInbox,
+  FiCalendar,
 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -191,6 +193,16 @@ function StatCard({ label, value, subValue, icon: Icon, colorClass, highlight })
 
 export default function ExpandedOverviewLayout({ orders = [] }) {
   const d = MOCK_DATA;
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (orders && orders.length > 0) {
+      setIsLoading(false);
+    } else {
+      const timer = setTimeout(() => setIsLoading(false), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [orders]);
 
   // ── Real-time B2B Stats from live orders ─────────────────────────
   const todayStr = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
@@ -478,8 +490,38 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     };
   }, [orders]);
 
+  if (isLoading) {
+    return (
+      <div className="space-y-12 pb-12 tabular-nums animate-pulse" style={{ fontFamily: "DM Sans, sans-serif" }}>
+        <section>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100/80 border border-slate-200"></div>
+            <div>
+              <div className="h-4 w-32 bg-slate-100/80 rounded mb-2"></div>
+              <div className="h-3 w-48 bg-slate-50 rounded"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-slate-100 h-96 shadow-sm"></div>
+            <div className="bg-white rounded-2xl border border-slate-100 h-96 shadow-sm"></div>
+          </div>
+        </section>
+        <section>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100/80 border border-slate-200"></div>
+            <div>
+              <div className="h-4 w-32 bg-slate-100/80 rounded mb-2"></div>
+              <div className="h-3 w-48 bg-slate-50 rounded"></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 h-48 shadow-sm"></div>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-12 pb-12" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="space-y-12 pb-12 tabular-nums" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* ─────────────────────────────────────────────────────────────
           PHASE 1: DEMAND / INPUT
           ───────────────────────────────────────────────────────────── */}
@@ -489,12 +531,16 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           {/* B2C PANEL — LIVE DATA */}
           <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3 flex justify-between items-center">
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 to-cyan-400"></div>
               <div>
-                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">B2C (App / Direct Customers)</h3>
-                <p className="text-[10px] text-blue-100 font-bold mt-0.5">{liveB2c.totalOrders} orders · All time</p>
+                <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                  B2C (App / Direct Customers)
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">{liveB2c.totalOrders} orders · All time</p>
               </div>
-              <span className="text-[11px] font-bold text-blue-100 bg-white/20 px-2 py-0.5 rounded-md">Live</span>
+              <span className="text-[11px] font-bold text-cyan-600 bg-cyan-50 border border-cyan-100 px-2 py-0.5 rounded-md">Live</span>
             </div>
 
             <div className="p-5 space-y-5">
@@ -553,7 +599,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[11px] text-emerald-600 font-bold">✓ No pending pickups</p>
+                    <div className="py-4 flex flex-col items-center justify-center text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 mt-2">
+                      <FiCheckCircle size={18} className="text-emerald-400 mb-1.5" />
+                      <p className="text-[11px] text-slate-500 font-bold">No pending pickups</p>
+                    </div>
                   )}
                 </div>
 
@@ -573,7 +622,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[11px] text-emerald-600 font-bold">✓ No pending deliveries</p>
+                    <div className="py-4 flex flex-col items-center justify-center text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 mt-2">
+                      <FiCheckCircle size={18} className="text-emerald-400 mb-1.5" />
+                      <p className="text-[11px] text-slate-500 font-bold">No pending deliveries</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -600,7 +652,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                     })}
                   </ul>
                 ) : (
-                  <p className="text-[11px] text-emerald-600 font-bold">✓ No issues raised</p>
+                  <div className="py-4 flex flex-col items-center justify-center text-center bg-emerald-50/50 rounded-xl border border-dashed border-emerald-200 mt-2">
+                    <FiCheckCircle size={18} className="text-emerald-500 mb-1.5" />
+                    <p className="text-[11px] text-emerald-600 font-bold">All clear. No issues raised.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -609,12 +664,16 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           {/* B2B PANEL — LIVE DATA */}
           <div className="bg-white rounded-2xl border border-purple-100 shadow-sm overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 flex justify-between items-center">
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-purple-500 to-indigo-500"></div>
               <div>
-                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">B2B (Hostels / Hotels )</h3>
-                <p className="text-[10px] text-purple-200 font-bold mt-0.5">{liveB2b.totalOrders} pickups · All time</p>
+                <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  B2B (Hostels / Hotels )
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">{liveB2b.totalOrders} pickups · All time</p>
               </div>
-              <span className="text-[11px] font-bold text-purple-200 bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-sm">Live</span>
+              <span className="text-[11px] font-bold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md">Live</span>
             </div>
 
             <div className="p-5 flex-1 flex flex-col gap-5">
@@ -702,7 +761,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                       ))}
                     </div>
                   ) : (
-                    <p className="px-3 py-4 text-center text-[11px] text-slate-400">No bulk orders in date range</p>
+                    <div className="py-8 flex flex-col items-center justify-center text-center bg-slate-50">
+                      <FiInbox size={20} className="text-slate-300 mb-2" />
+                      <p className="text-[11px] text-slate-400 font-bold">No bulk orders in date range</p>
+                    </div>
                   )}
                 </div>
 
@@ -741,7 +803,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                       ))}
                     </div>
                   ) : (
-                    <p className="px-3 py-4 text-center text-[11px] text-slate-400">No linen orders in date range</p>
+                    <div className="py-8 flex flex-col items-center justify-center text-center bg-slate-50">
+                      <FiInbox size={20} className="text-slate-300 mb-2" />
+                      <p className="text-[11px] text-slate-400 font-bold">No linen orders in date range</p>
+                    </div>
                   )}
                 </div>
 
@@ -796,10 +861,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           </div>
 
           {/* Timeline Bar */}
-          <div className="h-8 flex rounded-xl overflow-hidden mb-4 shadow-inner">
+          <div className="h-8 flex gap-1 mb-4">
             {d.phase2.zones.map((z, i) => (
-              <div key={i} className={`h-full ${z.color} flex items-center justify-center border-r border-white/20 last:border-0`} style={{ width: `${z.pct}%` }}>
-                {z.pct > 10 && <span className="text-[10px] font-black text-white mix-blend-overlay">{z.pct}%</span>}
+              <div key={i} className={`h-full ${z.color} rounded-md flex items-center justify-center relative overflow-hidden shadow-sm`} style={{ width: `${z.pct}%` }}>
+                {z.pct > 10 && <span className="text-[10px] font-black text-white/90">{z.pct}%</span>}
               </div>
             ))}
           </div>
@@ -909,12 +974,16 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
 
           {/* Revenue + Expenses - LIVE */}
           <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-500 px-5 py-3 flex justify-between items-center">
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500 to-teal-400"></div>
               <div>
-                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">Revenue &amp; Costs</h3>
-                <p className="text-[10px] text-emerald-100 font-bold mt-0.5">All time · from live orders</p>
+                <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Revenue &amp; Costs
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">All time · from live orders</p>
               </div>
-              <span className="text-[11px] font-bold text-emerald-100 bg-white/20 px-2 py-0.5 rounded-md">Live</span>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Live</span>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -959,12 +1028,16 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
 
           {/* Customers and Retention - LIVE */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-600 to-violet-500 px-5 py-3 flex justify-between items-center">
+            <div className="bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-indigo-500 to-violet-500"></div>
               <div>
-                <h3 className="text-[13px] font-black text-white uppercase tracking-wider">Customers &amp; Retention</h3>
-                <p className="text-[10px] text-indigo-100 font-bold mt-0.5">{liveP4.totalCustomers} unique customers tracked</p>
+                <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                  Customers &amp; Retention
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold mt-0.5">{liveP4.totalCustomers} unique customers tracked</p>
               </div>
-              <span className="text-[11px] font-bold text-indigo-100 bg-white/20 px-2 py-0.5 rounded-md">Live</span>
+              <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">Live</span>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
