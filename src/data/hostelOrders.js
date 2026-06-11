@@ -5,6 +5,7 @@
 export const CATEGORIES = {
   LINEN: { key: "LINEN", label: "Linen Services (B2B)", color: "#7C3AED", icon: "🛏️" },
   STUDENT_LAUNDRY: { key: "STUDENT_LAUNDRY", label: "Student Laundry (B2B)", color: "#1976D2", icon: "👕" },
+  INDIVIDUAL_STUDENT: { key: "INDIVIDUAL_STUDENT", label: "Student Direct Orders", color: "#0EA5E9", icon: "📱" },
   B2C_RETAIL: { key: "B2C_RETAIL", label: "Retail Customers (B2C)", color: "#059669", icon: "🧺" },
   AIRBNB: { key: "AIRBNB", label: "Airbnb Services", color: "#D97706", icon: "🏨" },
   BULK_LAUNDRY: { key: "BULK_LAUNDRY", label: "Bulk Laundry", color: "#0891B2", icon: "⚙️" },

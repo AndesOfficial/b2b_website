@@ -6,7 +6,7 @@ import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/ExpandableOrderRow";
 import {
   FiLogOut, FiFilter, FiCalendar, FiX, FiDownload,
-  FiPackage, FiShoppingBag, FiTruck, FiUsers, FiAlertTriangle, FiPlus
+  FiPackage, FiShoppingBag, FiTruck, FiUsers, FiAlertTriangle, FiPlus, FiUser
 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { MdScale } from "react-icons/md";
@@ -50,8 +50,9 @@ function exportCSV(rows, filename) {
 const CAT_ICONS = {
   LINEN: <FiShoppingBag />,
   STUDENT_LAUNDRY: <FiPackage />,
+  INDIVIDUAL_STUDENT: <FiUser />,
   B2C_RETAIL: <FiShoppingBag />,
-  AIRBNB: <FiTruck />,
+  AIRBNB: <FiShoppingBag />,
   BULK_LAUNDRY: <FiTruck />,
   ISSUES: <FiAlertTriangle />,
 };
