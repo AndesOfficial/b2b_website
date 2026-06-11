@@ -5,7 +5,7 @@ import { CATEGORIES, getCategoryLabel } from "../data/hostelOrders";
 import { FiChevronUp, FiChevronDown, FiArrowRight, FiShoppingBag, FiUsers } from "react-icons/fi";
 import { MdScale } from "react-icons/md";
 
-export default function ExpandableOrderRow({ order, showProperty = false }) {
+export default function ExpandableOrderRow({ order, showProperty = false, viewMode = "mixed" }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const cat = CATEGORIES[order.category] || {};
@@ -66,41 +66,62 @@ export default function ExpandableOrderRow({ order, showProperty = false }) {
         {showProperty && (
           <td className="px-4 py-3 text-sm text-gray-700">{order.property}</td>
         )}
-        <td className="px-4 py-3">
-          <span
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: cat.color + "18", color: cat.color }}
-          >
-            {categoryLabel}
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex gap-2 items-center justify-end">
-            {order.items ? (
-              <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
-                <FiShoppingBag size={12} className="text-blue-600 opacity-80" /> {order.items}
+        {viewMode === "student" ? (
+          <>
+            <td className="px-4 py-3 text-sm font-bold text-gray-800">{order.customerName || "N/A"}</td>
+            <td className="px-4 py-3 text-xs text-gray-500">
+              <span className="block font-medium text-gray-800">{order.service}</span>
+              <span className="block text-gray-400">{order.customerNumber}</span>
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex gap-2 items-center justify-start">
+                {order.items ? (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                    <FiShoppingBag size={12} className="text-blue-600 opacity-80" /> {order.items}
+                  </span>
+                ) : <span className="text-gray-400 text-sm">—</span>}
+              </div>
+            </td>
+          </>
+        ) : (
+          <>
+            <td className="px-4 py-3">
+              <span
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: cat.color + "18", color: cat.color }}
+              >
+                {categoryLabel}
               </span>
-            ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
-          </div>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex gap-2 items-center justify-end">
-            {order.weight ? (
-              <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
-                <MdScale size={13} className="text-orange-600 opacity-80" /> {order.weight}
-              </span>
-            ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
-          </div>
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex gap-2 items-center justify-end">
-            {order.studentCount ? (
-              <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
-                <FiUsers size={12} className="text-indigo-600 opacity-80" /> {order.studentCount}
-              </span>
-            ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
-          </div>
-        </td>
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex gap-2 items-center justify-end">
+                {order.items ? (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                    <FiShoppingBag size={12} className="text-blue-600 opacity-80" /> {order.items}
+                  </span>
+                ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
+              </div>
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex gap-2 items-center justify-end">
+                {order.weight ? (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                    <MdScale size={13} className="text-orange-600 opacity-80" /> {order.weight}
+                  </span>
+                ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
+              </div>
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex gap-2 items-center justify-end">
+                {order.studentCount ? (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                    <FiUsers size={12} className="text-indigo-600 opacity-80" /> {order.studentCount}
+                  </span>
+                ) : <span className="text-gray-400 text-sm w-full text-right">—</span>}
+              </div>
+            </td>
+          </>
+        )}
         <td className="px-4 py-3 text-center">
           <span
             className={`inline-block text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${order.status === "Delivered"
@@ -123,7 +144,7 @@ export default function ExpandableOrderRow({ order, showProperty = false }) {
       {/* Expanded detail panel */}
       {open && (
         <tr className="bg-gradient-to-br from-brand-50/40 to-white">
-          <td colSpan={showProperty ? 8 : 7} className="px-6 py-5">
+          <td colSpan={showProperty ? (viewMode === "student" ? 7 : 8) : (viewMode === "student" ? 6 : 7)} className="px-6 py-5">
             {/* Key metrics row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
               <MetricCard label="Property" value={order.property} />

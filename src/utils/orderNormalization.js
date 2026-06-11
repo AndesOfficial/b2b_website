@@ -280,6 +280,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   const property = normalizePropertyName(
     rawOrder.property ||
     rawOrder.partnerName ||
+    rawOrder.hostel ||
     rawOrder.location ||
     rawOrder.userName ||
     rawOrder.customerName ||
@@ -300,7 +301,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     ...(rawOrder.updatedAt !== undefined ? { updatedAtRaw: rawOrder.updatedAt } : {}),
     date: normalizeDate(rawOrder.date || rawOrder.createdAt),
     amount: firstPositiveNumber(rawOrder.amount, rawOrder.totalPrice),
-    items: normalizeNumber(rawOrder.items, itemsFromPartnerMap),
+    items: normalizeNumber(rawOrder.items ?? rawOrder.clothes, itemsFromPartnerMap),
     weight: normalizeNumber(rawOrder.weight),
     studentCount: normalizeNumber(rawOrder.studentCount),
     category: rawOrder.category || inferredCategory,
@@ -419,6 +420,17 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
         });
         normalized.amount = linenTotal;
       }
+    }
+  }
+
+  if (source === "hostels") {
+    normalized.category = ORDER_CATEGORIES.INDIVIDUAL_STUDENT;
+    normalized.type = ORDER_TYPES.STUDENT;
+    normalized.items = normalizeNumber(rawOrder.clothes, normalized.items);
+    normalized.customerName = rawOrder.userName || normalized.customerName;
+    normalized.customerNumber = rawOrder.userMobile || normalized.customerNumber;
+    if (rawOrder.room) {
+      normalized.service = `Room: ${rawOrder.room}`;
     }
   }
 

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/ExpandableOrderRow";
-import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers, FiUser } from "react-icons/fi";
 import { MdScale } from "react-icons/md";
 
 // CSV export helper
@@ -23,7 +23,7 @@ function exportCSV(rows, filename) {
 }
 
 const CAT_ICONS = {
-  LINEN: <FiShoppingBag />, STUDENT_LAUNDRY: <FiPackage />, B2C_RETAIL: <FiShoppingBag />,
+  LINEN: <FiShoppingBag />, STUDENT_LAUNDRY: <FiPackage />, INDIVIDUAL_STUDENT: <FiUser />, B2C_RETAIL: <FiShoppingBag />,
   AIRBNB: <FiTruck />, BULK_LAUNDRY: <FiTruck />, ISSUES: <FiFilter />,
 };
 
@@ -159,26 +159,36 @@ export default function ClientCategoryOrders() {
                 <tr className="bg-gray-50/80">
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
                   {isGroup && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Property</th>}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> {isTreeboClient ? "Pieces" : "Clothes"}</div>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><MdScale size={13} className="text-gray-400" /> Weight (KG)</div>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1.5"><FiUsers size={14} className="text-gray-400" /> Students</div>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  
+                  {categoryKey === "INDIVIDUAL_STUDENT" ? (
+                    <>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Student Name</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Room / Phone</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Clothes</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> {isTreeboClient ? "Pieces" : "Clothes"}</div>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5"><MdScale size={13} className="text-gray-400" /> Weight (KG)</div>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5"><FiUsers size={14} className="text-gray-400" /> Students</div>
+                      </th>
+                    </>
+                  )}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Status</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={isGroup ? 9 : 8} className="text-center py-16 text-gray-400 text-sm">No orders found.</td></tr>
+                  <tr><td colSpan={10} className="text-center py-16 text-gray-400 text-sm">No orders found.</td></tr>
                 ) : (
-                  filtered.map((o) => <ExpandableOrderRow key={o.id} order={o} showProperty={isGroup} />)
+                  filtered.map((o) => <ExpandableOrderRow key={o.id} order={o} showProperty={isGroup} viewMode={categoryKey === "INDIVIDUAL_STUDENT" ? "student" : "mixed"} />)
                 )}
               </tbody>
             </table>

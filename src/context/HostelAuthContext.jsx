@@ -36,6 +36,7 @@ export function HostelAuthProvider({ children }) {
   const [b2bOrders, setB2bOrders] = useState([]);
   const [websiteOrders, setWebsiteOrders] = useState([]);
   const [cartOrders, setCartOrders] = useState([]);
+  const [hostelsOrders, setHostelsOrders] = useState([]); // NEW
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
 
@@ -44,11 +45,14 @@ export function HostelAuthProvider({ children }) {
     let unsubscribeB2bOrders = () => { };
     let unsubscribeWebsiteOrders = () => { };
     let unsubscribeCartDetails = () => { };
+    let unsubscribeHostelsOrders = () => { }; // NEW
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       unsubscribeEdits();
       unsubscribeB2bOrders();
       unsubscribeWebsiteOrders();
       unsubscribeCartDetails();
+      unsubscribeHostelsOrders(); // NEW
 
       if (!firebaseUser) {
         setClient(null);
@@ -57,6 +61,7 @@ export function HostelAuthProvider({ children }) {
         setB2bOrders([]);
         setWebsiteOrders([]);
         setCartOrders([]);
+        setHostelsOrders([]); // NEW
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         return;
@@ -106,7 +111,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 4) setIsDataLoaded(true);
+        if (loadedCount >= 5) setIsDataLoaded(true); // UPDATED to 5
       };
 
       unsubscribeEdits = onSnapshot(
@@ -129,6 +134,19 @@ export function HostelAuthProvider({ children }) {
         },
         (error) => {
           console.error("B2B Orders sync error:", error.message);
+          checkAllLoaded();
+        },
+      );
+
+      // NEW: Hostels Orders
+      unsubscribeHostelsOrders = onSnapshot(
+        collection(db, "hostels_orders"),
+        (snapshot) => {
+          setHostelsOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "hostels")));
+          checkAllLoaded();
+        },
+        (error) => {
+          console.error("Hostels Orders sync error:", error.message);
           checkAllLoaded();
         },
       );
@@ -190,6 +208,7 @@ export function HostelAuthProvider({ children }) {
       unsubscribeB2bOrders();
       unsubscribeWebsiteOrders();
       unsubscribeCartDetails();
+      unsubscribeHostelsOrders(); // NEW
     };
   }, []);
 
@@ -228,6 +247,16 @@ export function HostelAuthProvider({ children }) {
       }
     });
     
+    // 3.5 Base Data: Hostels Orders (NEW)
+    hostelsOrders.forEach(order => {
+      const existing = primaryRecordsMap.get(order.id);
+      if (existing) {
+        primaryRecordsMap.set(order.id, { ...existing, ...order });
+      } else {
+        primaryRecordsMap.set(order.id, order);
+      }
+    });
+
     // 4. Overrides: Admin Edits (Regular/Issues)
     firestoreEdits.forEach(order => {
       const existing = primaryRecordsMap.get(order.id);
@@ -244,7 +273,7 @@ export function HostelAuthProvider({ children }) {
 
     const merged = [...primaryRecordsMap.values()];
     return merged.filter(isVisibleMergedOrder);
-  }, [cartOrders, b2bOrders, firestoreEdits, websiteOrders]);
+  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders]);
 
   const orders = useMemo(() => {
     if (!client) return [];
