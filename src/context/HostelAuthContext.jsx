@@ -141,7 +141,7 @@ export function HostelAuthProvider({ children }) {
       };
 
       const setupCollectionListener = (collectionName, normalizeType, setOrdersFn) => {
-        if (resolvedRole === "admin") {
+        if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
           const unsub = onSnapshot(
             collection(db, collectionName),
             (snapshot) => {
