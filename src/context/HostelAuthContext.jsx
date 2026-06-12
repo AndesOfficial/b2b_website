@@ -29,7 +29,8 @@ export function HostelAuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(() => {
     const saved = sessionStorage.getItem("hostelClient");
     if (!saved) return false;
-    return JSON.parse(saved).role === "admin";
+    const role = JSON.parse(saved).role;
+    return role === "admin" || role === "admin_viewer";
   });
 
   const [firestoreEdits, setFirestoreEdits] = useState([]);
@@ -86,17 +87,19 @@ export function HostelAuthProvider({ children }) {
           };
 
           setClient(clientData);
-          setIsAdmin(resolvedRole === "admin");
+          setIsAdmin(resolvedRole === "admin" || resolvedRole === "admin_viewer");
           sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
 
           const allowed = allowedProperties.filter(Boolean);
-          setProfileNeedsSetup(resolvedRole !== "admin" && allowed.length === 0);
+          setProfileNeedsSetup(resolvedRole !== "admin" && resolvedRole !== "admin_viewer" && allowed.length === 0);
         } else {
           console.warn("User profile not found in b2b_managers collection.");
           setProfileNeedsSetup(true);
         }
 
-        if (resolvedRole !== "admin") {
+        // NOTE: Firestore rules often restrict website/cart collections to admin users.
+        // Avoid subscribing for clients to prevent "Missing or insufficient permissions" errors.
+        if (resolvedRole !== "admin" && resolvedRole !== "admin_viewer") {
           setWebsiteOrders([]);
           setCartOrders([]);
         }
@@ -217,7 +220,7 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
 
-      if (resolvedRole === "admin") {
+      if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
         const unsubWeb = onSnapshot(
           collection(db, "orders"),
           (snapshot) => {
@@ -320,7 +323,7 @@ export function HostelAuthProvider({ children }) {
 
   const orders = useMemo(() => {
     if (!client) return [];
-    if (client.role === "admin") return allOrdersMerged;
+    if (client.role === "admin" || client.role === "admin_viewer") return allOrdersMerged;
 
     const allowedProperties = client.properties || client.partnernames || [];
     const normalizedAllowed = allowedProperties.map((property) => property.toLowerCase());
@@ -383,7 +386,7 @@ export function HostelAuthProvider({ children }) {
       };
 
       setClient(clientData);
-      setIsAdmin(userData.role === "admin");
+      setIsAdmin(userData.role === "admin" || userData.role === "admin_viewer");
       sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
 
       return { success: true, role: userData.role, client: clientData };
@@ -408,7 +411,7 @@ export function HostelAuthProvider({ children }) {
       properties: partnernames,
     };
     setClient(normalizedClient);
-    setIsAdmin(normalizedClient.role === "admin");
+    setIsAdmin(normalizedClient.role === "admin" || normalizedClient.role === "admin_viewer");
     sessionStorage.setItem("hostelClient", JSON.stringify(normalizedClient));
   }, []);
 
@@ -424,7 +427,7 @@ export function HostelAuthProvider({ children }) {
   }, []);
 
   return (
-    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, isDataLoaded }}>
+    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, isDataLoaded, isViewer: client?.role === "admin_viewer" }}>
       {children}
     </HostelAuthContext.Provider>
   );

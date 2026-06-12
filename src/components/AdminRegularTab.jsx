@@ -236,15 +236,17 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <FilterPills options={REGULAR_CHANNELS} activeValue={channelFilter} onChange={setChannelFilter} />
-        <button
-          onClick={() => {
-            resetForm();
-            setShowModal(true);
-          }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3 bg-blue-600 text-white text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
-        >
-          <FiPlus size={18} /> Log New Order
-        </button>
+        {onAddOrder && (
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3 bg-blue-600 text-white text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
+          >
+            <FiPlus size={18} /> Log New Order
+          </button>
+        )}
       </div>
 
       <TabSectionCard title="Retail Transaction Log" subtitle={`${filteredOrders.length} total orders found`}>
@@ -337,9 +339,11 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1.5 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                      <button onClick={(event) => { event.stopPropagation(); openEditModal(order); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                        <FiEdit2 size={15} />
-                      </button>
+                      {onEditOrder && (
+                        <button onClick={(event) => { event.stopPropagation(); openEditModal(order); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                          <FiEdit2 size={15} />
+                        </button>
+                      )}
                       {onDeleteOrder && (
                         <button onClick={(event) => { event.stopPropagation(); onDeleteOrder(order); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
                           <FiTrash2 size={15} />

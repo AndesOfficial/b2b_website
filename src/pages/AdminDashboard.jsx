@@ -21,7 +21,7 @@ import { getMonthStartString, getTodayString, useAdminDashboardData } from "../h
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { client, orders: baseOrders, logout, isDataLoaded } = useHostelAuth();
+  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddOrder, setShowAddOrder] = useState(false);
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
         <AdminOverviewTab
           orders={orders}
           daysInRange={daysInRange}
-          onDeleteData={handleDeleteData}
+          onDeleteData={!isViewer ? handleDeleteData : undefined}
         />
       ),
       hostels: <AdminHostelsTab orders={orders} daysInRange={daysInRange} />,
@@ -103,17 +103,17 @@ export default function AdminDashboard() {
       regular: (
         <AdminRegularTab
           orders={orders}
-          onAddOrder={handleAddOrder}
-          onEditOrder={handleEditOrder}
-          onDeleteOrder={handleDeleteData}
+          onAddOrder={!isViewer ? handleAddOrder : undefined}
+          onEditOrder={!isViewer ? handleEditOrder : undefined}
+          onDeleteOrder={!isViewer ? handleDeleteData : undefined}
         />
       ),
       issues: (
         <AdminIssuesTab
           orders={orders}
-          onAddIssue={handleAddIssue}
-          onEditIssue={handleEditIssue}
-          onDeleteIssue={handleDeleteData}
+          onAddIssue={!isViewer ? handleAddIssue : undefined}
+          onEditIssue={!isViewer ? handleEditIssue : undefined}
+          onDeleteIssue={!isViewer ? handleDeleteData : undefined}
         />
       ),
       expenses: <AdminExpensesTab />,
@@ -140,6 +140,7 @@ export default function AdminDashboard() {
     screenStats,
     searchStats,
     totalUsers,
+    isViewer
   ]);
 
   if (loading) return <LoadingSpinner fullscreen />;
@@ -185,7 +186,7 @@ export default function AdminDashboard() {
             <DashboardSkeleton />
           ) : (
             <>
-              {activeTabConfig.showHeaderActions && (
+              {activeTabConfig.showHeaderActions && !isViewer && (
                 <AdminPageActions
                   onGenerateInvoice={() => setShowInvoiceModal(true)}
                   onLogOrder={() => setShowAddOrder(true)}
