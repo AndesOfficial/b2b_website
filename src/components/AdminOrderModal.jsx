@@ -4,8 +4,11 @@ import { BiRupee } from "react-icons/bi";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
+import { useHostelAuth } from "../context/HostelAuthContext";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
+  const { client } = useHostelAuth();
+  const isViewer = client?.role === "admin_viewer";
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -119,7 +122,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isEditing && (
+            {!isEditing && !isViewer && (
               <button onClick={() => setIsEditing(true)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit Order">
                 <FiEdit2 size={18} />
               </button>

@@ -24,7 +24,7 @@ export default function Login() {
         const result = await login(email.trim(), password);
 
         if (result.success) {
-            if (result.role === "admin") {
+            if (result.role === "admin" || result.role === "admin_viewer") {
                 navigate("/admin");
             } else {
                 navigate("/client/dashboard");

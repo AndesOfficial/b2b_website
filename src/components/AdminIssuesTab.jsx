@@ -103,9 +103,11 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
             </div>
           </button>
         ))}
-        <button onClick={() => { setForm({ id: null, date: "", issueType: "Missing Items", description: "", linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "", originalService: "" }); setShowModal(true); }} className="col-span-2 lg:ml-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-red-600 text-white text-[12px] font-black rounded-xl hover:bg-red-700 transition-all shadow-md active:scale-95 uppercase tracking-widest">
-          <FiPlus size={18} /> Report New Issue
-        </button>
+        {onAddIssue && (
+          <button onClick={() => { setForm({ id: null, date: "", issueType: "Missing Items", description: "", linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "", originalService: "" }); setShowModal(true); }} className="col-span-2 lg:ml-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-red-600 text-white text-[12px] font-black rounded-xl hover:bg-red-700 transition-all shadow-md active:scale-95 uppercase tracking-widest">
+            <FiPlus size={18} /> Report New Issue
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -167,9 +169,11 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
                   {issue.resolveStatus}
                 </span>
                 <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditModal(issue)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <FiEdit2 size={14} />
-                  </button>
+                  {onEditIssue && (
+                    <button onClick={() => openEditModal(issue)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <FiEdit2 size={14} />
+                    </button>
+                  )}
                   {onDeleteIssue && (
                     <button onClick={() => onDeleteIssue(issue)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                       <FiTrash2 size={14} />
