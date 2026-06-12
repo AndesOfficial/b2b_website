@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
-import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { getDoc, doc, onSnapshot, collection, setDoc, query, where, or } from "firebase/firestore";
+import { getDoc, doc, onSnapshot, collection, setDoc } from "firebase/firestore";
 import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orders";
-import { normalizeOrder, normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
+import { normalizeOrder, normalizePropertyName } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
 
 const HostelAuthContext = createContext(null);
@@ -41,14 +41,18 @@ export function HostelAuthProvider({ children }) {
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
 
   useEffect(() => {
-    let activeSubscriptions = [];
-    const unsubscribeAll = () => {
-      activeSubscriptions.forEach((unsub) => unsub());
-      activeSubscriptions = [];
-    };
+    let unsubscribeEdits = () => { };
+    let unsubscribeB2bOrders = () => { };
+    let unsubscribeWebsiteOrders = () => { };
+    let unsubscribeCartDetails = () => { };
+    let unsubscribeHostelsOrders = () => { }; // NEW
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      unsubscribeAll();
+      unsubscribeEdits();
+      unsubscribeB2bOrders();
+      unsubscribeWebsiteOrders();
+      unsubscribeCartDetails();
+      unsubscribeHostelsOrders(); // NEW
 
       if (!firebaseUser) {
         setClient(null);
@@ -57,45 +61,44 @@ export function HostelAuthProvider({ children }) {
         setB2bOrders([]);
         setWebsiteOrders([]);
         setCartOrders([]);
-        setHostelsOrders([]);
+        setHostelsOrders([]); // NEW
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         return;
       }
 
-      let resolvedRole = "client";
-      let allowedProperties = [];
-
       try {
+        let resolvedRole = "client";
         const userDoc = await getDoc(doc(db, "b2b_managers", firebaseUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data() || {};
           resolvedRole = userData.role || "client";
 
           const rawPartnernames = userData.partnernames || userData.properties || [];
-          allowedProperties = rawPartnernames.map(name => normalizePropertyName(name));
-          
+          const partnernames = rawPartnernames.map(name => normalizePropertyName(name));
           const clientData = {
             email: userData.email || firebaseUser.email || "",
             name: userData.name || (userData.email || firebaseUser.email || "Client"),
             ...userData,
             uid: firebaseUser.uid,
             role: resolvedRole,
-            partnernames: allowedProperties,
-            properties: allowedProperties,
+            partnernames,
+            properties: partnernames,
           };
 
           setClient(clientData);
           setIsAdmin(resolvedRole === "admin");
           sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
 
-          const allowed = allowedProperties.filter(Boolean);
+          const allowed = (clientData.partnernames || clientData.properties || []).filter(Boolean);
           setProfileNeedsSetup(resolvedRole !== "admin" && allowed.length === 0);
         } else {
           console.warn("User profile not found in b2b_managers collection.");
           setProfileNeedsSetup(true);
         }
 
+        // NOTE: Firestore rules often restrict website/cart collections to admin users.
+        // Avoid subscribing for clients to prevent "Missing or insufficient permissions" errors.
         if (resolvedRole !== "admin") {
           setWebsiteOrders([]);
           setCartOrders([]);
@@ -108,142 +111,92 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 5) setIsDataLoaded(true);
+        if (loadedCount >= 5) setIsDataLoaded(true); // UPDATED to 5
       };
 
-      const getAllAliases = (canonicalNames) => {
-        const aliases = new Set();
-        
-        canonicalNames.forEach(name => {
-          if (!name) return;
-          aliases.add(name);
-          aliases.add(name.toLowerCase());
-          aliases.add(name.toUpperCase());
-          
-          Object.entries(CANONICAL_PROPERTY_NAMES).forEach(([key, val]) => {
-            if (val === name || val.toLowerCase() === name.toLowerCase()) {
-              aliases.add(key);
-              aliases.add(key.toLowerCase());
-              aliases.add(key.toUpperCase());
-              
-              const words = key.split(' ');
-              const titleCase = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-              aliases.add(titleCase);
-              aliases.add(key.charAt(0).toUpperCase() + key.slice(1).toLowerCase());
-            }
-          });
-        });
-        
-        return Array.from(aliases);
-      };
+      unsubscribeEdits = onSnapshot(
+        collection(db, "b2b_admin_edits"),
+        (snapshot) => {
+          setFirestoreEdits(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "admin")));
+          checkAllLoaded();
+        },
+        (error) => {
+          console.error("Orders sync error:", error.message);
+          checkAllLoaded();
+        },
+      );
 
-      const setupCollectionListener = (collectionName, normalizeType, setOrdersFn) => {
-        if (resolvedRole === "admin") {
-          const unsub = onSnapshot(
-            collection(db, collectionName),
-            (snapshot) => {
-              setOrdersFn(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, normalizeType)));
-              checkAllLoaded();
-            },
-            (error) => {
-              console.error(`${collectionName} sync error:`, error.message);
-              checkAllLoaded();
-            }
-          );
-          activeSubscriptions.push(unsub);
-        } else {
-          const allowed = allowedProperties.filter(Boolean);
-          if (allowed.length === 0) {
-            setOrdersFn([]);
-            checkAllLoaded();
-            return;
-          }
+      unsubscribeB2bOrders = onSnapshot(
+        collection(db, "b2b_orders"),
+        (snapshot) => {
+          setB2bOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "b2b")));
+          checkAllLoaded();
+        },
+        (error) => {
+          console.error("B2B Orders sync error:", error.message);
+          checkAllLoaded();
+        },
+      );
 
-          const allPossibleStrings = getAllAliases(allowed);
+      // NEW: Hostels Orders
+      unsubscribeHostelsOrders = onSnapshot(
+        collection(db, "hostels_orders"),
+        (snapshot) => {
+          setHostelsOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "hostels")));
+          checkAllLoaded();
+        },
+        (error) => {
+          console.error("Hostels Orders sync error:", error.message);
+          checkAllLoaded();
+        },
+      );
 
-          // Use chunk size of 5 to avoid exceeding Firestore's 30 condition OR limit when checking multiple fields
-          const chunks = [];
-          for (let i = 0; i < allPossibleStrings.length; i += 5) {
-            chunks.push(allPossibleStrings.slice(i, i + 5));
-          }
+      // Website + Cart orders are often permission-restricted for client accounts.
+      // Treebo (and other partners) should use `b2b_orders` for their order feed.
+      const sessionClient = (() => {
+        const saved = sessionStorage.getItem("hostelClient");
+        if (!saved) return null;
+        try { return JSON.parse(saved); } catch { return null; }
+      })();
 
-          // Define which fields to search depending on the collection
-          let fieldsToCheck = ["property", "linkedHostel"];
-          if (collectionName === "hostels_orders") {
-            fieldsToCheck = ["property", "hostelName", "hostel", "location"];
-          } else if (collectionName === "b2b_orders") {
-            fieldsToCheck = ["property", "hostel", "partnerName", "partnername"];
-          }
+      const roleFromSession = sessionClient?.role || null;
 
-          const chunksData = new Map();
-          let initializedChunks = 0;
-
-          chunks.forEach((chunk, index) => {
-            const orConditions = fieldsToCheck.map(field => where(field, "in", chunk));
-            const q = query(collection(db, collectionName), or(...orConditions));
-
-            const unsub = onSnapshot(
-              q,
-              (snapshot) => {
-                chunksData.set(index, snapshot.docs.map(docSnapshot => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, normalizeType)));
-                
-                const merged = [];
-                chunksData.forEach(list => merged.push(...list));
-                setOrdersFn(merged);
-
-                if (initializedChunks < chunks.length) {
-                  initializedChunks++;
-                  if (initializedChunks === chunks.length) {
-                    checkAllLoaded();
-                  }
-                }
-              },
-              (error) => {
-                console.error(`${collectionName} chunk sync error:`, error.message);
-                if (initializedChunks < chunks.length) {
-                  initializedChunks++;
-                  if (initializedChunks === chunks.length) {
-                    checkAllLoaded();
-                  }
-                }
-              }
-            );
-            activeSubscriptions.push(unsub);
-          });
-        }
-      };
-
-      setupCollectionListener("b2b_admin_edits", "admin", setFirestoreEdits);
-      setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
-      setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
-
-      if (resolvedRole === "admin") {
-        const unsubWeb = onSnapshot(
+      if (roleFromSession === "admin") {
+        unsubscribeWebsiteOrders = onSnapshot(
           collection(db, "orders"),
           (snapshot) => {
-            setWebsiteOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "website")));
+            setWebsiteOrders(
+              snapshot.docs.map((docSnapshot) =>
+                normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "website")
+              )
+            );
             checkAllLoaded();
           },
           (error) => {
             console.error("Website Orders sync error:", error.message);
             checkAllLoaded();
-          }
+          },
         );
-        activeSubscriptions.push(unsubWeb);
 
-        const unsubCart = onSnapshot(
+        unsubscribeCartDetails = onSnapshot(
           collection(db, "cartdetails"),
           (snapshot) => {
-            setCartOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "cartdetails")));
+            setCartOrders(
+              snapshot.docs.map((docSnapshot) =>
+                normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "cartdetails")
+              )
+            );
             checkAllLoaded();
           },
           (error) => {
             console.error("Cartdetails sync error:", error.message);
             checkAllLoaded();
-          }
+          },
         );
-        activeSubscriptions.push(unsubCart);
       } else {
+        // Clients don't subscribe to `orders` / `cartdetails` to avoid permission errors.
+        setWebsiteOrders([]);
+        setCartOrders([]);
         checkAllLoaded();
         checkAllLoaded();
       }
@@ -251,7 +204,11 @@ export function HostelAuthProvider({ children }) {
 
     return () => {
       unsubscribeAuth();
-      unsubscribeAll();
+      unsubscribeEdits();
+      unsubscribeB2bOrders();
+      unsubscribeWebsiteOrders();
+      unsubscribeCartDetails();
+      unsubscribeHostelsOrders(); // NEW
     };
   }, []);
 
@@ -363,7 +320,6 @@ export function HostelAuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     try {
-      await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, "b2b_managers", userCredential.user.uid));
 
