@@ -4,7 +4,7 @@ import { getTodayString } from "./dateUtils";
 import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG } from "../config/orderRateCard";
 
 // --- ADDED ALIASES HERE TO FIX CASE SENSITIVITY AND DUPLICATES ---
-const CANONICAL_PROPERTY_NAMES = {
+export const CANONICAL_PROPERTY_NAMES = {
   // Aakansha
   aakansha: "Aakansha",
   akansha: "Aakansha",
@@ -277,15 +277,19 @@ function buildCartServiceBreakdown(rawOrder) {
 }
 
 export function normalizeOrder(rawOrder = {}, source = "unknown") {
-  const property = normalizePropertyName(
-    rawOrder.property ||
+  const propertyCandidate = rawOrder.property ||
+    rawOrder.propertyName ||
     rawOrder.partnerName ||
+    rawOrder.partnername ||
     rawOrder.hostel ||
+    rawOrder.hostelName ||
+    rawOrder.hotelName ||
     rawOrder.location ||
     rawOrder.userName ||
     rawOrder.customerName ||
-    "Unknown Property"
-  );
+    "Unknown Property";
+    
+  const property = normalizePropertyName(propertyCandidate);
   const inferredCategory = inferCategoryFromProperty(property);
   const inferredType = getTypeForCategory(inferredCategory);
 
