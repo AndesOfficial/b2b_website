@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
-import { FiX, FiEdit2, FiCheck, FiLoader } from "react-icons/fi";
+import { FiX, FiEdit2, FiCheck, FiLoader, FiDownload } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
 import { useHostelAuth } from "../context/HostelAuthContext";
+import { getOrAssignInvoiceNumber } from "../utils/invoiceCounter";
+import { generateSingleInvoicePDF } from "../utils/pdfGenerator";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
   const { client } = useHostelAuth();
   const isViewer = client?.role === "admin_viewer";
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [editForm, setEditForm] = useState({
     status: "Pending",
     amount: 0,
@@ -79,6 +82,19 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
       alert("Failed to update order. Please check Firestore permissions.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    setIsGeneratingInvoice(true);
+    try {
+      const invoiceNo = await getOrAssignInvoiceNumber(order);
+      await generateSingleInvoicePDF(order, invoiceNo);
+    } catch (error) {
+      console.error("Failed to generate invoice:", error);
+      alert("Failed to generate invoice. Please try again.");
+    } finally {
+      setIsGeneratingInvoice(false);
     }
   };
 
@@ -244,6 +260,19 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
               <button onClick={handleUpdate} disabled={isSubmitting} className="flex-1 py-3 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2">
                 {isSubmitting ? <FiLoader className="animate-spin" /> : <FiCheck />}
                 {isSubmitting ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          )}
+
+          {!isEditing && (
+            <div className="mt-6">
+              <button 
+                onClick={handleDownloadInvoice} 
+                disabled={isGeneratingInvoice}
+                className="w-full py-3 bg-indigo-50 text-indigo-600 border border-indigo-100 text-[14px] font-bold rounded-xl hover:bg-indigo-100 transition-colors flex justify-center items-center gap-2"
+              >
+                {isGeneratingInvoice ? <FiLoader className="animate-spin" /> : <FiDownload />}
+                {isGeneratingInvoice ? "Generating..." : "Download Invoice"}
               </button>
             </div>
           )}

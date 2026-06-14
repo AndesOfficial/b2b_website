@@ -4,6 +4,7 @@ import AdminRoute from "./components/AdminRoute";
 import ClientProtectedRoute from "./components/ClientProtectedRoute";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminExpenses from "./pages/AdminExpenses";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Calculator from "./pages/Calculator";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -21,6 +22,7 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
           <Route path="/admin/investors" element={<AdminRoute><InvestorDashboard /></AdminRoute>} />
           <Route path="/admin/calculator" element={<AdminRoute><Calculator /></AdminRoute>} />
 

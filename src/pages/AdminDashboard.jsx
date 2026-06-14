@@ -77,6 +77,11 @@ export default function AdminDashboard() {
       navigate("/admin/investors");
       return;
     }
+    if (tab === "expenses") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/expenses");
+      return;
+    }
 
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
@@ -116,7 +121,7 @@ export default function AdminDashboard() {
           onDeleteIssue={!isViewer ? handleDeleteData : undefined}
         />
       ),
-      expenses: <AdminExpensesTab />,
+      expenses: null, // Handled by dedicated /admin/expenses route
       analytics: (
         <AdminAnalyticsTab
           orders={orders}
@@ -167,8 +172,7 @@ export default function AdminDashboard() {
           setDateFrom={setDateFrom}
           dateTo={dateTo}
           setDateTo={setDateTo}
-          onExpensesClick={() => handleTabChange(activeTab === "expenses" ? "overview" : "expenses")}
-          isExpensesActive={activeTab === "expenses"}
+          onExpensesClick={() => navigate("/admin/expenses")}
           onCalculatorClick={() => navigate("/admin/calculator")}
           orders={orders}
           onMenuClick={() => setIsMobileMenuOpen(true)}
