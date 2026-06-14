@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import {
   DollarSign, TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
   FileText, Loader2, ImageIcon, PieChart as PieChartIcon, BarChart3, Download,
-  ChevronDown, ChevronRight, Split, ChevronUp
+  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,6 +14,9 @@ import {
 } from "recharts";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
+import { FaRupeeSign } from "react-icons/fa";
+import { normalizeDate } from "../utils/orderNormalization";
+import { useHostelAuth } from "../context/HostelAuthContext";
 
 /* ─── constants ─── */
 const CATEGORIES = [
@@ -40,17 +43,15 @@ const CAT_COLORS = {
   "Marketing Expense": "#EC4899",
 };
 
-const MONTHS = [
-  "All", "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+
 
 const emptyForm = {
-  amount: "", payee: "", description: "", category: "", date: "", file: null, breakdown: [],
+  amount: "", payee: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid"
 };
 
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
+  const { orders } = useHostelAuth();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -60,7 +61,15 @@ export default function AdminExpensesTab() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState(null);
-  const [monthFilter, setMonthFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split("T")[0];
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  });
   const [catFilter, setCatFilter] = useState("All");
   const [expandedRows, setExpandedRows] = useState(new Set());
 
@@ -80,11 +89,12 @@ export default function AdminExpensesTab() {
 
   /* ─── Firestore listener ─── */
   useEffect(() => {
-    let unsubSnapshot = () => { };
+    let unsubExpenses = () => { };
+    
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      unsubSnapshot();
+      unsubExpenses();
       if (user) {
-        unsubSnapshot = onSnapshot(
+        unsubExpenses = onSnapshot(
           collection(db, "b2b_expenses"),
           (snap) => {
             const data = snap.docs.map((d) => {
@@ -113,28 +123,49 @@ export default function AdminExpensesTab() {
         setLoading(false);
       }
     });
-    return () => { unsubAuth(); unsubSnapshot(); };
+
+    return () => {
+      unsubExpenses();
+      unsubAuth();
+    };
   }, []);
 
   /* ─── Filtering ─── */
   const filtered = useMemo(() => {
     let list = expenses;
-    if (monthFilter !== "All") {
-      const mIdx = MONTHS.indexOf(monthFilter);
+    if (dateFrom && dateTo) {
       list = list.filter((e) => {
         if (!e.date) return false;
-        return new Date(e.date).getMonth() + 1 === mIdx;
+        return e.date >= dateFrom && e.date <= dateTo;
       });
     }
     if (catFilter !== "All") {
       list = list.filter((e) => e.category === catFilter);
     }
     return list;
-  }, [expenses, monthFilter, catFilter]);
+  }, [expenses, dateFrom, dateTo, catFilter]);
 
   /* ─── KPIs ─── */
   const kpis = useMemo(() => {
-    const total = filtered.reduce((s, e) => s + (e.amount || 0), 0);
+    let totalPaid = 0;
+    let totalPayable = 0;
+
+    filtered.forEach((e) => {
+      const amt = e.amount || 0;
+      const t = e.type || "Paid";
+      if (t === "Paid") totalPaid += amt;
+      else if (t === "Payable") totalPayable += amt;
+    });
+
+    let totalReceived = 0;
+    orders.forEach((o) => {
+      if (o.status === "CANCELLED" || o.status === "Cancelled" || o.category === "ISSUES") return;
+      const oDate = normalizeDate(o.date || o.createdAt);
+      if (dateFrom && oDate < dateFrom) return;
+      if (dateTo && oDate > dateTo) return;
+      totalReceived += (Number(o.amount) || 0);
+    });
+
     const now = new Date();
     const thisMonth = expenses.filter((e) => {
       if (!e.date) return false;
@@ -149,8 +180,8 @@ export default function AdminExpensesTab() {
     let topCat = "—";
     let topVal = 0;
     Object.entries(catMap).forEach(([c, v]) => { if (v > topVal) { topCat = c; topVal = v; } });
-    return { total, monthTotal, topCat, count: filtered.length };
-  }, [filtered, expenses]);
+    return { total: totalPaid, totalPaid, totalPayable, totalReceived, monthTotal, topCat, count: filtered.length };
+  }, [filtered, expenses, orders, dateFrom, dateTo]);
 
   /* ─── Chart data ─── */
   const areaData = useMemo(() => {
@@ -215,6 +246,7 @@ export default function AdminExpensesTab() {
       category: exp.category || "",
       date: exp.date || "",
       breakdown: exp.breakdown || [],
+      type: exp.type || "Paid",
       file: null,
     });
     setErrors({});
@@ -262,6 +294,7 @@ export default function AdminExpensesTab() {
         description: form.description.trim(),
         category: form.category,
         date: form.date,
+        type: form.type,
         breakdown: form.breakdown || [],
         ...(receiptUrl ? { receiptUrl } : {}),
         updatedAt: Timestamp.now(),
@@ -327,7 +360,7 @@ export default function AdminExpensesTab() {
       {/* Toast */}
       {toast && (
         <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
-          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
             <FileText size={14} />
           </div>
           <span className="text-[13px] font-black tracking-tight">{toast}</span>
@@ -336,20 +369,37 @@ export default function AdminExpensesTab() {
 
       {/* Control Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex bg-white/70 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm gap-1 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center px-3 border-r border-gray-100 mr-1 flex-shrink-0">
-            <CalendarDays size={16} className="text-slate-400" />
-          </div>
-          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}
-            className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer pr-8 whitespace-nowrap">
-            {MONTHS.map((m) => <option key={m} value={m}>{m} Period</option>)}
-          </select>
-          <div className="h-4 w-px bg-gray-200 mx-1 self-center flex-shrink-0" />
-          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
-            className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer pr-8 whitespace-nowrap">
-            <option value="All">All Categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex bg-white/70 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm gap-1 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center px-3 border-r border-gray-100 mr-1 flex-shrink-0">
+                <CalendarDays size={16} className="text-slate-400" />
+              </div>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
+              <div className="h-4 w-px bg-gray-200 mx-1 self-center flex-shrink-0" />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
+              <div className="h-4 w-px bg-gray-200 mx-1 self-center flex-shrink-0" />
+              <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
+                className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer pr-8 whitespace-nowrap">
+                <option value="All">All Categories</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <button 
+                onClick={() => {
+                  const headers = ["Date", "Payee", "Description", "Category", "Amount"];
+                  const rows = filtered.map(e => [e.date, e.payee, e.description, e.category, e.amount]);
+                  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+                  const blob = new Blob([csv], { type: "text/csv" });
+                  const url = URL.createObjectURL(blob);
+                  const localDateObj = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+                  const a = document.createElement("a"); a.href = url; a.download = `corporate_expenses_${localDateObj.toISOString().split("T")[0]}.csv`; a.click();
+                  URL.revokeObjectURL(url);
+                }} 
+                disabled={filtered.length === 0}
+                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-[#E3F2FD] text-[12px] font-black text-[#1976D2] border border-brand-200 rounded-xl hover:bg-[#1976D2] hover:text-white transition shadow-sm active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#E3F2FD] disabled:hover:text-[#1976D2]"
+              >
+                <Download size={14} /> Export CSV
+            </button>
         </div>
         <button onClick={openNew}
           className="flex items-center justify-center gap-2.5 px-6 py-3.5 sm:py-3 bg-blue-600 text-white text-[12px] sm:text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest">
@@ -358,10 +408,12 @@ export default function AdminExpensesTab() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KpiCard icon={<DollarSign size={20} />} label="Total Payments" value={`₹${kpis.total.toLocaleString()}`} sub={`${kpis.count} individual entries`} color="indigo" />
-        <KpiCard icon={<TrendingUp size={20} />} label="Top Outflow" value={kpis.topCat} sub="Highest Category Spending" color="amber" />
-        <KpiCard icon={<CalendarDays size={20} />} label="Current Month" value={`₹${kpis.monthTotal.toLocaleString()}`} sub={`${new Date().toLocaleString("default", { month: "long" })} Run Rate`} color="emerald" />
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
+        <KpiCard icon={<ArrowDownLeft size={20} />} label="Revenue" value={`₹${kpis.totalReceived.toLocaleString()}`} sub="From Orders" color="blue" />
+        <KpiCard icon={<ArrowUpRight size={20} />} label="Payable" value={`₹${kpis.totalPayable.toLocaleString()}`} sub="Pending Dues" color="rose" />
+        <KpiCard icon={<TrendingUp size={20} />} label="Top Outflow" value={kpis.topCat} sub="Highest Spending" color="amber" />
+        <KpiCard icon={<DollarSign size={20} />} label="Net Balance" value={`₹${(kpis.totalReceived - kpis.totalPaid).toLocaleString()}`} sub="Revenue - Total Paid" color="emerald" />
       </div>
 
       {/* Visual Analytics */}
@@ -450,20 +502,6 @@ export default function AdminExpensesTab() {
             <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">Corporate Expense Ledger</h2>
             <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest">{filtered.length} total entries</p>
           </div>
-          {filtered.length > 0 && (
-            <button onClick={() => {
-              const headers = ["Date", "Payee", "Description", "Category", "Amount"];
-              const rows = filtered.map(e => [e.date, e.payee, e.description, e.category, e.amount]);
-              const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
-              const blob = new Blob([csv], { type: "text/csv" });
-              const url = URL.createObjectURL(blob);
-              const localDateObj = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
-              const a = document.createElement("a"); a.href = url; a.download = `corporate_expenses_${localDateObj.toISOString().split("T")[0]}.csv`; a.click();
-              URL.revokeObjectURL(url);
-            }} className="flex items-center gap-2 px-4 py-2 bg-white text-[12px] font-black text-slate-600 border border-gray-200 rounded-xl hover:bg-slate-50 transition shadow-sm active:scale-95 uppercase tracking-wider">
-              <Download size={14} /> Download CSV
-            </button>
-          )}
         </div>
 
         {/* Desktop Table */}
@@ -473,8 +511,8 @@ export default function AdminExpensesTab() {
               <tr>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Entry Date</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Beneficiary (Payee)</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Type</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Classification</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Justification</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Amount (INR)</th>
                 <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Invoice</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Actions</th>
@@ -522,12 +560,18 @@ export default function AdminExpensesTab() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
-                          {e.category}
+                        <span className={`px-2.5 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${
+                            e.type === 'Received' ? 'bg-blue-100 text-blue-700' :
+                            e.type === 'Payable' ? 'bg-rose-100 text-rose-700' :
+                            'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {e.type || "Paid"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-[13px] font-medium text-slate-600 italic truncate max-w-[250px]" title={e.description}>{e.description}</p>
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
+                          {e.category}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-0.5 text-[15px] font-black text-[#0F172A] tracking-tight">
@@ -562,17 +606,30 @@ export default function AdminExpensesTab() {
                             <table className="w-full">
                               <thead className="bg-slate-50 border-b border-slate-100">
                                 <tr>
-                                  <th className="text-left text-[10px] font-black text-slate-400 px-4 py-2 uppercase tracking-widest">To (Recipient)</th>
-                                  <th className="text-left text-[10px] font-black text-slate-400 px-4 py-2 uppercase tracking-widest">For (Purpose)</th>
+                                  <th className="p-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest w-48">Payee</th>
+                                  <th className="p-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest w-32">Type</th>
+                                  <th className="p-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">Description & Category</th>
                                   <th className="text-right text-[10px] font-black text-slate-400 px-4 py-2 uppercase tracking-widest">Amount</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
                                 {e.breakdown.map((b, i) => (
                                   <tr key={i}>
-                                    <td className="px-4 py-2 text-[12px] font-bold text-slate-700">{b.to || b.payee}</td>
-                                    <td className="px-4 py-2 text-[12px] font-medium text-slate-500">{b.purpose || '—'}</td>
-                                    <td className="px-4 py-2 text-[12px] font-black text-slate-800 text-right">₹{Number(b.amount).toLocaleString()}</td>
+                                    <td className="p-4 text-[12px] font-bold text-slate-700">{b.to || b.payee}</td>
+                                    <td className="p-4 whitespace-nowrap">
+                                      <span className={`px-2.5 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${
+                                          e.type === 'Received' ? 'bg-blue-100 text-blue-700' :
+                                          e.type === 'Payable' ? 'bg-rose-100 text-rose-700' :
+                                          'bg-emerald-100 text-emerald-700'
+                                      }`}>
+                                        {e.type || "Paid"}
+                                      </span>
+                                    </td>
+                                    <td className="p-4">
+                                      <p className="text-[13px] font-bold text-[#0F172A]">{b.purpose || "-"}</p>
+                                      <span className="inline-block mt-1 px-2.5 py-1 text-[10px] font-black bg-slate-100 text-slate-600 rounded-lg uppercase tracking-wider border border-slate-200">{e.category}</span>
+                                    </td>
+                                    <td className="p-4 text-[12px] font-black text-slate-800 text-right">₹{Number(b.amount).toLocaleString()}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -707,6 +764,14 @@ export default function AdminExpensesTab() {
                       className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none transition-all uppercase placeholder:normal-case" placeholder="e.g. Rahul, Petty Cash, Owner" />
                   </div>
                   {errors.payee && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.payee}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Transaction Type *</label>
+                  <select value={form.type || "Paid"} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-black text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none appearance-none">
+                    <option value="Paid">Paid (Outflow)</option>
+                    <option value="Payable">Payable (Pending Due)</option>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

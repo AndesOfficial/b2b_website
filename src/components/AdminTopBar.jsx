@@ -3,7 +3,7 @@ import { BiRupee } from "react-icons/bi";
 import ExportCSV from "./ExportCSV";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
-export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, isExpensesActive, onCalculatorClick, orders, onMenuClick }) {
+export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, onCalculatorClick, orders, onMenuClick }) {
     return (
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200 h-16 lg:h-18 flex items-center justify-between px-4 lg:px-8 shadow-sm" style={{ fontFamily: 'DM Sans, sans-serif' }}>
             <div className="flex items-center gap-3">
@@ -17,13 +17,10 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
             </div>
 
             <div className="flex items-center gap-4">
-                {/* CEO Expenses */}
+                {/* ANDES Expenses */}
                 <button
                     onClick={onExpensesClick}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13.5px] font-bold transition-all border ${isExpensesActive
-                            ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm'
-                            : 'bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200'
-                        }`}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13.5px] font-bold transition-all border bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
                 >
                     <FaIndianRupeeSign size={16} />
                     ANDES Expenses
@@ -56,7 +53,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                     />
                 </div>
 
-                {/* Export - Icon only on small mobile */}
+                {/* Export Orders CSV */}
                 <div className="hidden sm:block">
                     <ExportCSV orders={orders} className="!bg-blue-600 !text-white !p-2 !rounded-lg hover:!bg-blue-700 transition-colors shadow-sm" />
                 </div>

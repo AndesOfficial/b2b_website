@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiDownload, FiMenu } from "react-icons/fi";
+import { FiMenu } from "react-icons/fi";
+import { FaIndianRupeeSign } from "react-icons/fa6";
 import AdminSidebar from "../components/AdminSidebar";
-import InvestorMetrics from "../components/InvestorMetrics";
+import AdminExpensesTab from "../components/AdminExpensesTab";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
-export default function InvestorDashboard() {
+export default function AdminExpenses() {
   const navigate = useNavigate();
   const { client, logout } = useHostelAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -24,14 +25,11 @@ export default function InvestorDashboard() {
   }, []);
 
   const handleSidebarTabChange = useCallback((tab) => {
-    if (tab === "investors") {
-      setIsMobileMenuOpen(false);
-      return;
-    }
-
     setIsMobileMenuOpen(false);
-    if (tab === "expenses") {
-      navigate("/admin/expenses");
+    if (tab === "expenses") return; // already here
+
+    if (tab === "investors") {
+      navigate("/admin/investors");
     } else {
       navigate("/admin");
     }
@@ -40,7 +38,7 @@ export default function InvestorDashboard() {
   return (
     <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
-        activeTab="investors"
+        activeTab="expenses"
         setActiveTab={handleSidebarTabChange}
         user={client}
         onLogout={logout}
@@ -68,23 +66,17 @@ export default function InvestorDashboard() {
               </button>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Admin Portal</p>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">Investor Relations</h1>
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 flex items-center gap-2">
+                  <FaIndianRupeeSign size={20} className="text-amber-500" />
+                  ANDES Expenses
+                </h1>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
-            >
-              <FiDownload size={16} />
-              Export Report
-            </button>
           </div>
         </header>
 
         <div className="p-4 lg:p-8">
-          <InvestorMetrics />
+          <AdminExpensesTab />
         </div>
       </main>
     </div>

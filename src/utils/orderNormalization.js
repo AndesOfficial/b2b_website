@@ -124,7 +124,7 @@ export const CANONICAL_PROPERTY_NAMES = {
 
 // getTodayString imported from ./dateUtils
 
-function normalizeDate(raw) {
+export function normalizeDate(raw) {
   if (!raw) return getTodayString();
   if (typeof raw === "string") {
     // If it's a string like "2026-05-01T12:00:00", split and take the date part

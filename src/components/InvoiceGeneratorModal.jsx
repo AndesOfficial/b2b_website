@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
 import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
-import { normalizePropertyName } from "../utils/orderNormalization";
+import { normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
 import signatureImage from "../assets/signature.jpeg";
 
 
@@ -78,17 +78,11 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
         return Boolean(getOrderProperty(order));
     };
 
-    // Extract unique properties from orders for the dropdown
+    // Use the canonical correct list instead of extracting from raw orders to avoid spelling typos
     const uniqueProperties = useMemo(() => {
-        const propertiesWithOrders = Array.from(new Set(
-            orders
-                .filter(isInvoiceEligibleOrder)
-                .map(getOrderProperty)
-                .filter(Boolean)
-        ));
-
+        const propertiesWithOrders = Array.from(new Set(Object.values(CANONICAL_PROPERTY_NAMES)));
         return propertiesWithOrders.sort((a, b) => a.localeCompare(b));
-    }, [orders]);
+    }, []);
 
     const getQty = (order, propertyName) => {
         const name = propertyName?.toLowerCase() || "";
