@@ -29,6 +29,8 @@ const CATEGORIES = [
   "Dark Store OPEX",
   "COMPANY OPEX",
   "Marketing Expense",
+  "Packaging",
+  "Team Member Salary",
 ];
 
 const CAT_COLORS = {
@@ -46,7 +48,7 @@ const CAT_COLORS = {
 
 
 const emptyForm = {
-  amount: "", payee: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid"
+  amount: "", payee: "", payer: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid"
 };
 
 /* ─── Component ─── */
@@ -248,6 +250,7 @@ export default function AdminExpensesTab() {
     setForm({
       amount: exp.amount || "",
       payee: exp.payee || "",
+      payer: exp.payer || "",
       description: exp.description || "",
       category: exp.category || "",
       date: exp.date || "",
@@ -263,6 +266,7 @@ export default function AdminExpensesTab() {
     const e = {};
     if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0) e.amount = "Enter a valid amount";
     if (!form.payee.trim()) e.payee = "Payee is required";
+    if (!form.payer.trim()) e.payer = "Payer is required";
     if (!form.description.trim()) e.description = "Description is required";
     if (!form.category) e.category = "Select a category";
     if (!form.date) e.date = "Date is required";
@@ -297,6 +301,7 @@ export default function AdminExpensesTab() {
       const payload = {
         amount: parseFloat(form.amount),
         payee: form.payee.trim(),
+        payer: form.payer.trim(),
         description: form.description.trim(),
         category: form.category,
         date: form.date,
@@ -327,7 +332,7 @@ export default function AdminExpensesTab() {
   }, [form, editingId]);
 
   const handleDelete = async (exp) => {
-    if (!window.confirm(`Delete payment to "${exp.payee}"?`)) return;
+    if (!window.confirm(`Delete payment of ₹${exp.amount?.toLocaleString()} to "${exp.payee}" paid by "${exp.payer || '—'}"?`)) return;
     try {
       await deleteDoc(doc(db, "b2b_expenses", exp.id));
       showToast("Expense deleted");
@@ -392,8 +397,8 @@ export default function AdminExpensesTab() {
             </div>
             <button 
                 onClick={() => {
-                  const headers = ["Date", "Payee", "Description", "Category", "Amount"];
-                  const rows = filtered.map(e => [e.date, e.payee, e.description, e.category, e.amount]);
+                  const headers = ["Date", "Beneficiary (Payee)", "Paid By (Payer)", "Description", "Category", "Amount"];
+                  const rows = filtered.map(e => [e.date, e.payee, e.payer || "", e.description, e.category, e.amount]);
                   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(",")).join("\n");
                   const blob = new Blob([csv], { type: "text/csv" });
                   const url = URL.createObjectURL(blob);
@@ -404,7 +409,7 @@ export default function AdminExpensesTab() {
                 disabled={filtered.length === 0}
                 className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-[#E3F2FD] text-[12px] font-black text-[#1976D2] border border-brand-200 rounded-xl hover:bg-[#1976D2] hover:text-white transition shadow-sm active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#E3F2FD] disabled:hover:text-[#1976D2]"
               >
-                <Download size={14} /> Export CSV
+                <Download size={14} /> Export 
             </button>
         </div>
         <button onClick={openNew}
@@ -415,7 +420,24 @@ export default function AdminExpensesTab() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KpiCard icon={<ArrowDownLeft size={20} />} label="Revenue" value={`₹${kpis.totalReceived.toLocaleString()}`} sub="From Orders" color="blue" />
+        <KpiCard 
+          icon={<ArrowDownLeft size={20} />} 
+          label="Revenue" 
+          value={`₹${kpis.totalReceived.toLocaleString()}`} 
+          sub={
+            <div className="flex flex-col gap-0.5 mt-1.5 text-[10px]">
+              <div className="flex justify-between gap-6">
+                <span className="text-slate-400">B2C (Regular):</span>
+                <span className="font-extrabold text-slate-600">₹{(kpis.totalReceived - kpis.receivables).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between gap-6 border-t border-slate-100 pt-0.5 mt-0.5">
+                <span className="text-slate-400">B2B (Linen/Hostel):</span>
+                <span className="font-extrabold text-slate-600">₹{kpis.receivables.toLocaleString()}</span>
+              </div>
+            </div>
+          } 
+          color="blue" 
+        />
         <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
         <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString()}`} sub="Non-Regular Sources" color="rose" />
         <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value="₹20,02,969.22" sub="Net Account Balance" color="emerald" />
@@ -516,6 +538,7 @@ export default function AdminExpensesTab() {
               <tr>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Entry Date</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Beneficiary (Payee)</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Paid By (Payer)</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Type</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Classification</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Amount (INR)</th>
@@ -526,14 +549,14 @@ export default function AdminExpensesTab() {
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-20 text-center text-slate-300">
+                  <td colSpan="8" className="px-6 py-20 text-center text-slate-300">
                     <Loader2 size={32} className="animate-spin mx-auto mb-4" />
                     <p className="text-[13px] font-bold">Synchronizing with Cloud...</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-20 text-center">
+                  <td colSpan="8" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-200"><FileText size={32} /></div>
                       <p className="text-[15px] font-black text-slate-400">Ledger is empty for this period</p>
@@ -563,6 +586,11 @@ export default function AdminExpensesTab() {
                             </>
                           )}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-[13.5px] font-black text-[#0F172A] tracking-tight">
+                          {e.payer || "—"}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${
@@ -606,7 +634,7 @@ export default function AdminExpensesTab() {
                     </tr>
                     {e.breakdown?.length > 0 && expandedRows.has(e.id) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan="7" className="px-6 py-4">
+                        <td colSpan="8" className="px-6 py-4">
                           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                             <table className="w-full">
                               <thead className="bg-slate-50 border-b border-slate-100">
@@ -667,6 +695,9 @@ export default function AdminExpensesTab() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[14px] font-black text-[#0F172A] tracking-tight mb-1">{e.payee}</p>
+                  {e.payer && (
+                    <p className="text-[11px] font-bold text-slate-500 mb-1">Paid by: {e.payer}</p>
+                  )}
                   {e.breakdown?.length > 0 && (
                     <p className="text-[10px] font-bold text-indigo-500 mt-0.5">
                       → {e.breakdown.map(b => b.to || b.payee).join(', ')}
@@ -762,13 +793,23 @@ export default function AdminExpensesTab() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Paid By (Payer) *</label>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Paid To (Payee) *</label>
                   <div className="relative">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><FileText size={18} /></div>
                     <input type="text" value={form.payee} onChange={(e) => setForm({ ...form, payee: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none transition-all uppercase placeholder:normal-case" placeholder="e.g. Rahul, Petty Cash, Owner" />
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none transition-all uppercase placeholder:normal-case" placeholder="e.g. Sai Enterprises, Rohit Chavan, Alliance" />
                   </div>
                   {errors.payee && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.payee}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Paid By (Payer) *</label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><FileText size={18} /></div>
+                    <input type="text" value={form.payer} onChange={(e) => setForm({ ...form, payer: e.target.value })}
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none transition-all uppercase placeholder:normal-case" placeholder="e.g. Rahul, Petty Cash, Owner" />
+                  </div>
+                  {errors.payer && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.payer}</p>}
                 </div>
 
                 <div>
@@ -810,9 +851,9 @@ export default function AdminExpensesTab() {
                       <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                         <Split size={14} className="text-indigo-400" /> Payment Breakdown (Optional)
                       </label>
-                      {form.payee && form.amount && (
+                      {form.payer && form.amount && (
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          <span className="font-black text-indigo-600">{form.payee}</span> pays <span className="font-black text-slate-700">₹{Number(form.amount).toLocaleString()}</span> → split below
+                          <span className="font-black text-indigo-600">{form.payer}</span> pays <span className="font-black text-slate-700">₹{Number(form.amount).toLocaleString()}</span> → split below
                         </p>
                       )}
                     </div>
@@ -923,6 +964,8 @@ export default function AdminExpensesTab() {
 function KpiCard({ icon, label, value, sub, color }) {
   const colorMap = {
     indigo: { bg: "bg-indigo-50", ring: "ring-indigo-100", icon: "text-indigo-500" },
+    blue: { bg: "bg-blue-50", ring: "ring-blue-100", icon: "text-blue-500" },
+    rose: { bg: "bg-rose-50", ring: "ring-rose-100", icon: "text-rose-500" },
     amber: { bg: "bg-amber-50", ring: "ring-amber-100", icon: "text-amber-500" },
     emerald: { bg: "bg-emerald-50", ring: "ring-emerald-100", icon: "text-emerald-500" },
   };
@@ -932,10 +975,10 @@ function KpiCard({ icon, label, value, sub, color }) {
       <div className={`${c.bg} p-2.5 rounded-xl`}>
         <span className={c.icon}>{icon}</span>
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs text-slate-400 font-medium">{label}</p>
         <p className="text-lg font-bold text-slate-800 truncate">{value}</p>
-        <p className="text-[10px] text-slate-400">{sub}</p>
+        <div className="text-[10px] text-slate-400">{sub}</div>
       </div>
     </div>
   );

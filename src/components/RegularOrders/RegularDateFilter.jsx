@@ -4,7 +4,7 @@ import { getTodayString, getYesterdayString, formatDateString } from '../../util
 const PRESETS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'Custom'];
 
 export default function RegularDateFilter({ dateFrom, dateTo, setDateFrom, setDateTo }) {
-  const [activePreset, setActivePreset] = useState('Monthly'); // Default or could be prop
+  const [activePreset, setActivePreset] = useState('Daily'); // Default or could be prop
 
   const handlePresetClick = (preset) => {
     setActivePreset(preset);

@@ -45,7 +45,7 @@ const _today = new Date();
 const _thirtyDaysAgo = new Date(_today);
 _thirtyDaysAgo.setDate(_today.getDate() - 30);
 const _fmt = (d) => d.toISOString().split("T")[0];
-const DEFAULT_DATE_FROM = _fmt(_thirtyDaysAgo);
+const DEFAULT_DATE_FROM = _fmt(_today);
 const DEFAULT_DATE_TO = _fmt(_today);
 
 export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDeleteOrder }) {
