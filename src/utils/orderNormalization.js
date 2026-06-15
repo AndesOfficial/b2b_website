@@ -127,9 +127,25 @@ export const CANONICAL_PROPERTY_NAMES = {
 export function normalizeDate(raw) {
   if (!raw) return getTodayString();
   if (typeof raw === "string") {
-    // If it's a string like "2026-05-01T12:00:00", split and take the date part
-    if (raw.includes("T")) return raw.split("T")[0];
-    return raw;
+    const trimmed = raw.trim();
+    // Check for DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+    if (dmyMatch) {
+      const [, day, month, year] = dmyMatch;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    // Check for YYYY-MM-DD or YYYY-MM-DD...
+    const ymdMatch = trimmed.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    if (trimmed.includes("T")) return trimmed.split("T")[0];
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    return trimmed;
   }
   
   let d;
@@ -234,13 +250,22 @@ function normalizeCartServiceName(rawName) {
 function mapCartSelectionSource(source) {
   if (!source) return ORDER_CHANNELS.APP;
   const normalized = String(source).toLowerCase();
-  if (normalized.includes("map") || normalized.includes("tap") || normalized.includes("app")) return ORDER_CHANNELS.APP;
+  // App sources
+  if (
+    normalized.includes("map") || 
+    normalized.includes("tap") || 
+    normalized.includes("app") || 
+    normalized.includes("search") // catches "search_result"
+  ) return ORDER_CHANNELS.APP;
+  
   if (normalized.includes("gps") || normalized.includes("auto")) return ORDER_CHANNELS.AUTO;
   if (normalized.includes("website")) return ORDER_CHANNELS.WEBSITE;
   if (normalized.includes("whatsapp")) return ORDER_CHANNELS.WHATSAPP;
   if (normalized.includes("call")) return ORDER_CHANNELS.CALL;
   if (normalized.includes("outlet")) return ORDER_CHANNELS.OUTLET;
   if (normalized.includes("student")) return ORDER_CHANNELS.STUDENT;
+  
+  // Default fallback
   return ORDER_CHANNELS.APP;
 }
 

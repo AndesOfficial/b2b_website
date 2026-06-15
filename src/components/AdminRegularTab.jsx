@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { FiPlus, FiX, FiCheck, FiSmartphone, FiMessageSquare, FiShoppingBag, FiPhone, FiUser, FiEdit2, FiTrash2, FiInbox, FiCheckCircle, FiCalendar, FiChevronRight, FiMapPin } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "./EmptyState";
 import AdminOrderModal from "./AdminOrderModal";
 import FilterPills from "./FilterPills";
 import TabSectionCard from "./TabSectionCard";
+
+// Analytics Components
+import RegularDateFilter from "./RegularOrders/RegularDateFilter";
+import OverviewDashboard from "./RegularOrders/OverviewDashboard";
+import CustomersDashboard from "./RegularOrders/CustomersDashboard";
+import AnalyticsDashboard from "./RegularOrders/AnalyticsDashboard";
+import ExportReports from "./RegularOrders/ExportReports";
+
 import {
   createEmptyRegularOrderForm,
   createRegularServiceLine,
@@ -15,6 +23,7 @@ import {
   REGULAR_STATUS_OPTIONS,
   useRegularOrders,
 } from "../hooks/useRegularOrders";
+import { useRegularAnalytics } from "../hooks/useRegularAnalytics";
 import { isNegativeNumberInput } from "../utils/numberInputUtils";
 import { calculateTAT } from "../utils/dateUtils";
 
@@ -28,17 +37,56 @@ const STATUS_BADGE = {
 };
 
 const POSITIVE_NUMERIC_FIELDS = new Set(["amount"]);
+const SERVICE_LINE_NUMERIC_FIELDS = ["weight", "quantity", "amount"];
+const SUB_TABS = ["Overview", "Customers", "Analytics", "Transactions Log"];
+
+// Computed once at module load — avoids Date() allocation on every render
+const _today = new Date();
+const _thirtyDaysAgo = new Date(_today);
+_thirtyDaysAgo.setDate(_today.getDate() - 30);
+const _fmt = (d) => d.toISOString().split("T")[0];
+const DEFAULT_DATE_FROM = _fmt(_thirtyDaysAgo);
+const DEFAULT_DATE_TO = _fmt(_today);
 
 export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDeleteOrder }) {
+  const [activeSubTab, setActiveSubTab] = useState("Overview");
+  const [localDateFrom, setLocalDateFrom] = useState(DEFAULT_DATE_FROM);
+  const [localDateTo, setLocalDateTo] = useState(DEFAULT_DATE_TO);
+
+  // All historical orders are passed in — analytics hook handles current vs previous period internally
+  const analytics = useRegularAnalytics(orders, localDateFrom, localDateTo);
+
+  // Existing Transactions Log State
   const [channelFilter, setChannelFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState("");
   const [selectedDrilldownOrder, setSelectedDrilldownOrder] = useState(null);
   const [isDrilldownOpen, setIsDrilldownOpen] = useState(false);
   const [form, setForm] = useState(createEmptyRegularOrderForm());
-  const { channelStats, filteredOrders } = useRegularOrders(orders, channelFilter);
+  
+  // Feed the filtered currentOrders to the existing hook for the transactions log
+  const { channelStats, filteredOrders } = useRegularOrders(analytics.currentOrders, channelFilter);
 
-  const openEditModal = (order) => {
+  useEffect(() => {
+    const ramnathOrders = filteredOrders.filter((order) =>
+      String(order.customerName || order.userName || "").toLowerCase().includes("ramnath")
+    );
+
+    if (ramnathOrders.length > 0) {
+      console.table(ramnathOrders.map((order) => ({
+        id: order.id,
+        source: order.source,
+        channel: order.channel,
+        customerName: order.customerName,
+        amount: order.amount,
+        date: order.date,
+        status: order.status,
+      })));
+      console.log("Ramnath full order objects:", ramnathOrders);
+    }
+  }, [filteredOrders]);
+
+  const openEditModal = useCallback((order) => {
     const breakdownFromOrder = (order.serviceBreakdown && order.serviceBreakdown.length > 0)
       ? order.serviceBreakdown.map((line) =>
           createRegularServiceLine({
@@ -69,36 +117,36 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
       originalOrder: order,
     });
     setShowModal(true);
-  };
+  }, []);
 
-  const updateForm = (key, value) => {
+  const updateForm = useCallback((key, value) => {
     if (POSITIVE_NUMERIC_FIELDS.has(key) && isNegativeNumberInput(value)) return;
     setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  }, []);
 
-  const parseNumberValue = (value) => {
+  const parseNumberValue = useCallback((value) => {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : 0;
-  };
+  }, []);
 
-  const updateServiceLine = (lineId, field, value) => {
-    if (["weight", "quantity", "amount"].includes(field) && isNegativeNumberInput(value)) return;
+  const updateServiceLine = useCallback((lineId, field, value) => {
+    if (SERVICE_LINE_NUMERIC_FIELDS.includes(field) && isNegativeNumberInput(value)) return;
     setForm((prev) => ({
       ...prev,
       serviceBreakdown: prev.serviceBreakdown.map((line) =>
         line.id === lineId ? { ...line, [field]: value } : line
       ),
     }));
-  };
+  }, []);
 
-  const addServiceLine = () => {
+  const addServiceLine = useCallback(() => {
     setForm((prev) => ({
       ...prev,
       serviceBreakdown: [...prev.serviceBreakdown, createRegularServiceLine()],
     }));
-  };
+  }, []);
 
-  const removeServiceLine = (lineId) => {
+  const removeServiceLine = useCallback((lineId) => {
     setForm((prev) => {
       if (prev.serviceBreakdown.length === 1) return prev;
       return {
@@ -106,11 +154,11 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
         serviceBreakdown: prev.serviceBreakdown.filter((line) => line.id !== lineId),
       };
     });
-  };
+  }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setForm(createEmptyRegularOrderForm());
-  };
+  }, []);
 
   const breakdownLines = form.serviceBreakdown && form.serviceBreakdown.length > 0
     ? form.serviceBreakdown
@@ -179,11 +227,16 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
     setTimeout(() => setToast(""), 3000);
   };
 
-  const breakdownAmountTotal = breakdownLines.reduce((sum, line) => sum + parseNumberValue(line.amount), 0);
+  const breakdownAmountTotal = useMemo(
+    () => breakdownLines.reduce((sum, line) => sum + parseNumberValue(line.amount), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [breakdownLines]
+  );
   const displayedAmountValue = form.amount !== "" ? form.amount : breakdownAmountTotal;
 
+
   return (
-    <div className="space-y-8" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="space-y-6" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {toast && (
         <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
           <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
@@ -193,245 +246,284 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {REGULAR_CHANNELS.filter((channel) => channel !== "All").map((channel) => {
-          const Icon = CHANNEL_ICONS[channel];
-          const stats = channelStats[channel];
-          const isActive = channelFilter === channel;
-
-          return (
-            <button
-              key={channel}
-              onClick={() => setChannelFilter(channel === channelFilter ? "All" : channel)}
-              className={`group bg-white rounded-xl border p-3.5 sm:p-5 text-left transition-all duration-300 relative overflow-hidden ${
-                isActive
-                  ? "border-blue-500 shadow-md ring-1 ring-blue-500/20"
-                  : "border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div
-                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400 group-hover:bg-slate-100"
-                  }`}
-                  style={!isActive ? { color: CHANNEL_COLORS[channel], backgroundColor: `${CHANNEL_COLORS[channel]}10` } : {}}
-                >
-                  <Icon size={16} />
-                </div>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-              </div>
-              <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{channel}</p>
-              <div className="flex items-baseline gap-1.5 sm:gap-2">
-                <p className="text-lg sm:text-[20px] font-black text-[#0F172A] tracking-tight">{stats.count}</p>
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400">orders</p>
-              </div>
-              <div className="flex items-center gap-0.5 text-[11px] sm:text-[12px] font-black text-blue-600 mt-1">
-                <BiRupee size={10} className="mb-0.5" />
-                <span>{stats.revenue.toLocaleString()}</span>
-              </div>
-            </button>
-          );
-        })}
+      {/* Header Controls: Date Filter & Export */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <RegularDateFilter 
+          dateFrom={localDateFrom} 
+          dateTo={localDateTo} 
+          setDateFrom={setLocalDateFrom} 
+          setDateTo={setLocalDateTo} 
+        />
+        <ExportReports analytics={analytics} />
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <FilterPills options={REGULAR_CHANNELS} activeValue={channelFilter} onChange={setChannelFilter} />
-        {onAddOrder && (
+      {/* Sub-Tab Navigation */}
+      <div className="flex items-center gap-2 border-b border-gray-200 mb-6 overflow-x-auto pb-[-1px]">
+        {SUB_TABS.map((tab) => (
           <button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3 bg-blue-600 text-white text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
+            key={tab}
+            onClick={() => setActiveSubTab(tab)}
+            className={`px-5 py-3 text-[14px] font-bold transition-all border-b-2 whitespace-nowrap ${
+              activeSubTab === tab
+                ? "border-blue-600 text-blue-600 bg-blue-50/50"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+            }`}
           >
-            <FiPlus size={18} /> Log New Order
+            {tab}
           </button>
-        )}
+        ))}
       </div>
 
-      <TabSectionCard title="Retail Transaction Log" subtitle={`${filteredOrders.length} total orders found`}>
-        <div className="hidden md:block overflow-x-auto max-h-[520px] overflow-y-auto">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-[#F8FAFC]">
-              <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Customer Identity</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Service Detail</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Stats (KG/PCS)</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Amount (₹)</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Pickup Date</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Delivery Date</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Status</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">TAT</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+      {/* Tab Contents */}
+      {activeSubTab === "Overview" && <OverviewDashboard analytics={analytics} />}
+      {activeSubTab === "Customers" && <CustomersDashboard analytics={analytics} />}
+      {activeSubTab === "Analytics" && <AnalyticsDashboard analytics={analytics} />}
+
+      {activeSubTab === "Transactions Log" && (
+        <div className="animate-fade-in space-y-6">
+          {/* Legacy Transactions Log View */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {REGULAR_CHANNELS.filter((channel) => channel !== "All").map((channel) => {
+              const Icon = CHANNEL_ICONS[channel];
+              const stats = channelStats[channel];
+              const isActive = channelFilter === channel;
+
+              return (
+                <button
+                  key={channel}
+                  onClick={() => setChannelFilter(channel === channelFilter ? "All" : channel)}
+                  className={`group bg-white rounded-xl border p-3.5 sm:p-5 text-left transition-all duration-300 relative overflow-hidden ${
+                    isActive
+                      ? "border-blue-500 shadow-md ring-1 ring-blue-500/20"
+                      : "border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-colors ${
+                        isActive ? "bg-blue-600 text-white" : "bg-slate-50 text-slate-400 group-hover:bg-slate-100"
+                      }`}
+                      style={!isActive ? { color: CHANNEL_COLORS[channel], backgroundColor: `${CHANNEL_COLORS[channel]}10` } : {}}
+                    >
+                      <Icon size={16} />
+                    </div>
+                    {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                  </div>
+                  <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{channel}</p>
+                  <div className="flex items-baseline gap-1.5 sm:gap-2">
+                    <p className="text-lg sm:text-[20px] font-black text-[#0F172A] tracking-tight">{stats.count}</p>
+                    <p className="text-[10px] sm:text-[11px] font-bold text-slate-400">orders</p>
+                  </div>
+                  <div className="flex items-center gap-0.5 text-[11px] sm:text-[12px] font-black text-blue-600 mt-1">
+                    <BiRupee size={10} className="mb-0.5" />
+                    <span>{stats.revenue.toLocaleString()}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <FilterPills options={REGULAR_CHANNELS} activeValue={channelFilter} onChange={setChannelFilter} />
+            {onAddOrder && (
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3 bg-blue-600 text-white text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest"
+              >
+                <FiPlus size={18} /> Log New Order
+              </button>
+            )}
+          </div>
+
+          <TabSectionCard title="Retail Transaction Log" subtitle={`${filteredOrders.length} total orders found`}>
+            <div className="hidden md:block overflow-x-auto max-h-[520px] overflow-y-auto">
+              <table className="w-full min-w-[900px]">
+                <thead className="bg-[#F8FAFC] sticky top-0 z-10">
+                  <tr>
+                    <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Customer Identity</th>
+                    <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Service Detail</th>
+                    <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Stats (KG/PCS)</th>
+                    <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Amount (₹)</th>
+                    <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Pickup Date</th>
+                    <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Delivery Date</th>
+                    <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Status</th>
+                    <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">TAT</th>
+                    <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="px-6 py-12">
+                        <EmptyState
+                          icon={FiInbox}
+                          title="No matching transactions"
+                          message="Adjust your filters or start by logging a new customer order."
+                        />
+                      </td>
+                    </tr>
+                  ) : filteredOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
+                      className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer"
+                    >
+                      <td className="px-6 py-4">
+                        <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{order.customerName || "Anonymous"}</p>
+                        <p className="text-[11px] font-medium text-slate-400">{order.customerNumber || "no contact"}</p>
+                        {order.address && (
+                          <p className="text-[10px] font-medium text-slate-400 mt-1 truncate max-w-[200px]">{order.address}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-[13px] font-bold text-slate-700">{getServiceLabel(order.service)}</p>
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter">
+                            {order.channel || "direct"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-medium text-slate-400 italic truncate max-w-[150px]">{order.notes || order.serviceBreakdownSummary || "No special notes"}</p>
+                        {order.serviceBreakdown?.length > 1 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {order.serviceBreakdown.map((line, index) => {
+                              const qty = Number(line.quantity);
+                              const wt = Number(line.weight);
+                              return (
+                                <span key={`${line.name}-${index}`} className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-100">
+                                  {line.name}
+                                  {(qty > 0 || wt > 0) && " • "}
+                                  {qty > 0 && `${qty} pcs`}
+                                  {qty > 0 && wt > 0 && " / "}
+                                  {wt > 0 && `${wt.toFixed(1)} kg`}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className="text-[13px] font-black text-slate-800">{order.weight?.toFixed(1) || "0.0"} <span className="text-[10px] text-slate-400">kg</span></p>
+                        <p className="text-[11px] font-bold text-slate-400">{order.items || "—"} pcs</p>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-0.5 text-[14px] font-black text-blue-600 tracking-tight">
+                          <BiRupee size={13} className="mb-0.5" />
+                          <span>{order.amount?.toLocaleString()}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.date}</td>
+                      <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.deliveryDate || "Pending"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-[12px] font-bold text-slate-500 whitespace-nowrap">
+                          {calculateTAT(order.createdAtRaw, order.updatedAtRaw)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          {onEditOrder && (
+                            <button onClick={(event) => { event.stopPropagation(); openEditModal(order); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                              <FiEdit2 size={15} />
+                            </button>
+                          )}
+                          {onDeleteOrder && (
+                            <button onClick={(event) => { event.stopPropagation(); onDeleteOrder(order); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                              <FiTrash2 size={15} />
+                            </button>
+                          )}
+                          <FiChevronRight size={16} className="text-slate-400 ml-1" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="md:hidden divide-y divide-gray-50 uppercase tracking-tight">
               {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="px-6 py-12">
-                    <EmptyState
-                      icon={FiInbox}
-                      title="No matching transactions"
-                      message="Adjust your filters or start by logging a new customer order."
-                    />
-                  </td>
-                </tr>
+                <div className="p-8 text-center text-slate-400 text-xs italic uppercase">No matching transactions</div>
               ) : filteredOrders.map((order) => (
-                <tr
+                <div
                   key={order.id}
                   onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
-                  className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer"
+                  className="p-4 active:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <td className="px-6 py-4">
-                    <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{order.customerName || "Anonymous"}</p>
-                    <p className="text-[11px] font-medium text-slate-400">{order.customerNumber || "no contact"}</p>
-                    {order.address && (
-                      <p className="text-[10px] font-medium text-slate-400 mt-1 truncate max-w-[200px]">{order.address}</p>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-[13px] font-bold text-slate-700">{getServiceLabel(order.service)}</p>
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter">
-                        {order.channel || "direct"}
-                      </span>
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="text-sm font-black text-[#0F172A]">{order.customerName || "Anonymous"}</h4>
+                      <p className="text-[10px] font-bold text-slate-400">{order.customerNumber || "NO CONTACT"}</p>
+                      {order.address && (
+                        <p className="text-[9px] text-slate-500 mt-1 truncate max-w-[180px]">{order.address}</p>
+                      )}
                     </div>
-                    <p className="text-[11px] font-medium text-slate-400 italic truncate max-w-[150px]">{order.notes || order.serviceBreakdownSummary || "No special notes"}</p>
-                    {order.serviceBreakdown?.length > 1 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {order.serviceBreakdown.map((line, index) => {
-                          const qty = Number(line.quantity);
-                          const wt = Number(line.weight);
-                          return (
-                            <span key={`${line.name}-${index}`} className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-100">
-                              {line.name}
-                              {(qty > 0 || wt > 0) && " • "}
-                              {qty > 0 && `${qty} pcs`}
-                              {qty > 0 && wt > 0 && " / "}
-                              {wt > 0 && `${wt.toFixed(1)} kg`}
-                            </span>
-                          );
-                        })}
+                    <div className="flex flex-col items-end">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border mb-1.5 ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                        {order.status}
+                      </span>
+                      <div className="text-[9px] font-bold text-slate-400 mb-1">
+                        TAT: {calculateTAT(order.createdAtRaw, order.updatedAtRaw)}
                       </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <p className="text-[13px] font-black text-slate-800">{order.weight?.toFixed(1) || "0.0"} <span className="text-[10px] text-slate-400">kg</span></p>
-                    <p className="text-[11px] font-bold text-slate-400">{order.items || "—"} pcs</p>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-0.5 text-[14px] font-black text-blue-600 tracking-tight">
-                      <BiRupee size={13} className="mb-0.5" />
-                      <span>{order.amount?.toLocaleString()}</span>
+                      <div className="flex items-center gap-0.5 text-sm font-black text-blue-600">
+                        <BiRupee size={12} className="text-blue-400" />
+                        <span>{order.amount?.toLocaleString()}</span>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.date}</td>
-                  <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.deliveryDate || "Pending"}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-[12px] font-bold text-slate-500 whitespace-nowrap">
-                      {calculateTAT(order.createdAtRaw, order.updatedAtRaw)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                      {onEditOrder && (
-                        <button onClick={(event) => { event.stopPropagation(); openEditModal(order); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                          <FiEdit2 size={15} />
-                        </button>
-                      )}
-                      {onDeleteOrder && (
-                        <button onClick={(event) => { event.stopPropagation(); onDeleteOrder(order); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
-                          <FiTrash2 size={15} />
-                        </button>
-                      )}
-                      <FiChevronRight size={16} className="text-slate-400 ml-1" />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
 
-        <div className="md:hidden divide-y divide-gray-50 uppercase tracking-tight">
-          {filteredOrders.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs italic uppercase">No matching transactions</div>
-          ) : filteredOrders.map((order) => (
-            <div
-              key={order.id}
-              onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
-              className="p-4 active:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h4 className="text-sm font-black text-[#0F172A]">{order.customerName || "Anonymous"}</h4>
-                  <p className="text-[10px] font-bold text-slate-400">{order.customerNumber || "NO CONTACT"}</p>
-                  {order.address && (
-                    <p className="text-[9px] text-slate-500 mt-1 truncate max-w-[180px]">{order.address}</p>
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/50 flex items-center justify-between mb-3">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Service</span>
+                      <span className="text-[11px] font-bold text-slate-700">{getServiceLabel(order.service)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Metric</span>
+                      <span className="text-[11px] font-black text-slate-700">{order.weight?.toFixed(1)} KG / {order.items} PCS</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] font-medium text-slate-400 italic">{order.notes || order.serviceBreakdownSummary || "No special notes"}</p>
+                  
+                  {order.serviceBreakdown?.length > 1 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                      {order.serviceBreakdown.map((line, index) => {
+                        const qty = Number(line.quantity);
+                        const wt = Number(line.weight);
+                        return (
+                          <span key={`${line.name}-${index}`} className="px-2 py-1 rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm">
+                            {line.name}
+                            {(qty > 0 || wt > 0) && " • "}
+                            {qty > 0 && `${qty} pcs`}
+                            {qty > 0 && wt > 0 && " / "}
+                            {wt > 0 && `${wt.toFixed(1)} kg`}
+                          </span>
+                        );
+                      })}
+                    </div>
                   )}
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border mb-1.5 ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                    {order.status}
-                  </span>
-                  <div className="text-[9px] font-bold text-slate-400 mb-1">
-                    TAT: {calculateTAT(order.createdAtRaw, order.updatedAtRaw)}
-                  </div>
-                  <div className="flex items-center gap-0.5 text-sm font-black text-blue-600">
-                    <BiRupee size={12} className="text-blue-400" />
-                    <span>{order.amount?.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/50 flex items-center justify-between mb-3">
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Service</span>
-                  <span className="text-[11px] font-bold text-slate-700">{getServiceLabel(order.service)}</span>
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <FiCalendar size={12} />
+                      <span>{order.date}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="uppercase text-[8px] tracking-widest">To:</span>
+                      <span className={order.deliveryDate ? "text-slate-600" : "text-amber-500"}>{order.deliveryDate || "TBD"}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Metric</span>
-                  <span className="text-[11px] font-black text-slate-700">{order.weight?.toFixed(1)} KG / {order.items} PCS</span>
-                </div>
-              </div>
-              <p className="text-[10px] font-medium text-slate-400 italic">{order.notes || order.serviceBreakdownSummary || "No special notes"}</p>
-              {order.serviceBreakdown?.length > 1 && (
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-                  {order.serviceBreakdown.map((line, index) => {
-                    const qty = Number(line.quantity);
-                    const wt = Number(line.weight);
-                    return (
-                      <span key={`${line.name}-${index}`} className="px-2 py-1 rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm">
-                        {line.name}
-                        {(qty > 0 || wt > 0) && " • "}
-                        {qty > 0 && `${qty} pcs`}
-                        {qty > 0 && wt > 0 && " / "}
-                        {wt > 0 && `${wt.toFixed(1)} kg`}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <FiCalendar size={12} />
-                  <span>{order.date}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="uppercase text-[8px] tracking-widest">To:</span>
-                  <span className={order.deliveryDate ? "text-slate-600" : "text-amber-500"}>{order.deliveryDate || "TBD"}</span>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </TabSectionCard>
         </div>
-      </TabSectionCard>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-end p-0 sm:p-4">
