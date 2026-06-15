@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMenu } from "react-icons/fi";
 import { FaIndianRupeeSign } from "react-icons/fa6";
-import AdminSidebar from "../components/AdminSidebar";
-import AdminExpensesTab from "../components/AdminExpensesTab";
+import AdminSidebar from "../components/Layout/AdminSidebar";
+import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 export default function AdminExpenses() {

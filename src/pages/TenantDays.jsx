@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import TopNav from "../components/TopNav";
-import PageHeader from "../components/PageHeader";
-import OrderTable from "../components/OrderTable";
+import TopNav from "../components/Layout/TopNav";
+import PageHeader from "../components/Shared/PageHeader";
+import OrderTable from "../components/Shared/OrderTable";
 import { parseOrderDate } from "./Dashboard";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell

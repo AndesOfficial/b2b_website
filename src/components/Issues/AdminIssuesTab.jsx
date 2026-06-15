@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { FiCheckCircle, FiClock, FiAlertTriangle, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiInbox, FiTrendingUp, FiTrendingDown, FiAward, FiPackage } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
-import EmptyState from "./EmptyState";
+import EmptyState from "../Shared/EmptyState";
 
 const ISSUE_TYPES = ["Missing Items", "Damage", "Quality Issue", "Stain Issue", "Return Pending", "Weight Dispute", "Bags Pending"];
 const SEVERITY_ORDER = { critical: 0, pending: 1 };

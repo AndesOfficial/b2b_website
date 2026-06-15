@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
-import ExpandableOrderRow from "../components/ExpandableOrderRow";
+import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
 import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers, FiUser } from "react-icons/fi";
 import { MdScale } from "react-icons/md";
 

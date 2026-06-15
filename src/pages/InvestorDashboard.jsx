@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiDownload, FiMenu } from "react-icons/fi";
-import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/Layout/AdminSidebar";
 import InvestorMetrics from "../components/InvestorMetrics";
 import { useHostelAuth } from "../context/HostelAuthContext";
 

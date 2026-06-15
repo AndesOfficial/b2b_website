@@ -37,39 +37,22 @@ export default function KpiCard({
                     <div className="text-[10px] sm:text-[11.5px] font-bold text-[#94A3B8] uppercase tracking-wider mb-0.5 sm:mb-1 min-w-0">
                         {label}
                     </div>
-                    <p className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight truncate">
+                    <div className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight">
                         {value}
-                    </p>
+                    </div>
                 </div>
                 <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.icon}`}>
                     {Icon && <Icon size={window?.innerWidth < 640 ? 16 : 18} />}
                 </div>
             </div>
 
-            {/* Bottom Row: Trend & Sparkline */}
+            {/* Bottom Row: Trend */}
             <div className="flex items-end justify-between mt-auto">
                 {trend && (
                     <div className={`px-2 py-1 rounded-full text-[11px] font-bold flex items-center gap-1
                         ${trend.direction === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}
                     `}>
-                        {trend.direction === 'up' ? '↑' : '↓'} {trend.text}
-                    </div>
-                )}
-
-                {sparklineData && sparklineData.length > 0 && (
-                    <div className="w-20 h-10 flex-shrink-0 min-w-0">
-                        <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={1} minHeight={1}>
-                            <LineChart data={sparklineData}>
-                                <Line
-                                    type="monotone"
-                                    dataKey="v"
-                                    stroke={config.spark}
-                                    strokeWidth={2}
-                                    dot={false}
-                                    animationDuration={1500}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                         {trend.direction === 'up' ? '↑' : '↓'} {trend.text}
                     </div>
                 )}
             </div>

@@ -6,11 +6,11 @@ import {
 import { FiChevronDown, FiChevronRight, FiXCircle, FiEdit2, FiTrash2 } from "react-icons/fi";
 
 import { BiRupee } from "react-icons/bi";
-import AdminOrderModal from "./AdminOrderModal";
-import { normalizePropertyName } from "../utils/orderNormalization";
-import { useWindowWidth } from "../hooks/windowHooks";
+import AdminOrderModal from "../Shared/AdminOrderModal";
+import { normalizePropertyName } from "../../utils/orderNormalization";
+import { useWindowWidth } from "../../hooks/windowHooks";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 
 
 const DEFAULT_HOSTEL_COLORS = {
@@ -31,7 +31,7 @@ const DEFAULT_HOSTEL_COLORS = {
   "Hostel 99 no-3": "#D97706"
 };
 const FALLBACK_COLORS = ["#1976D2", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D", "#DC2626", "#4338CA"];
-const HIDDEN_HOSTEL_PROPERTIES = new Set([]);
+const HIDDEN_HOSTEL_PROPERTIES = new Set(["Unknown Property"]);
 
 function getPropertyColor(name, index) {
   return DEFAULT_HOSTEL_COLORS[name] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
@@ -93,7 +93,7 @@ function SummaryCard({ name, color, orders, kg, clothes, students, avgKgPerStude
         )}
         {students !== undefined && students > 0 && (
           <div className="text-right">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Students</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Students</p>
             <p className="text-[13.5px] font-black text-slate-700">{students}</p>
           </div>
         )}
@@ -180,7 +180,7 @@ function UnifiedSummaryCard({ name, color, studentOrderCount, linenOrderCount, k
               </div>
               {students > 0 && (
                 <div className="text-right">
-                  <p className="text-[10px] font-bold text-slate-500 leading-none mb-1">Students</p>
+                  <p className="text-[10px] font-bold text-slate-500 leading-none mb-1">Total Students</p>
                   <p className="text-[13px] font-black text-slate-800 leading-none">{students}</p>
                 </div>
               )}
@@ -527,8 +527,12 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                     <td className="px-6 py-4 text-right">
                       {o.type === 'student' ? (
                         <div>
-                          <p className="text-[13.5px] font-black text-slate-800">{o.weight?.toFixed(1) || '0.0'} <span className="text-[10px] text-slate-400">kg</span></p>
-                          <p className="text-[11px] font-bold text-slate-400">{o.studentCount || '—'} students</p>
+                          {o.weight > 0 ? (
+                            <p className="text-[13.5px] font-black text-slate-800">{o.weight.toFixed(1)} <span className="text-[10px] text-slate-400">kg</span></p>
+                          ) : (
+                            <p className="text-[13.5px] font-black text-slate-800">{(o.items || o.clothes) || 0} <span className="text-[10px] text-slate-400">pcs</span></p>
+                          )}
+                          <p className="text-[11px] font-bold text-slate-400">{o.studentCount || 1} {o.studentCount === 1 ? 'student' : 'students'}</p>
                         </div>
                       ) : (
                         <div>
@@ -617,8 +621,12 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                 <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-100/50 mb-3">
                   {o.type === 'student' ? (
                     <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-bold text-slate-500">Pickup Weight</span>
-                      <p className="text-[13px] font-black text-slate-800">{o.weight?.toFixed(1) || '0.0'} <span className="text-[10px] text-slate-400">KG</span></p>
+                      <span className="text-[11px] font-bold text-slate-500">{o.weight > 0 ? "Pickup Weight" : "Clothes Count"}</span>
+                      {o.weight > 0 ? (
+                        <p className="text-[13px] font-black text-slate-800">{o.weight.toFixed(1)} <span className="text-[10px] text-slate-400">KG</span></p>
+                      ) : (
+                        <p className="text-[13px] font-black text-slate-800">{(o.items || o.clothes) || 0} <span className="text-[10px] text-slate-400">Pcs</span></p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">

@@ -393,7 +393,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     );
     const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
     normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
-    normalized.weight = normalizeNumber(rawOrder.clothesWeightKg ?? normalized.weight);
+    const weightFromBreakdown = breakdown.reduce((sum, item) => sum + (item.weight || 0), 0);
+    normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, weightFromBreakdown);
     normalized.status = normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus || rawOrder.paymentStatus);
     if (cartCreatedDate) {
       normalized.date = normalizeDate(cartCreatedDate);
@@ -419,14 +420,29 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.type = rawOrder.type || inferredType;
 
     // Parse B2B specific fields (Student Laundry)
-    if (rawOrder.hostelTotalClothes !== undefined) {
-      normalized.items = normalizeNumber(rawOrder.hostelTotalClothes, normalized.items);
-    }
-    if (rawOrder.hostelTotalWeightKg !== undefined) {
-      normalized.weight = normalizeNumber(rawOrder.hostelTotalWeightKg, normalized.weight);
-    }
-    if (rawOrder.hostelTotalStudents !== undefined) {
-      normalized.studentCount = normalizeNumber(rawOrder.hostelTotalStudents, normalized.studentCount);
+    if (rawOrder.details && Array.isArray(rawOrder.details.studentServices)) {
+      const services = rawOrder.details.studentServices;
+      const computedWeight = services.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
+      const computedItems = services.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+      const computedAmount = services.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+
+      normalized.weight = firstPositiveNumber(rawOrder.weight, rawOrder.hostelTotalWeightKg, computedWeight);
+      normalized.items = firstPositiveNumber(rawOrder.items, rawOrder.hostelTotalClothes, computedItems);
+      normalized.amount = firstPositiveNumber(rawOrder.amount, computedAmount);
+
+      if (rawOrder.details.entryMode === "student" && !normalized.studentCount) {
+        normalized.studentCount = 1;
+      }
+    } else {
+      if (rawOrder.hostelTotalClothes !== undefined) {
+        normalized.items = normalizeNumber(rawOrder.hostelTotalClothes, normalized.items);
+      }
+      if (rawOrder.hostelTotalWeightKg !== undefined) {
+        normalized.weight = normalizeNumber(rawOrder.hostelTotalWeightKg, normalized.weight);
+      }
+      if (rawOrder.hostelTotalStudents !== undefined) {
+        normalized.studentCount = normalizeNumber(rawOrder.hostelTotalStudents, normalized.studentCount);
+      }
     }
 
     // Parse B2B specific fields (Linen)
@@ -458,6 +474,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.items = normalizeNumber(rawOrder.clothes, normalized.items);
     normalized.customerName = rawOrder.userName || normalized.customerName;
     normalized.customerNumber = rawOrder.userMobile || normalized.customerNumber;
+    normalized.studentCount = 1; // Each individual hostel order represents 1 student
     if (rawOrder.room) {
       normalized.service = `Room: ${rawOrder.room}`;
     }

@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import TopNav from "../components/TopNav";
-import KpiCard from "../components/KpiCard";
-import StatusBar from "../components/StatusBar";
-import LoadingSpinner from "../components/LoadingSpinner";
+import TopNav from "../components/Layout/TopNav";
+import KpiCard from "../components/Shared/KpiCard";
+import StatusBar from "../components/Shared/StatusBar";
+import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";

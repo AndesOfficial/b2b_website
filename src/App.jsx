@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HostelAuthProvider } from "./context/HostelAuthContext";
-import AdminRoute from "./components/AdminRoute";
-import ClientProtectedRoute from "./components/ClientProtectedRoute";
+import AdminRoute from "./components/Auth/AdminRoute";
+import ClientProtectedRoute from "./components/Auth/ClientProtectedRoute";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminExpenses from "./pages/AdminExpenses";

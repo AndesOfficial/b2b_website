@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
-import EmptyState from "./EmptyState";
+import EmptyState from "./Shared/EmptyState";
 import { normalizePropertyName } from "../utils/orderNormalization";
 
 function normalizeList(value) {

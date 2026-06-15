@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { FiChevronRight, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
-import AdminOrderModal from "./AdminOrderModal";
-import EmptyState from "./EmptyState";
-import TabSectionCard from "./TabSectionCard";
-import { useHotelMetrics } from "../hooks/useHotelMetrics";
+import AdminOrderModal from "../Shared/AdminOrderModal";
+import EmptyState from "../Shared/EmptyState";
+import TabSectionCard from "../Shared/TabSectionCard";
+import { useHotelMetrics } from "../../hooks/useHotelMetrics";
 import { doc, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 
 function HotelSummaryCard({ name, color, orders, revenue }) {
   const totals = {};

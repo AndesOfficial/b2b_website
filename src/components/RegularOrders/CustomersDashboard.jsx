@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { BiRupee } from 'react-icons/bi';
 import { FiUsers } from 'react-icons/fi';
-import EmptyState from '../EmptyState';
+import EmptyState from '../Shared/EmptyState';
 
 export default function CustomersDashboard({ analytics }) {
   const [activeSubTab, setActiveSubTab] = useState('New');

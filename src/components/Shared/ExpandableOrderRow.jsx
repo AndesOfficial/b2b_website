@@ -1,7 +1,7 @@
 // src/components/ExpandableOrderRow.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CATEGORIES, getCategoryLabel } from "../data/hostelOrders";
+import { CATEGORIES, getCategoryLabel } from "../../data/hostelOrders";
 import { FiChevronUp, FiChevronDown, FiArrowRight, FiShoppingBag, FiUsers } from "react-icons/fi";
 import { MdScale } from "react-icons/md";
 

@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { FiPlus, FiX, FiCheck, FiSmartphone, FiMessageSquare, FiShoppingBag, FiPhone, FiUser, FiEdit2, FiTrash2, FiInbox, FiCheckCircle, FiCalendar, FiChevronRight, FiMapPin } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
-import EmptyState from "./EmptyState";
-import AdminOrderModal from "./AdminOrderModal";
-import FilterPills from "./FilterPills";
-import TabSectionCard from "./TabSectionCard";
+import EmptyState from "./Shared/EmptyState";
+import AdminOrderModal from "./Shared/AdminOrderModal";
+import FilterPills from "./Shared/FilterPills";
+import TabSectionCard from "./Shared/TabSectionCard";
 
 // Analytics Components
 import RegularDateFilter from "./RegularOrders/RegularDateFilter";

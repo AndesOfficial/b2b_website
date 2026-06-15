@@ -17,7 +17,7 @@ import {
 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { db, auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 const MONTHLY_CAPACITY_KG = 5980;
@@ -707,97 +707,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                 </div>
               )}
 
-              {/* B2B-wise Breakdown Tables */}
-              <div className="space-y-4">
-
-                {/* Hostel Bulk Breakdown */}
-                <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-                  <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Hostel Orders </p>
-                    <span className="text-[9px] font-bold text-slate-400">{liveB2b.hostelBulkBreakdown.length} properties</span>
-                  </div>
-                  {liveB2b.hostelBulkBreakdown.length > 0 ? (
-                    <div className="divide-y divide-slate-100 max-h-[160px] overflow-y-auto">
-                      {liveB2b.hostelBulkBreakdown.map((h, i) => (
-                        <div key={h.name} className="px-3 py-2.5">
-                          <div className="flex justify-between items-start mb-1">
-                            <div>
-                              <p className="text-[12px] font-black text-slate-800">{h.name}</p>
-                              {h.firstOrder && (
-                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
-                                  Last: {h.firstOrder.date} · {h.firstOrder.customerName}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[11px] font-black text-purple-600">
-                                {h.kg > 0 ? `${h.kg.toFixed(1)} kg` : h.items > 0 ? `${h.items} items` : `₹${h.revenue.toFixed(0)}`}
-                              </p>
-                              <p className="text-[9px] font-bold text-slate-400">
-                                {h.students > 0 ? `${h.students} students` : `${h.orders} orders`}
-                              </p>
-                            </div>
-                          </div>
-                          {h.issues > 0 && (
-                            <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded">{h.issues} issues</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-8 flex flex-col items-center justify-center text-center bg-slate-50">
-                      <FiInbox size={20} className="text-slate-300 mb-2" />
-                      <p className="text-[11px] text-slate-400 font-bold">No bulk orders in date range</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Hotel & Linen Breakdown */}
-                <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
-                  <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Hotels & Airbnbs </p>
-                    <span className="text-[9px] font-bold text-slate-400">{liveB2b.hotelLinenBreakdown.length} properties</span>
-                  </div>
-                  {liveB2b.hotelLinenBreakdown.length > 0 ? (
-                    <div className="divide-y divide-slate-100 max-h-[160px] overflow-y-auto">
-                      {liveB2b.hotelLinenBreakdown.map((h, i) => (
-                        <div key={h.name} className="px-3 py-2.5">
-                          <div className="flex justify-between items-start mb-1">
-                            <div>
-                              <p className="text-[12px] font-black text-slate-800">{h.name}</p>
-                              {h.firstOrder && (
-                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
-                                  Last: {h.firstOrder.date} · {h.firstOrder.customerName}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[11px] font-black text-indigo-600">
-                                {h.items > 0 ? `${h.items} items` : h.kg > 0 ? `${h.kg.toFixed(1)} kg` : `₹${h.revenue.toFixed(0)}`}
-                              </p>
-                              <p className="text-[9px] font-bold text-slate-400">
-                                {h.orders} orders
-                              </p>
-                            </div>
-                          </div>
-                          {h.issues > 0 && (
-                            <span className="text-[9px] font-black bg-red-50 text-red-500 px-1.5 py-0.5 rounded">{h.issues} issues</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-8 flex flex-col items-center justify-center text-center bg-slate-50">
-                      <FiInbox size={20} className="text-slate-300 mb-2" />
-                      <p className="text-[11px] text-slate-400 font-bold">No linen orders in date range</p>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
               {/* Today's Pickups & Deliveries */}
-              <div className="grid grid-cols-2 gap-3 mt-auto">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
                   <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Today's Pickups</p>
                   <p className="text-[20px] font-black text-emerald-700 leading-none">{liveB2b.todayPickups.count}</p>

@@ -1,6 +1,6 @@
 // src/components/ClientProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 export default function ClientProtectedRoute({ children }) {
   const { client } = useHostelAuth();

@@ -1,9 +1,9 @@
 // src/components/AirbnbOrderForm.jsx
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import { FiPlus, FiTrash2, FiLoader } from "react-icons/fi";
-import { isNegativeNumberInput } from "../utils/numberInputUtils";
+import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 
 const COMMON_ITEMS = [
     "Single Bedsheet", "Double Bedsheet", "Duvet Cover",

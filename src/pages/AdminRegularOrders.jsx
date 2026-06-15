@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMenu, FiInbox } from "react-icons/fi";
-import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminRegularTab from "../components/AdminRegularTab";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { useAdminDashboardData } from "../hooks/useAdminDashboardData";
-import LoadingSpinner from "../components/LoadingSpinner";
-import DashboardSkeleton from "../components/DashboardSkeleton";
+import LoadingSpinner from "../components/Shared/LoadingSpinner";
+import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 
 export default function AdminRegularOrders() {
   const navigate = useNavigate();

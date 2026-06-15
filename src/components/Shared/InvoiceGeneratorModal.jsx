@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { FiX, FiDownload, FiFileText } from 'react-icons/fi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { isNegativeNumberInput } from "../utils/numberInputUtils";
-import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
-import { normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
-import signatureImage from "../assets/signature.jpeg";
+import { isNegativeNumberInput } from "../../utils/numberInputUtils";
+import { ORDER_CATEGORIES, ORDER_TYPES } from "../../constants/orders";
+import { normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../../utils/orderNormalization";
+import signatureImage from "../../assets/signature.jpeg";
 
 
 export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) {
