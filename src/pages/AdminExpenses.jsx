@@ -26,13 +26,11 @@ export default function AdminExpenses() {
 
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
-    if (tab === "expenses") return; // already here
-
-    if (tab === "investors") {
-      navigate("/admin/investors");
-    } else {
-      navigate("/admin");
-    }
+    if (tab === "expenses") return;
+    if (tab === "investors") { navigate("/admin/investors"); return; }
+    if (tab === "regular") { navigate("/admin/regular-orders"); return; }
+    if (tab === "calculator") { navigate("/admin/calculator"); return; }
+    navigate("/admin");
   }, [navigate]);
 
   return (

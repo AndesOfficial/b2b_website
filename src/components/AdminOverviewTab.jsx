@@ -15,6 +15,7 @@ import AdminOrderModal from "./AdminOrderModal";
 import { ORDER_STATUSES } from "../constants/orders";
 import { useOverviewMetrics } from "../hooks/useOverviewMetrics";
 import ExpandedOverviewLayout from "./ExpandedOverviewLayout";
+import { getTodayString, formatDateString } from "../utils/dateUtils";
 
 // ── Constants ────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#1976D2", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D"];
@@ -555,8 +556,59 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
   );
 }
 
+function OverviewDateFilter({ dateFrom, setDateFrom, dateTo, setDateTo }) {
+  const [activePreset, setActivePreset] = useState("Custom");
+
+  const handlePresetClick = (preset) => {
+    setActivePreset(preset);
+    let newFrom = dateFrom;
+    let newTo = getTodayString();
+
+    switch(preset) {
+      case 'Daily':
+        newFrom = getTodayString();
+        break;
+      case 'Weekly':
+        newFrom = formatDateString(-7);
+        break;
+      case 'Monthly':
+        newFrom = formatDateString(-30);
+        break;
+      default:
+        return;
+    }
+
+    setDateFrom(newFrom);
+    setDateTo(newTo);
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6">
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mr-2">Quick Date Filter</span>
+        {['Daily', 'Weekly', 'Monthly'].map(preset => (
+          <button
+            key={preset}
+            onClick={() => handlePresetClick(preset)}
+            className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
+              activePreset === preset
+                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            {preset}
+          </button>
+        ))}
+      </div>
+      <div className="text-[12px] font-bold text-slate-400">
+        Active Period: <span className="text-slate-700 font-extrabold">{dateFrom} — {dateTo}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Export ───────────────────────────────────────────────────
-export default function AdminOverviewTab({ orders, daysInRange }) {
+export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDateFrom, dateTo, setDateTo }) {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [filterType, setFilterType] = useState("All");
   const [sortConfig, setSortConfig] = useState({ key: "rev", direction: "desc" });
@@ -598,6 +650,14 @@ export default function AdminOverviewTab({ orders, daysInRange }) {
 
   return (
     <div className="space-y-6" style={{ fontFamily: "DM Sans, sans-serif" }}>
+      {dateFrom && setDateFrom && dateTo && setDateTo && (
+        <OverviewDateFilter 
+          dateFrom={dateFrom} 
+          setDateFrom={setDateFrom} 
+          dateTo={dateTo} 
+          setDateTo={setDateTo} 
+        />
+      )}
       <ExpandedOverviewLayout orders={orders} />
 
       {/* P0 HERO: Revenue Sources with Period Toggle + Sparklines + Trends + Drill-Down */}

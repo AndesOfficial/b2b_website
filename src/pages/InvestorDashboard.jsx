@@ -24,17 +24,12 @@ export default function InvestorDashboard() {
   }, []);
 
   const handleSidebarTabChange = useCallback((tab) => {
-    if (tab === "investors") {
-      setIsMobileMenuOpen(false);
-      return;
-    }
-
     setIsMobileMenuOpen(false);
-    if (tab === "expenses") {
-      navigate("/admin/expenses");
-    } else {
-      navigate("/admin");
-    }
+    if (tab === "investors") return;
+    if (tab === "expenses") { navigate("/admin/expenses"); return; }
+    if (tab === "regular") { navigate("/admin/regular-orders"); return; }
+    if (tab === "calculator") { navigate("/admin/calculator"); return; }
+    navigate("/admin");
   }, [navigate]);
 
   return (

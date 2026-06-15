@@ -17,23 +17,6 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
             </div>
 
             <div className="flex items-center gap-4">
-                {/* ANDES Expenses */}
-                <button
-                    onClick={onExpensesClick}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13.5px] font-bold transition-all border bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
-                >
-                    <FaIndianRupeeSign size={16} />
-                    ANDES Expenses
-                </button>
-
-                {/* Calculator */}
-                <button
-                    onClick={onCalculatorClick}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13.5px] font-bold transition-all border bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200 shadow-sm"
-                >
-                    <FaCalculator size={16} />
-                    Calculator
-                </button>
 
                 {/* Date Picker - Compact on mobile */}
                 <div className="flex items-center gap-1.5 sm:gap-3 bg-gray-50 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-200 shadow-sm">

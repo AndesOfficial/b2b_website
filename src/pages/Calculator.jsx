@@ -1594,8 +1594,11 @@ export default function Calculator() {
 
   const handleSidebarTabChange = useCallback((t) => {
     setIsMobileMenuOpen(false);
-    if (t === "investors") navigate("/admin/investors");
-    else navigate("/admin");
+    if (t === "calculator") return;
+    if (t === "investors") { navigate("/admin/investors"); return; }
+    if (t === "expenses") { navigate("/admin/expenses"); return; }
+    if (t === "regular") { navigate("/admin/regular-orders"); return; }
+    navigate("/admin");
   }, [navigate]);
 
   const set         = (key, val) => setAssumptions(prev => ({ ...prev, [key]: val }));

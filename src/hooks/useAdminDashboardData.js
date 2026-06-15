@@ -85,6 +85,15 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     }))
   );
 
+  const b2cOrders = orders.filter((o) => o.type === "regular" || o.source === "cartdetails" || o.source === "website");
+  const b2bOrders = orders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b");
+
+  const b2cPickups = b2cOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
+  const b2cDeliveries = b2cOrders.filter((o) => o.status === "Delivered").length;
+
+  const b2bPickups = b2bOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
+  const b2bDeliveries = b2bOrders.filter((o) => o.status === "Delivered").length;
+
   return {
     totalRevenue,
     totalOrders,
@@ -92,6 +101,10 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     totalClients,
     openIssuesCount: issues.filter((issue) => issue.resolveStatus !== "Resolved").length,
     breakdown: { hostelRevenue, retailRevenue, hotelRevenue },
+    b2cPickups,
+    b2cDeliveries,
+    b2bPickups,
+    b2bDeliveries,
     sparklines: {
       revenue: getTrend((order) => {
         if (activeTab === "regular") return order.type === "regular";

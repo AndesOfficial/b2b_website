@@ -39,9 +39,10 @@ export default function AdminRegularOrders() {
 
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
-    if (tab === "regular") return; // already here
+    if (tab === "regular") return;
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "expenses") { navigate("/admin/expenses"); return; }
+    if (tab === "calculator") { navigate("/admin/calculator"); return; }
     navigate("/admin");
   }, [navigate]);
 

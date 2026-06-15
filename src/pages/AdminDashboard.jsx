@@ -86,6 +86,11 @@ export default function AdminDashboard() {
       navigate("/admin/expenses");
       return;
     }
+    if (tab === "calculator") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/calculator");
+      return;
+    }
 
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
@@ -105,6 +110,10 @@ export default function AdminDashboard() {
           orders={orders}
           daysInRange={daysInRange}
           onDeleteData={!isViewer ? handleDeleteData : undefined}
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
         />
       ),
       hostels: <AdminHostelsTab orders={orders} daysInRange={daysInRange} />,
