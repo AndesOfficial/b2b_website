@@ -3,18 +3,18 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
-import ExpandableOrderRow from "../components/ExpandableOrderRow";
+import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
 import {
   FiLogOut, FiFilter, FiCalendar, FiX, FiDownload,
   FiPackage, FiShoppingBag, FiTruck, FiUsers, FiAlertTriangle, FiPlus, FiUser
 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { MdScale } from "react-icons/md";
-import BrandLogo from "../components/BrandLogo";
+import BrandLogo from "../components/Shared/BrandLogo";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import AirbnbOrderForm from "../components/AirbnbOrderForm";
+import AirbnbOrderForm from "../components/Hotels/AirbnbOrderForm";
 
 // ── CSV export helper ──
 function exportCSV(rows, filename) {

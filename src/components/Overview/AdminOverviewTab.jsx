@@ -7,15 +7,15 @@ import {
   FiFilter, FiX, FiTrendingUp, FiCalendar, FiMinus, FiChevronRight,
   FiCheckCircle,
 } from "react-icons/fi";
-import { normalizeOrder } from "../utils/orderNormalization";
-import { useWindowWidth } from "../hooks/windowHooks";
+import { normalizeOrder } from "../../utils/orderNormalization";
+import { useWindowWidth } from "../../hooks/windowHooks";
 import { BiRupee } from "react-icons/bi";
-import OrderTable from "./OrderTable";
-import AdminOrderModal from "./AdminOrderModal";
-import { ORDER_STATUSES } from "../constants/orders";
-import { useOverviewMetrics } from "../hooks/useOverviewMetrics";
+import OrderTable from "../Shared/OrderTable";
+import AdminOrderModal from "../Shared/AdminOrderModal";
+import { ORDER_STATUSES } from "../../constants/orders";
+import { useOverviewMetrics } from "../../hooks/useOverviewMetrics";
 import ExpandedOverviewLayout from "./ExpandedOverviewLayout";
-import { getTodayString, formatDateString } from "../utils/dateUtils";
+import { getTodayString, formatDateString } from "../../utils/dateUtils";
 
 // ── Constants ────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#1976D2", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D"];

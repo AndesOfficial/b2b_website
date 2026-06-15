@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMenu, FiArrowLeft, FiRefreshCw, FiAlertTriangle, FiTrendingUp, FiTrendingDown, FiMinus, FiSettings, FiX, FiZap, FiDroplet, FiPackage, FiInfo } from "react-icons/fi";
-import AdminSidebar from "../components/AdminSidebar";
+import AdminSidebar from "../components/Layout/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // ─── Scenario seeds ───────────────────────────────────────────────────────────

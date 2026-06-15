@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { FiMonitor, FiSearch, FiLayers, FiChevronDown, FiTrendingUp, FiUsers, FiShoppingBag, FiGlobe } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
-import EmptyState from "./EmptyState";
+import EmptyState from "./Shared/EmptyState";
 
 // Re-using the card style for the main stats
 const StatCard = ({ label, value, icon, color, subValue }) => (

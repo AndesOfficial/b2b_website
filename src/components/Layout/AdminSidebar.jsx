@@ -1,6 +1,6 @@
 import { FiChevronLeft, FiLogOut, FiMenu } from "react-icons/fi";
-import BrandLogo from "./BrandLogo";
-import { ADMIN_SIDEBAR_TABS } from "../config/adminTabs";
+import BrandLogo from "../Shared/BrandLogo";
+import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
 
 const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center rounded-lg text-[13.5px] font-medium transition-all group";
 

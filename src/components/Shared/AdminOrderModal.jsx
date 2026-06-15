@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { FiX, FiEdit2, FiCheck, FiLoader, FiDownload } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { isNegativeNumberInput } from "../utils/numberInputUtils";
-import { useHostelAuth } from "../context/HostelAuthContext";
-import { getOrAssignInvoiceNumber } from "../utils/invoiceCounter";
-import { generateSingleInvoicePDF } from "../utils/pdfGenerator";
+import { db } from "../../firebase";
+import { isNegativeNumberInput } from "../../utils/numberInputUtils";
+import { useHostelAuth } from "../../context/HostelAuthContext";
+import { getOrAssignInvoiceNumber } from "../../utils/invoiceCounter";
+import { generateSingleInvoicePDF } from "../../utils/pdfGenerator";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
   const { client } = useHostelAuth();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage, auth } from "../firebase";
+import { db, storage, auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
@@ -13,10 +13,10 @@ import {
   PieChart, Pie, Cell, Legend
 } from "recharts";
 import { BiRupee } from "react-icons/bi";
-import { isNegativeNumberInput } from "../utils/numberInputUtils";
+import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { FaRupeeSign } from "react-icons/fa";
-import { normalizeDate } from "../utils/orderNormalization";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { normalizeDate } from "../../utils/orderNormalization";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 /* ─── constants ─── */
 const CATEGORIES = [

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { FiEye, FiEyeOff, FiMail, FiLock, FiLoader, FiPackage, FiBarChart2, FiUsers, FiShield } from "react-icons/fi";
-import BrandLogo from "../components/BrandLogo";
+import BrandLogo from "../components/Shared/BrandLogo";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";

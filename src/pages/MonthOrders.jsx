@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import TopNav from "../components/TopNav";
-import MonthCard from "../components/MonthCard";
-import PageHeader from "../components/PageHeader";
+import TopNav from "../components/Layout/TopNav";
+import MonthCard from "../components/Shared/MonthCard";
+import PageHeader from "../components/Shared/PageHeader";
 import { parseOrderDate } from "./Dashboard";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell

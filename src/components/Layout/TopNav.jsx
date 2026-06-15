@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 import { FiLogOut, FiMapPin, FiShield } from "react-icons/fi";
-import BrandLogo from "./BrandLogo";
+import BrandLogo from "../Shared/BrandLogo";
 
 export default function TopNav() {
     const { client: partner, isAdmin, logout } = useHostelAuth();

@@ -94,6 +94,35 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
   const b2bPickups = b2bOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
   const b2bDeliveries = b2bOrders.filter((o) => o.status === "Delivered").length;
 
+  const b2cKg = b2cOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
+  const b2bKg = b2bOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
+
+  const b2cServicesKg = {};
+
+  b2cOrders.forEach(o => {
+    if (o.serviceBreakdown && Array.isArray(o.serviceBreakdown) && o.serviceBreakdown.length > 0) {
+      o.serviceBreakdown.forEach(item => {
+        const name = item.name || "Other";
+        const itemWt = Number(item.weight) || 0;
+        const itemQty = Number(item.quantity) || 0;
+        if (!b2cServicesKg[name]) {
+          b2cServicesKg[name] = { weight: 0, quantity: 0 };
+        }
+        b2cServicesKg[name].weight += itemWt;
+        b2cServicesKg[name].quantity += itemQty;
+      });
+    } else {
+      const name = o.service || "Other";
+      const wt = Number(o.weight) || 0;
+      const qty = Number(o.items) || 0;
+      if (!b2cServicesKg[name]) {
+        b2cServicesKg[name] = { weight: 0, quantity: 0 };
+      }
+      b2cServicesKg[name].weight += wt;
+      b2cServicesKg[name].quantity += qty;
+    }
+  });
+
   return {
     totalRevenue,
     totalOrders,
@@ -105,6 +134,9 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     b2cDeliveries,
     b2bPickups,
     b2bDeliveries,
+    b2cKg,
+    b2bKg,
+    b2cServicesKg,
     sparklines: {
       revenue: getTrend((order) => {
         if (activeTab === "regular") return order.type === "regular";
