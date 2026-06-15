@@ -564,23 +564,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                 </div>
               </div>
 
-              {/* New Customers detail */}
-              {liveB2c.recentNew.length > 0 && (
-                <div className="bg-indigo-50/50 rounded-xl border border-indigo-100 p-3">
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2">Recent New Customers</p>
-                  <div className="space-y-1">
-                    {liveB2c.recentNew.map((c, i) => (
-                      <div key={i} className="flex justify-between items-center text-[11px]">
-                        <span className="font-bold text-slate-700 truncate max-w-[150px]">{c.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-blue-500 bg-blue-100 px-1.5 py-0.5 rounded text-[9px]">{c.channel}</span>
-                          <span className="text-slate-400 font-bold">{c.firstDate}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Pending Pickups */}

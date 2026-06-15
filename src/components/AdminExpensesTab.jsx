@@ -4,7 +4,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  DollarSign, TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
+  TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
   FileText, Loader2, ImageIcon, PieChart as PieChartIcon, BarChart3, Download,
   ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
@@ -158,12 +158,18 @@ export default function AdminExpensesTab() {
     });
 
     let totalReceived = 0;
+    let receivables = 0;
     orders.forEach((o) => {
       if (o.status === "CANCELLED" || o.status === "Cancelled" || o.category === "ISSUES") return;
       const oDate = normalizeDate(o.date || o.createdAt);
       if (dateFrom && oDate < dateFrom) return;
       if (dateTo && oDate > dateTo) return;
-      totalReceived += (Number(o.amount) || 0);
+      
+      const amt = Number(o.amount) || 0;
+      totalReceived += amt;
+      if (o.type !== "regular") {
+        receivables += amt;
+      }
     });
 
     const now = new Date();
@@ -180,7 +186,7 @@ export default function AdminExpensesTab() {
     let topCat = "—";
     let topVal = 0;
     Object.entries(catMap).forEach(([c, v]) => { if (v > topVal) { topCat = c; topVal = v; } });
-    return { total: totalPaid, totalPaid, totalPayable, totalReceived, monthTotal, topCat, count: filtered.length };
+    return { total: totalPaid, totalPaid, totalPayable, totalReceived, receivables, monthTotal, topCat, count: filtered.length };
   }, [filtered, expenses, orders, dateFrom, dateTo]);
 
   /* ─── Chart data ─── */
@@ -408,12 +414,11 @@ export default function AdminExpensesTab() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KpiCard icon={<ArrowDownLeft size={20} />} label="Revenue" value={`₹${kpis.totalReceived.toLocaleString()}`} sub="From Orders" color="blue" />
-        <KpiCard icon={<ArrowUpRight size={20} />} label="Payable" value={`₹${kpis.totalPayable.toLocaleString()}`} sub="Pending Dues" color="rose" />
-        <KpiCard icon={<TrendingUp size={20} />} label="Top Outflow" value={kpis.topCat} sub="Highest Spending" color="amber" />
-        <KpiCard icon={<DollarSign size={20} />} label="Net Balance" value={`₹${(kpis.totalReceived - kpis.totalPaid).toLocaleString()}`} sub="Revenue - Total Paid" color="emerald" />
+        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
+        <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString()}`} sub="Non-Regular Sources" color="rose" />
+        <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value="₹20,02,969.22" sub="Net Account Balance" color="emerald" />
       </div>
 
       {/* Visual Analytics */}

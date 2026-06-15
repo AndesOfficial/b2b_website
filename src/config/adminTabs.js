@@ -1,5 +1,5 @@
 import { FiActivity, FiAlertCircle, FiDollarSign, FiHome, FiInbox, FiLayout, FiPieChart, FiUsers } from "react-icons/fi";
-import { FaIndianRupeeSign } from "react-icons/fa6";
+import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
 export const ADMIN_TAB_CONFIG = {
@@ -11,7 +11,7 @@ export const ADMIN_TAB_CONFIG = {
     showSidebar: true,
     showHeaderActions: true,
     showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-5",
+    kpiColumnsClass: "lg:grid-cols-4",
   },
   hostels: {
     key: "hostels",
@@ -21,7 +21,7 @@ export const ADMIN_TAB_CONFIG = {
     showSidebar: true,
     showHeaderActions: true,
     showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-4",
+    kpiColumnsClass: "lg:grid-cols-2",
   },
   hotels: {
     key: "hotels",
@@ -31,7 +31,7 @@ export const ADMIN_TAB_CONFIG = {
     showSidebar: true,
     showHeaderActions: true,
     showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-4",
+    kpiColumnsClass: "lg:grid-cols-2",
   },
   regular: {
     key: "regular",
@@ -41,7 +41,7 @@ export const ADMIN_TAB_CONFIG = {
     showSidebar: true,
     showHeaderActions: false,
     showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-4",
+    kpiColumnsClass: "lg:grid-cols-2",
   },
   issues: {
     key: "issues",
@@ -69,6 +69,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "ANDES Expenses",
     navLabel: "Expenses",
     navIcon: FaIndianRupeeSign,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  calculator: {
+    key: "calculator",
+    title: "Revenue Calculator",
+    navLabel: "Calculator",
+    navIcon: FaCalculator,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,
