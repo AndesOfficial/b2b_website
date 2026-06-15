@@ -7,7 +7,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import AdminOverviewTab from "../components/AdminOverviewTab";
 import AdminHostelsTab from "../components/AdminHostelsTab";
 import AdminHotelsTab from "../components/AdminHotelsTab";
-import AdminRegularTab from "../components/AdminRegularTab";
 import AdminIssuesTab from "../components/AdminIssuesTab";
 import AdminExpensesTab from "../components/AdminExpensesTab";
 import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
@@ -72,6 +71,11 @@ export default function AdminDashboard() {
   }, [dateFrom, dateTo]);
 
   const handleTabChange = useCallback((tab) => {
+    if (tab === "regular") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/regular-orders");
+      return;
+    }
     if (tab === "investors") {
       setIsMobileMenuOpen(false);
       navigate("/admin/investors");
@@ -105,14 +109,7 @@ export default function AdminDashboard() {
       ),
       hostels: <AdminHostelsTab orders={orders} daysInRange={daysInRange} />,
       hotels: <AdminHotelsTab orders={orders} />,
-      regular: (
-        <AdminRegularTab
-          orders={orders}
-          onAddOrder={!isViewer ? handleAddOrder : undefined}
-          onEditOrder={!isViewer ? handleEditOrder : undefined}
-          onDeleteOrder={!isViewer ? handleDeleteData : undefined}
-        />
-      ),
+      regular: null, // Handled by dedicated /admin/regular-orders route
       issues: (
         <AdminIssuesTab
           orders={orders}
@@ -137,10 +134,8 @@ export default function AdminDashboard() {
     activeTab,
     daysInRange,
     handleAddIssue,
-    handleAddOrder,
     handleDeleteData,
     handleEditIssue,
-    handleEditOrder,
     orders,
     screenStats,
     searchStats,
