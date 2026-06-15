@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddOrder, setShowAddOrder] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [dateFrom, setDateFrom] = useState(() => getMonthStartString());
+  const [dateFrom, setDateFrom] = useState(() => getTodayString());
   const [dateTo, setDateTo] = useState(() => getTodayString());
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);

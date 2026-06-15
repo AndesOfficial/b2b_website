@@ -557,7 +557,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
 }
 
 function OverviewDateFilter({ dateFrom, setDateFrom, dateTo, setDateTo }) {
-  const [activePreset, setActivePreset] = useState("Custom");
+  const [activePreset, setActivePreset] = useState("Daily");
 
   const handlePresetClick = (preset) => {
     setActivePreset(preset);

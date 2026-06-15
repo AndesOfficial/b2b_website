@@ -8,7 +8,7 @@ import { getTodayString, getMonthStartString } from "../utils/dateUtils";
 // getTodayString and getMonthStartString are imported from ../utils/dateUtils
 
 function buildDaysInRange(dateFrom, dateTo) {
-  const from = new Date(dateFrom || getMonthStartString());
+  const from = new Date(dateFrom || getTodayString());
   const to = new Date(dateTo || getTodayString());
   const dates = [];
 
