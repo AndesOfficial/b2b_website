@@ -74,6 +74,8 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
   };
 
   /* ─── Closing balance computation (over ALL entries) ─── */
+  const ANDES_INITIAL_BALANCE = 2002969.22;
+
   const computedEntries = useMemo(() => {
     // 1. Sort all entries chronologically (oldest first)
     const sorted = [...propEntries].sort((a, b) =>
@@ -81,7 +83,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     );
     
     // 2. Compute running balance over the entire history
-    let balance = 0;
+    let balance = ANDES_INITIAL_BALANCE;
     const withBalance = sorted.map((entry) => {
       if (entry.transactionType === "credit") {
         balance += Number(entry.amount) || 0;
