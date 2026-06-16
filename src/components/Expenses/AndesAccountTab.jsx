@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
-  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp
+  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet
 } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
