@@ -79,9 +79,16 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
 
   const computedEntries = useMemo(() => {
     // 1. Sort all entries chronologically (oldest first)
-    const sorted = [...propEntries].sort((a, b) =>
-      (a.date || "").localeCompare(b.date || "")
-    );
+    const sorted = [...propEntries].sort((a, b) => {
+      const dateA = a.date || "";
+      const dateB = b.date || "";
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      
+      // If dates are identical, fallback to exact creation time so order is preserved
+      const timeA = a.createdAt?.toMillis?.() || a.updatedAt?.toMillis?.() || 0;
+      const timeB = b.createdAt?.toMillis?.() || b.updatedAt?.toMillis?.() || 0;
+      return timeA - timeB;
+    });
     
     // 2. Compute running balance over the entire history
     let balance = ANDES_INITIAL_BALANCE;
