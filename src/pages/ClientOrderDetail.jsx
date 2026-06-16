@@ -1,5 +1,5 @@
 // src/pages/ClientOrderDetail.jsx
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES, getCategoryLabel } from "../data/hostelOrders";
@@ -38,10 +38,23 @@ function exportSingleCSV(order) {
 
 export default function ClientOrderDetail() {
   const { orderId } = useParams();
-  const { orders } = useHostelAuth();
+  const { orders, verifyOrder } = useHostelAuth();
   const navigate = useNavigate();
+  const [verifying, setVerifying] = useState(false);
 
   const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
+
+  const handleVerify = async () => {
+    if (!order || order.verifiedByClient || verifying) return;
+    setVerifying(true);
+    try {
+      await verifyOrder(order.id, order.source);
+    } catch (err) {
+      alert("Failed to verify order. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   if (!order) {
     return (
@@ -85,6 +98,7 @@ export default function ClientOrderDetail() {
     },
     { label: "Items", value: order.items ?? "—" },
     { icon: <FiCheckCircle />, label: "Status", value: order.status, statusBadge: true },
+    { label: "Verified by Client", value: order.verifiedByClient ? "Yes, Verified" : "No" }
   ];
 
   if (order.weight) fields.push({ label: "Weight", value: `${order.weight} KG` });
@@ -132,7 +146,21 @@ export default function ClientOrderDetail() {
               <h2 className="text-xl font-bold text-gray-900">{order.property}</h2>
               <p className="text-sm text-gray-500">{categoryLabel} · {order.date}</p>
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-3">
+              {order.verifiedByClient ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  Verified
+                </span>
+              ) : (
+                <button
+                  onClick={handleVerify}
+                  disabled={verifying}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-md active:scale-95"
+                >
+                  {verifying ? "Verifying..." : "Verify Order"}
+                </button>
+              )}
               <span
                 className={`inline-block text-sm font-bold px-4 py-1.5 rounded-full ${
                   order.status === "Delivered"
