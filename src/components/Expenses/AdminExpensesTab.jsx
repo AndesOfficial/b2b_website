@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import {
   TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
   FileText, Loader2, ImageIcon, PieChart as PieChartIcon, BarChart3, Download,
-  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight
+  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight, Wallet, User
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -17,6 +17,7 @@ import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { FaRupeeSign } from "react-icons/fa";
 import { normalizeDate } from "../../utils/orderNormalization";
 import { useHostelAuth } from "../../context/HostelAuthContext";
+import AndesAccountTab from "./AndesAccountTab";
 
 /* ─── constants ─── */
 const CATEGORIES = [
@@ -54,6 +55,7 @@ const emptyForm = {
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
   const { orders } = useHostelAuth();
+  const [activeSubTab, setActiveSubTab] = useState("personal");
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -65,12 +67,11 @@ export default function AdminExpensesTab() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split("T")[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   });
   const [dateTo, setDateTo] = useState(() => {
     const d = new Date();
-    return d.toISOString().split("T")[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [catFilter, setCatFilter] = useState("All");
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -89,7 +90,7 @@ export default function AdminExpensesTab() {
     setForm((prev) => ({ ...prev, amount: value }));
   };
 
-  /* ─── Firestore listener ─── */
+  /* ─── Firestore listener (loads ALL b2b_expenses, splits in memory) ─── */
   useEffect(() => {
     let unsubExpenses = () => { };
     
@@ -132,9 +133,13 @@ export default function AdminExpensesTab() {
     };
   }, []);
 
-  /* ─── Filtering ─── */
+  /* ─── Split expenses by account type ─── */
+  const personalExpenses = useMemo(() => expenses.filter(e => e.accountType !== "andes"), [expenses]);
+  const andesExpenses = useMemo(() => expenses.filter(e => e.accountType === "andes"), [expenses]);
+
+  /* ─── Filtering (personal account only) ─── */
   const filtered = useMemo(() => {
-    let list = expenses;
+    let list = personalExpenses;
     if (dateFrom && dateTo) {
       list = list.filter((e) => {
         if (!e.date) return false;
@@ -145,7 +150,7 @@ export default function AdminExpensesTab() {
       list = list.filter((e) => e.category === catFilter);
     }
     return list;
-  }, [expenses, dateFrom, dateTo, catFilter]);
+  }, [personalExpenses, dateFrom, dateTo, catFilter]);
 
   /* ─── KPIs ─── */
   const kpis = useMemo(() => {
@@ -368,6 +373,35 @@ export default function AdminExpensesTab() {
   /* ─── Render ─── */
   return (
     <div className="space-y-8 pb-12" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+      {/* Sub-Tab Navigation */}
+      <div className="flex items-center gap-2 p-1.5 bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm w-fit">
+        <button
+          onClick={() => setActiveSubTab("personal")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
+            activeSubTab === "personal"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+              : "text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          <User size={16} /> Personal Account
+        </button>
+        <button
+          onClick={() => setActiveSubTab("andes")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
+            activeSubTab === "andes"
+              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200"
+              : "text-slate-500 hover:bg-slate-100"
+          }`}
+        >
+          <Wallet size={16} /> Andes Account
+        </button>
+      </div>
+
+      {/* ─── Andes Account Tab ─── */}
+      {activeSubTab === "andes" && <AndesAccountTab entries={andesExpenses} loading={loading} />}
+
+      {/* ─── Personal Account Tab ─── */}
+      {activeSubTab === "personal" && (<>
       {/* Toast */}
       {toast && (
         <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
@@ -526,7 +560,7 @@ export default function AdminExpensesTab() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-slate-50/20">
           <div>
-            <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">Corporate Expense Ledger</h2>
+            <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">Personal Account Ledger</h2>
             <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest">{filtered.length} total entries</p>
           </div>
         </div>
@@ -771,7 +805,7 @@ export default function AdminExpensesTab() {
             <div className="p-6 sm:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30 flex-shrink-0">
               <div>
                 <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{editingId ? 'Modify Ledger Entry' : 'New Capital Outflow'}</h2>
-                <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Corporate Financial Management</p>
+                <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Personal Account Management</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
                 <X size={28} />
@@ -956,6 +990,7 @@ export default function AdminExpensesTab() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }
