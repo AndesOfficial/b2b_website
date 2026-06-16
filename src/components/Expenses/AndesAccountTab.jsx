@@ -72,24 +72,14 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     });
   };
 
-  /* ─── Date filtering ─── */
-  const filtered = useMemo(() => {
-    let list = propEntries;
-    if (dateFrom && dateTo) {
-      list = list.filter((e) => {
-        if (!e.date) return false;
-        return e.date >= dateFrom && e.date <= dateTo;
-      });
-    }
-    return list;
-  }, [propEntries, dateFrom, dateTo]);
-
-  /* ─── Closing balance computation ─── */
+  /* ─── Closing balance computation (over ALL entries) ─── */
   const computedEntries = useMemo(() => {
-    // Sort chronologically (oldest first) to compute running balance
-    const sorted = [...filtered].sort((a, b) =>
+    // 1. Sort all entries chronologically (oldest first)
+    const sorted = [...propEntries].sort((a, b) =>
       (a.date || "").localeCompare(b.date || "")
     );
+    
+    // 2. Compute running balance over the entire history
     let balance = 0;
     const withBalance = sorted.map((entry) => {
       if (entry.transactionType === "credit") {
@@ -99,10 +89,20 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       }
       return { ...entry, closingBalance: balance };
     });
-    // Reverse for display (newest first)
-    withBalance.reverse();
-    return withBalance;
-  }, [filtered]);
+
+    // 3. Filter by date for display
+    let displayList = withBalance;
+    if (dateFrom && dateTo) {
+      displayList = displayList.filter((e) => {
+        if (!e.date) return false;
+        return e.date >= dateFrom && e.date <= dateTo;
+      });
+    }
+
+    // 4. Reverse for display (newest first)
+    displayList.reverse();
+    return displayList;
+  }, [propEntries, dateFrom, dateTo]);
 
 
 
