@@ -45,6 +45,8 @@ const emptyAndesForm = {
   debitBreakdown: [],
 };
 
+const ANDES_INITIAL_BALANCE = 2002969.22;
+
 /* ─── Component ─── */
 export default function AndesAccountTab({ entries: propEntries = [], loading = false }) {
   const [showModal, setShowModal] = useState(false);
@@ -74,7 +76,6 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
   };
 
   /* ─── Closing balance computation (over ALL entries) ─── */
-  const ANDES_INITIAL_BALANCE = 2002969.22;
 
   const computedEntries = useMemo(() => {
     // 1. Sort all entries chronologically (oldest first)
