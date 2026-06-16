@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
-  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet
+  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet, TrendingUp
 } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
@@ -39,6 +39,7 @@ const CAT_COLORS = {
 const emptyAndesForm = {
   amount: "",
   payee: "",
+  category: "Other",
   transactionType: "debit",
   date: "",
   debitBreakdown: [],
@@ -124,6 +125,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     setForm({
       amount: entry.amount || "",
       payee: entry.payee || "",
+      category: entry.category || "Other",
       transactionType: entry.transactionType || "debit",
       date: entry.date || "",
       debitBreakdown: entry.debitBreakdown || [],
@@ -137,6 +139,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
       e.amount = "Enter a valid amount";
     if (!form.payee.trim()) e.payee = "Beneficiary is required";
+    if (!form.category) e.category = "Classification is required";
     if (!form.date) e.date = "Date is required";
 
     if (form.transactionType === "debit" && form.debitBreakdown?.length > 0) {
@@ -165,6 +168,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         accountType: "andes",
         amount: parseFloat(form.amount),
         payee: form.payee.trim(),
+        category: form.category,
         transactionType: form.transactionType,
         date: form.date,
         debitBreakdown: form.transactionType === "debit"
@@ -287,6 +291,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Debit</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Credit</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Closing Balance</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Classification</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Debit Breakdown</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Actions</th>
               </tr>
@@ -340,6 +345,15 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                         <span className={`text-[15px] font-black tracking-tight ${e.closingBalance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
                           ₹{e.closingBalance.toLocaleString("en-IN")}
                         </span>
+                      </td>
+                      {/* Classification */}
+                      <td className="px-6 py-4">
+                        {e.category && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                            style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
+                            {e.category}
+                          </span>
+                        )}
                       </td>
                       {/* Debit Breakdown */}
                       <td className="px-6 py-4">
@@ -433,7 +447,15 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-[14px] font-black text-[#0F172A] tracking-tight mb-1">{e.payee}</p>
-                    <p className="text-[11px] font-bold text-slate-400">{e.date}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-bold text-slate-400">{e.date}</p>
+                      {e.category && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
+                          style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
+                          {e.category}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     {e.transactionType === "debit" ? (
@@ -513,16 +535,32 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                   {errors.amount && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.amount}</p>}
                 </div>
 
-                {/* Beneficiary */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Beneficiary *</label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><FileText size={18} /></div>
-                    <input type="text" value={form.payee} onChange={(e) => setForm({ ...form, payee: e.target.value })}
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none transition-all uppercase placeholder:normal-case"
-                      placeholder="e.g. Sai Enterprises, Alliance" />
+                {/* Beneficiary & Classification */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Beneficiary *</label>
+                    <div className="relative">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><FileText size={18} /></div>
+                      <input type="text" value={form.payee} onChange={(e) => setForm({ ...form, payee: e.target.value })}
+                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none transition-all uppercase placeholder:normal-case"
+                        placeholder="e.g. Sai Enterprises, Alliance" />
+                    </div>
+                    {errors.payee && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.payee}</p>}
                   </div>
-                  {errors.payee && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.payee}</p>}
+
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Classification *</label>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none appearance-none"
+                    >
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    {errors.category && <p className="text-[10px] font-bold text-red-500 mt-1 uppercase tracking-wider">{errors.category}</p>}
+                  </div>
                 </div>
 
                 {/* Date + Transaction Type */}
