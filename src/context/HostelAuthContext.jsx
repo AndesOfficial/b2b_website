@@ -364,6 +364,31 @@ export function HostelAuthProvider({ children }) {
     }
   }, []);
 
+  const verifyOrder = useCallback(async (orderId, source) => {
+    try {
+      let collectionName = "b2b_orders";
+      if (source === "admin") collectionName = "b2b_admin_edits";
+      else if (source === "b2b") collectionName = "b2b_orders";
+      else if (source === "hostels") collectionName = "hostels_orders";
+      else if (source === "website") collectionName = "orders";
+      else if (source === "cartdetails") collectionName = "cartdetails";
+
+      const docRef = doc(db, collectionName, String(orderId));
+      await setDoc(docRef, { verifiedByClient: true }, { merge: true });
+      console.log(`Order ${orderId} successfully verified in ${collectionName}.`);
+    } catch (error) {
+      console.warn(`Could not write verification to source collection (${source}), trying b2b_admin_edits fallback:`, error.message);
+      try {
+        const fallbackRef = doc(db, "b2b_admin_edits", String(orderId));
+        await setDoc(fallbackRef, { verifiedByClient: true }, { merge: true });
+        console.log(`Order ${orderId} successfully verified in b2b_admin_edits fallback.`);
+      } catch (fallbackError) {
+        console.error("Fallback verification also failed:", fallbackError);
+        throw fallbackError;
+      }
+    }
+  }, []);
+
   const login = useCallback(async (email, password) => {
     try {
       await setPersistence(auth, browserSessionPersistence);
@@ -426,8 +451,15 @@ export function HostelAuthProvider({ children }) {
     }
   }, []);
 
+  const verifyAllOrders = useCallback(async (ordersToVerify) => {
+    const unverified = ordersToVerify.filter(o => !o.verifiedByClient);
+    if(unverified.length === 0) return;
+    
+    await Promise.all(unverified.map(o => verifyOrder(o.id, o.source)));
+  }, [verifyOrder]);
+
   return (
-    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, isDataLoaded, isViewer: client?.role === "admin_viewer" }}>
+    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, verifyOrder, verifyAllOrders, isDataLoaded, isViewer: client?.role === "admin_viewer" }}>
       {children}
     </HostelAuthContext.Provider>
   );

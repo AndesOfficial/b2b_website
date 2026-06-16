@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
-import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers, FiUser } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers, FiUser, FiCheckCircle } from "react-icons/fi";
 import { MdScale } from "react-icons/md";
 
 // CSV export helper
@@ -29,7 +29,7 @@ const CAT_ICONS = {
 
 export default function ClientCategoryOrders() {
   const { categoryKey } = useParams();
-  const { client, orders } = useHostelAuth();
+  const { client, orders, verifyAllOrders } = useHostelAuth();
   const navigate = useNavigate();
 
   const isTreeboClient =
@@ -69,6 +69,19 @@ export default function ClientCategoryOrders() {
     exportCSV(filtered, `${(cat.label || categoryKey).replace(/\s+/g, "_")}_orders.csv`);
   }, [filtered, cat.label, categoryKey]);
 
+  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
+  const handleVerifyAll = async () => {
+    setIsVerifyingAll(true);
+    try {
+      await verifyAllOrders(filtered);
+    } catch (error) {
+      console.error("Failed to verify all:", error);
+      alert("An error occurred while verifying some orders.");
+    } finally {
+      setIsVerifyingAll(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F0F7FF]" style={{ fontFamily: "Poppins, sans-serif" }}>
       <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
@@ -87,9 +100,14 @@ export default function ClientCategoryOrders() {
               </div>
             </div>
           </div>
-          <button onClick={handleExport} className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand-dark border border-brand-200 bg-blue-50 px-4 py-2 rounded-xl transition-all hover:bg-blue-100">
-            <FiDownload size={15} /> Export CSV
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={handleVerifyAll} disabled={isVerifyingAll} className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-800 border border-green-200 bg-green-50 px-4 py-2 rounded-xl transition-all hover:bg-green-100 disabled:opacity-50">
+              <FiCheckCircle size={15} /> {isVerifyingAll ? "Verifying..." : "Verify All"}
+            </button>
+            <button onClick={handleExport} className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand-dark border border-brand-200 bg-blue-50 px-4 py-2 rounded-xl transition-all hover:bg-blue-100">
+              <FiDownload size={15} /> Export CSV
+            </button>
+          </div>
         </div>
       </nav>
 

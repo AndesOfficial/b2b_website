@@ -6,7 +6,7 @@ import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
 import {
   FiLogOut, FiFilter, FiCalendar, FiX, FiDownload,
-  FiPackage, FiShoppingBag, FiTruck, FiUsers, FiAlertTriangle, FiPlus, FiUser
+  FiPackage, FiShoppingBag, FiTruck, FiUsers, FiAlertTriangle, FiPlus, FiUser, FiCheckCircle
 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { MdScale } from "react-icons/md";
@@ -58,7 +58,7 @@ const CAT_ICONS = {
 };
 
 export default function ClientDashboard() {
-  const { client, orders, logout, addIssue, profileNeedsSetup } = useHostelAuth();
+  const { client, orders, logout, addIssue, profileNeedsSetup, verifyAllOrders } = useHostelAuth();
   const navigate = useNavigate();
   // Helper to handle schema migration (properties -> partnernames)
   const clientProperties = useMemo(() => client?.properties || client?.partnernames || [], [client]);
@@ -241,6 +241,19 @@ export default function ClientDashboard() {
   const handleExport = useCallback(() => {
     exportCSV(filtered, `${(displayClientName || "orders").replace(/\s+/g, "_")}_orders.csv`);
   }, [filtered, displayClientName]);
+
+  const [isVerifyingAll, setIsVerifyingAll] = useState(false);
+  const handleVerifyAll = async () => {
+    setIsVerifyingAll(true);
+    try {
+      await verifyAllOrders(filtered);
+    } catch (error) {
+      console.error("Failed to verify all:", error);
+      alert("An error occurred while verifying some orders.");
+    } finally {
+      setIsVerifyingAll(false);
+    }
+  };
 
   // Issue Submission Handler
   const handleSubmitIssue = async () => {
@@ -541,12 +554,21 @@ export default function ClientDashboard() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-800">All Orders ({filtered.length})</h2>
-            <button
-              onClick={handleExport}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark transition-colors"
-            >
-              <FiDownload size={13} /> Export
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleVerifyAll}
+                disabled={isVerifyingAll}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 hover:text-green-700 disabled:opacity-50 transition-colors"
+              >
+                <FiCheckCircle size={13} /> {isVerifyingAll ? "Verifying..." : "Verify All"}
+              </button>
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark transition-colors"
+              >
+                <FiDownload size={13} /> Export
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
