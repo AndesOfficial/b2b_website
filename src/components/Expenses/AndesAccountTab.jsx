@@ -162,8 +162,8 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         sum += Number(item.amount) || 0;
       });
       if (hasErrors) e.breakdown = "All breakdown fields (category, item, amount) are required";
-      else if (Math.abs(sum - Number(form.amount)) > 0.01)
-        e.breakdown = `Breakdown total (₹${sum.toFixed(2)}) must equal debit amount (₹${Number(form.amount).toFixed(2)})`;
+      else if (sum > Number(form.amount) + 0.01)
+        e.breakdown = `Breakdown total (₹${sum.toFixed(2)}) cannot exceed debit amount (₹${Number(form.amount).toFixed(2)})`;
     }
 
     setErrors(e);
@@ -367,24 +367,40 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                       </td>
                       {/* Debit Breakdown */}
                       <td className="px-6 py-4">
-                        {e.transactionType === "debit" && e.debitBreakdown?.length > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-wrap gap-1 max-w-[250px]">
-                              {e.debitBreakdown.slice(0, 2).map((b, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                                  style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "15", color: CAT_COLORS[b.category] || "#94a3b8" }}>
-                                  ₹{Number(b.amount).toLocaleString("en-IN")} {b.itemName}
-                                </span>
-                              ))}
-                              {e.debitBreakdown.length > 2 && (
-                                <span className="text-[10px] font-bold text-slate-400">+{e.debitBreakdown.length - 2} more</span>
+                        {e.transactionType === "debit" ? (() => {
+                          const splitSum = (e.debitBreakdown || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                          const remaining = Number(e.amount) - splitSum;
+                          const hasBreakdown = e.debitBreakdown?.length > 0;
+                          const showRemaining = hasBreakdown && remaining > 0.01;
+
+                          if (!hasBreakdown) return <span className="text-[11px] font-bold text-slate-300">—</span>;
+
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap gap-1 max-w-[250px]">
+                                {(e.debitBreakdown || []).slice(0, 2).map((b, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                    style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "15", color: CAT_COLORS[b.category] || "#94a3b8" }}>
+                                    ₹{Number(b.amount).toLocaleString("en-IN")} {b.itemName}
+                                  </span>
+                                ))}
+                                {e.debitBreakdown?.length > 2 && (
+                                  <span className="text-[10px] font-bold text-slate-400">+{e.debitBreakdown.length - 2} more</span>
+                                )}
+                                {showRemaining && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-500">
+                                    ₹{remaining.toLocaleString("en-IN")} Unspent
+                                  </span>
+                                )}
+                              </div>
+                              {(hasBreakdown || showRemaining) && (
+                                <button onClick={() => toggleRow(e.id)} className="p-1 rounded bg-indigo-50 text-indigo-400 hover:bg-indigo-100 transition-colors">
+                                  {expandedRows.has(e.id) ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                </button>
                               )}
                             </div>
-                            <button onClick={() => toggleRow(e.id)} className="p-1 rounded bg-indigo-50 text-indigo-400 hover:bg-indigo-100 transition-colors">
-                              {expandedRows.has(e.id) ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            </button>
-                          </div>
-                        ) : (
+                          );
+                        })() : (
                           <span className="text-[11px] font-bold text-slate-300">—</span>
                         )}
                       </td>
@@ -401,9 +417,9 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                       </td>
                     </tr>
                     {/* Expanded Breakdown */}
-                    {e.debitBreakdown?.length > 0 && expandedRows.has(e.id) && (
+                    {e.transactionType === "debit" && e.debitBreakdown?.length > 0 && expandedRows.has(e.id) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan="7" className="px-6 py-4">
+                        <td colSpan="8" className="px-6 py-4">
                           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                             <table className="w-full">
                               <thead className="bg-slate-50 border-b border-slate-100">
@@ -414,7 +430,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-50">
-                                {e.debitBreakdown.map((b, i) => (
+                                {(e.debitBreakdown || []).map((b, i) => (
                                   <tr key={i}>
                                     <td className="p-4">
                                       <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider"
@@ -426,6 +442,24 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                     <td className="p-4 text-[13px] font-black text-slate-800 text-right">₹{Number(b.amount).toLocaleString("en-IN")}</td>
                                   </tr>
                                 ))}
+                                {(() => {
+                                  const splitSum = (e.debitBreakdown || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                                  const remaining = Number(e.amount) - splitSum;
+                                  if (remaining > 0.01) {
+                                    return (
+                                      <tr>
+                                        <td className="p-4">
+                                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider bg-slate-100 text-slate-500">
+                                            Unspent
+                                          </span>
+                                        </td>
+                                        <td className="p-4 text-[13px] font-bold text-slate-500">Remaining Amount</td>
+                                        <td className="p-4 text-[13px] font-black text-slate-500 text-right">₹{remaining.toLocaleString("en-IN")}</td>
+                                      </tr>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </tbody>
                             </table>
                           </div>
@@ -482,7 +516,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                 {e.transactionType === "debit" && e.debitBreakdown?.length > 0 && (
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Debit Breakdown</p>
-                    {e.debitBreakdown.map((b, i) => (
+                    {(e.debitBreakdown || []).map((b, i) => (
                       <div key={i} className="flex justify-between items-center text-[11px] border-b border-slate-100/70 pb-1 last:border-0 last:pb-0">
                         <div className="flex items-center gap-1.5">
                           <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black"
@@ -495,6 +529,24 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                         <span className="font-black text-red-600">₹{Number(b.amount).toLocaleString("en-IN")}</span>
                       </div>
                     ))}
+                    {(() => {
+                      const splitSum = (e.debitBreakdown || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                      const remaining = Number(e.amount) - splitSum;
+                      if (remaining > 0.01) {
+                        return (
+                          <div className={`flex justify-between items-center text-[11px] ${(e.debitBreakdown && e.debitBreakdown.length > 0) ? 'border-t border-slate-100/70 pt-1' : ''}`}>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black bg-slate-200 text-slate-500">
+                                ?
+                              </span>
+                              <span className="font-bold text-slate-500">Remaining Amount</span>
+                            </div>
+                            <span className="font-black text-slate-500">₹{remaining.toLocaleString("en-IN")}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
                 <div className="flex items-center justify-end gap-2 pt-1">

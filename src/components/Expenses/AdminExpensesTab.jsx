@@ -193,8 +193,18 @@ export default function AdminExpensesTab() {
     let topCat = "—";
     let topVal = 0;
     Object.entries(catMap).forEach(([c, v]) => { if (v > topVal) { topCat = c; topVal = v; } });
-    return { total: totalPaid, totalPaid, totalPayable, totalReceived, receivables, monthTotal, topCat, count: filtered.length };
-  }, [filtered, expenses, orders, dateFrom, dateTo]);
+
+    let andesBalance = 2002969.22;
+    andesExpenses.forEach((e) => {
+      if (e.transactionType === "credit") {
+        andesBalance += Number(e.amount) || 0;
+      } else {
+        andesBalance -= Number(e.amount) || 0;
+      }
+    });
+
+    return { total: totalPaid, totalPaid, totalPayable, totalReceived, receivables, monthTotal, topCat, count: filtered.length, andesBalance };
+  }, [filtered, expenses, orders, dateFrom, dateTo, andesExpenses]);
 
   /* ─── Chart data ─── */
   const areaData = useMemo(() => {
@@ -474,7 +484,7 @@ export default function AdminExpensesTab() {
         />
         <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
         <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString()}`} sub="Non-Regular Sources" color="rose" />
-        <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value="₹20,02,969.22" sub="Net Account Balance" color="emerald" />
+        <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value={`₹${kpis.andesBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Net Account Balance" color="emerald" />
       </div>
 
       {/* Visual Analytics */}
