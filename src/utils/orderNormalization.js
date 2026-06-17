@@ -471,7 +471,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   if (source === "hostels") {
     normalized.category = ORDER_CATEGORIES.INDIVIDUAL_STUDENT;
     normalized.type = ORDER_TYPES.STUDENT;
-    normalized.items = normalizeNumber(rawOrder.clothes, normalized.items);
+    normalized.items = firstPositiveNumber(rawOrder.clothesCount, rawOrder.clothes, normalized.items);
+    normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, normalized.weight);
     normalized.customerName = rawOrder.userName || normalized.customerName;
     normalized.customerNumber = rawOrder.userMobile || normalized.customerNumber;
     normalized.studentCount = 1; // Each individual hostel order represents 1 student
