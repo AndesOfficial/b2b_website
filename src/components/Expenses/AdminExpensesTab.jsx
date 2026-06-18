@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import {
   TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
   FileText, Loader2, ImageIcon, PieChart as PieChartIcon, BarChart3, Download,
-  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight, Wallet, User
+  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight, Wallet, User, Lock
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -57,6 +57,9 @@ export default function AdminExpensesTab() {
   const { orders } = useHostelAuth();
   const [activeSubTab, setActiveSubTab] = useState("personal");
   const [expenses, setExpenses] = useState([]);
+  const [isAndesUnlocked, setIsAndesUnlocked] = useState(() => sessionStorage.getItem("andes_unlocked") === "true");
+  const [andesPassword, setAndesPassword] = useState("");
+  const [andesAuthError, setAndesAuthError] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -411,7 +414,56 @@ export default function AdminExpensesTab() {
       </div>
 
       {/* ─── Andes Account Tab ─── */}
-      {activeSubTab === "andes" && <AndesAccountTab entries={andesExpenses} loading={loading} />}
+      {activeSubTab === "andes" && (
+        !isAndesUnlocked ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm mt-4">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
+              <Lock size={32} />
+            </div>
+            <h2 className="text-[18px] font-black text-slate-800 mb-2">Restricted Access</h2>
+            <p className="text-[13px] text-slate-500 mb-6 text-center max-w-sm">
+              Please enter the master password to access the Andes Account Ledger.
+            </p>
+            <div className="w-full max-w-sm relative">
+              <input 
+                type="password" 
+                value={andesPassword}
+                onChange={(e) => { setAndesPassword(e.target.value); setAndesAuthError(""); }}
+                placeholder="Enter password"
+                className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-sm pr-24"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const expectedPwd = import.meta.env.VITE_ANDES_PASSWORD || "Financeandes@2505";
+                    if (andesPassword === expectedPwd) {
+                      setIsAndesUnlocked(true);
+                      sessionStorage.setItem("andes_unlocked", "true");
+                    } else {
+                      setAndesAuthError("Incorrect password");
+                    }
+                  }
+                }}
+              />
+              <button 
+                onClick={() => {
+                  const expectedPwd = import.meta.env.VITE_ANDES_PASSWORD || "Financeandes@2505";
+                  if (andesPassword === expectedPwd) {
+                    setIsAndesUnlocked(true);
+                    sessionStorage.setItem("andes_unlocked", "true");
+                  } else {
+                    setAndesAuthError("Incorrect password");
+                  }
+                }}
+                className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-emerald-600 text-white text-[12px] font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-widest"
+              >
+                Unlock
+              </button>
+            </div>
+            {andesAuthError && <p className="text-[12px] font-bold text-red-500 mt-3">{andesAuthError}</p>}
+          </div>
+        ) : (
+          <AndesAccountTab entries={andesExpenses} loading={loading} />
+        )
+      )}
 
       {/* ─── Personal Account Tab ─── */}
       {activeSubTab === "personal" && (<>
