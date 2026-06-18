@@ -444,6 +444,7 @@ export function HostelAuthProvider({ children }) {
     setClient(null);
     setIsAdmin(false);
     sessionStorage.removeItem("hostelClient");
+    sessionStorage.removeItem("andes_unlocked");
     try {
       await firebaseSignOut(auth);
     } catch (_) {
