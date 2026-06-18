@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
-  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet, TrendingUp
+  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet, TrendingUp, Edit2
 } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
@@ -43,6 +43,7 @@ const emptyAndesForm = {
   transactionType: "debit",
   date: "",
   debitBreakdown: [],
+  unspentNote: "",
 };
 
 const ANDES_INITIAL_BALANCE = 2002969.22;
@@ -56,6 +57,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [notePrompt, setNotePrompt] = useState(null);
 
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
@@ -139,6 +141,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       transactionType: entry.transactionType || "debit",
       date: entry.date || "",
       debitBreakdown: entry.debitBreakdown || [],
+      unspentNote: entry.unspentNote || "",
     });
     setErrors({});
     setShowModal(true);
@@ -181,6 +184,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         category: form.category,
         transactionType: form.transactionType,
         date: form.date,
+        unspentNote: form.unspentNote || "",
         debitBreakdown: form.transactionType === "debit"
           ? (form.debitBreakdown || []).map(b => ({
               category: b.category,
@@ -218,6 +222,25 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       showToastMsg("Entry deleted");
     } catch (err) {
       console.error("Delete error:", err);
+    }
+  };
+
+  const handleEditUnspentNote = (entry) => {
+    setNotePrompt({
+      entry,
+      note: entry.unspentNote || ""
+    });
+  };
+
+  const handleSubmitNotePrompt = async () => {
+    if (!notePrompt) return;
+    try {
+      await updateDoc(doc(db, "b2b_expenses", notePrompt.entry.id), { unspentNote: notePrompt.note });
+      showToastMsg("Note updated");
+      setNotePrompt(null);
+    } catch (err) {
+      console.error("Update note error:", err);
+      alert("Failed to update note.");
     }
   };
 
@@ -453,7 +476,15 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                             Unspent
                                           </span>
                                         </td>
-                                        <td className="p-4 text-[13px] font-bold text-slate-500">Remaining Amount</td>
+                                        <td className="p-4 text-[13px] font-bold text-slate-500">
+                                          <div className="flex items-center gap-2">
+                                            <span>Remaining Amount</span>
+                                            <button onClick={() => handleEditUnspentNote(e)} className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all" title="Add/Edit Note">
+                                              <Edit2 size={12} />
+                                            </button>
+                                          </div>
+                                          {e.unspentNote && <span className="block text-[11px] font-black text-emerald-500 mt-0.5">{e.unspentNote}</span>}
+                                        </td>
                                         <td className="p-4 text-[13px] font-black text-slate-500 text-right">₹{remaining.toLocaleString("en-IN")}</td>
                                       </tr>
                                     );
@@ -539,7 +570,15 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                               <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black bg-slate-200 text-slate-500">
                                 ?
                               </span>
-                              <span className="font-bold text-slate-500">Remaining Amount</span>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-500">Remaining Amount</span>
+                                  <button onClick={() => handleEditUnspentNote(e)} className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all" title="Add/Edit Note">
+                                    <Edit2 size={12} />
+                                  </button>
+                                </div>
+                                {e.unspentNote && <span className="text-[10px] font-black text-emerald-500 mt-0.5">{e.unspentNote}</span>}
+                              </div>
                             </div>
                             <span className="font-black text-slate-500">₹{remaining.toLocaleString("en-IN")}</span>
                           </div>
@@ -703,6 +742,26 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                           );
                         })()}
 
+                        {(() => {
+                          const splitSum = form.debitBreakdown.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                          const total = Number(form.amount) || 0;
+                          const remaining = total - splitSum;
+                          if (remaining > 0.01) {
+                            return (
+                              <div className="mt-2 mb-2">
+                                <input
+                                  type="text"
+                                  value={form.unspentNote || ""}
+                                  onChange={(e) => setForm({ ...form, unspentNote: e.target.value })}
+                                  placeholder="Note for remaining amount (optional)"
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 focus:border-red-400 focus:bg-white focus:outline-none transition-all"
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         {form.debitBreakdown.map((item, index) => (
                           <div key={index} className="bg-white border border-slate-200 p-3 rounded-xl space-y-2">
                             <div className="flex items-center gap-2">
@@ -754,6 +813,28 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                 className="order-1 sm:order-2 flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-[13px] rounded-xl transition-all shadow-xl active:scale-95 uppercase tracking-widest flex items-center justify-center gap-2">
                 {submitting ? <Loader2 size={18} className="animate-spin" /> : editingId ? "Update Entry" : "Commit Entry"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ─── Note Prompt Modal ─── */}
+      {notePrompt && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setNotePrompt(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 animate-slide-up">
+            <h3 className="text-[16px] font-black text-[#0F172A] mb-4">Note for Remaining Amount</h3>
+            <input
+              autoFocus
+              type="text"
+              value={notePrompt.note}
+              onChange={(e) => setNotePrompt({ ...notePrompt, note: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitNotePrompt(); }}
+              placeholder="E.g. Kept as cash in store"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setNotePrompt(null)} className="flex-1 py-3 text-[13px] font-black text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors uppercase">Cancel</button>
+              <button onClick={handleSubmitNotePrompt} className="flex-1 py-3 text-[13px] font-black text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors uppercase">Save Note</button>
             </div>
           </div>
         </div>
