@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, storage } from "../../firebase";
 import {
-  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet, TrendingUp, Edit2
+  Plus, X, Trash2, FileText, Loader2, ChevronDown, ChevronUp, Wallet, TrendingUp, Edit2, Paperclip, Upload, Link as LinkIcon, ExternalLink
 } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
@@ -20,6 +21,7 @@ const CATEGORIES = [
   "Marketing Expense",
   "Packaging",
   "Team Member Salary",
+  "Remaining Amount ",
 ];
 
 const CAT_COLORS = {
@@ -34,6 +36,7 @@ const CAT_COLORS = {
   "Marketing Expense": "#EC4899",
   Packaging: "#A855F7",
   "Team Member Salary": "#F97316",
+  "Remaining Amount ": "#FACC15",
 };
 
 const emptyAndesForm = {
@@ -43,6 +46,9 @@ const emptyAndesForm = {
   transactionType: "debit",
   date: "",
   note: "",
+  invoiceUrl: "",
+  invoiceFile: null,
+  removedInvoices: [],
   debitBreakdown: [],
   unspentNote: "",
 };
@@ -142,6 +148,9 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       transactionType: entry.transactionType || "debit",
       date: entry.date || "",
       note: entry.note || "",
+      invoiceUrl: entry.invoiceUrl || "",
+      invoiceFile: null,
+      removedInvoices: [],
       debitBreakdown: entry.debitBreakdown || [],
       unspentNote: entry.unspentNote || "",
     });
@@ -175,10 +184,67 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     return Object.keys(e).length === 0;
   };
 
+  const safeDeleteByUrl = async (url) => {
+    if (!url) return;
+    try {
+      const encodedPath = url.split('/o/')[1]?.split('?')[0];
+      if (encodedPath) {
+        const filePath = decodeURIComponent(encodedPath);
+        await deleteObject(ref(storage, filePath));
+      }
+    } catch (e) {
+      console.warn("Failed to delete file:", e);
+    }
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      const uploadPromises = [];
+
+      let mainInvoiceUrl = form.invoiceUrl || "";
+      if (form.invoiceFile) {
+        const p = (async () => {
+          const storageRef = ref(storage, `andes_invoices/${Date.now()}_${form.invoiceFile.name}`);
+          await uploadBytes(storageRef, form.invoiceFile);
+          mainInvoiceUrl = await getDownloadURL(storageRef);
+          if (form.invoiceUrl) await safeDeleteByUrl(form.invoiceUrl);
+        })();
+        uploadPromises.push(p);
+      }
+
+      const finalBreakdown = [];
+      if (form.transactionType === "debit") {
+        for (const b of form.debitBreakdown || []) {
+          const bObj = {
+            category: b.category,
+            itemName: (b.itemName || "").trim(),
+            amount: parseFloat(b.amount) || 0,
+            invoiceUrl: b.invoiceUrl || "",
+          };
+          if (b.invoiceFile) {
+            const p = (async () => {
+              const bStorageRef = ref(storage, `andes_invoices/breakdown/${Date.now()}_${b.invoiceFile.name}`);
+              await uploadBytes(bStorageRef, b.invoiceFile);
+              bObj.invoiceUrl = await getDownloadURL(bStorageRef);
+              if (b.invoiceUrl) await safeDeleteByUrl(b.invoiceUrl);
+            })();
+            uploadPromises.push(p);
+          }
+          finalBreakdown.push(bObj);
+        }
+      }
+
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
+
+      // Cleanup any explicitly removed invoices
+      if (form.removedInvoices && form.removedInvoices.length > 0) {
+        form.removedInvoices.forEach(url => safeDeleteByUrl(url));
+      }
+
       const payload = {
         accountType: "andes",
         amount: parseFloat(form.amount),
@@ -187,14 +253,9 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         transactionType: form.transactionType,
         date: form.date,
         note: form.note || "",
+        invoiceUrl: mainInvoiceUrl,
         unspentNote: form.unspentNote || "",
-        debitBreakdown: form.transactionType === "debit"
-          ? (form.debitBreakdown || []).map(b => ({
-              category: b.category,
-              itemName: (b.itemName || "").trim(),
-              amount: parseFloat(b.amount) || 0,
-            }))
-          : [],
+        debitBreakdown: finalBreakdown,
         updatedAt: Timestamp.now(),
       };
 
@@ -222,6 +283,12 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     if (!window.confirm(`Delete ₹${entry.amount?.toLocaleString()} entry for "${entry.payee}"?`)) return;
     try {
       await deleteDoc(doc(db, "b2b_expenses", entry.id));
+      if (entry.invoiceUrl) safeDeleteByUrl(entry.invoiceUrl);
+      if (entry.debitBreakdown) {
+        entry.debitBreakdown.forEach(b => {
+          if (b.invoiceUrl) safeDeleteByUrl(b.invoiceUrl);
+        });
+      }
       showToastMsg("Entry deleted");
     } catch (err) {
       console.error("Delete error:", err);
@@ -281,7 +348,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     <div className="space-y-8" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
+        <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
           <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
             <FileText size={14} />
           </div>
@@ -319,31 +386,30 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
 
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1000px]">
+          <table className="w-full min-w-[950px]">
             <thead className="bg-[#F8FAFC]">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Date</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Beneficiary</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Note</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Debit</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Credit</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Closing Balance</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Classification</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Debit Breakdown</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Actions</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Date</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Beneficiary</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Note</th>
+                <th className="text-center text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Invoice</th>
+                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Amount</th>
+                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Closing Balance</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Debit Breakdown</th>
+                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-20 text-center text-slate-300">
+                  <td colSpan="8" className="px-6 py-20 text-center text-slate-300">
                     <Loader2 size={32} className="animate-spin mx-auto mb-4" />
                     <p className="text-[13px] font-bold">Synchronizing with Cloud...</p>
                   </td>
                 </tr>
               ) : computedEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-20 text-center">
+                  <td colSpan="8" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-200"><Wallet size={32} /></div>
                       <p className="text-[15px] font-black text-slate-400">No entries for this period</p>
@@ -356,46 +422,47 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                   <React.Fragment key={e.id}>
                     <tr className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group">
                       {/* Date */}
-                      <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{e.date}</td>
-                      {/* Beneficiary */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 text-[13px] font-bold text-slate-500">{e.date}</td>
+                      {/* Beneficiary & Classification */}
+                      <td className="px-4 py-3">
                         <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{e.payee}</p>
-                      </td>
-                      {/* Note */}
-                      <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{e.note || "—"}</td>
-                      {/* Debit */}
-                      <td className="px-6 py-4 text-right">
-                        {e.transactionType === "debit" ? (
-                          <span className="text-[15px] font-black text-red-600 tracking-tight">₹{Number(e.amount).toLocaleString("en-IN")}</span>
-                        ) : (
-                          <span className="text-[13px] font-bold text-slate-300">—</span>
-                        )}
-                      </td>
-                      {/* Credit */}
-                      <td className="px-6 py-4 text-right">
-                        {e.transactionType === "credit" ? (
-                          <span className="text-[15px] font-black text-emerald-600 tracking-tight">₹{Number(e.amount).toLocaleString("en-IN")}</span>
-                        ) : (
-                          <span className="text-[13px] font-bold text-slate-300">—</span>
-                        )}
-                      </td>
-                      {/* Closing Balance */}
-                      <td className="px-6 py-4 text-right">
-                        <span className={`text-[15px] font-black tracking-tight ${e.closingBalance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                          ₹{e.closingBalance.toLocaleString("en-IN")}
-                        </span>
-                      </td>
-                      {/* Classification */}
-                      <td className="px-6 py-4">
                         {e.category && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-1 rounded text-[9px] font-black uppercase tracking-wider"
                             style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
                             {e.category}
                           </span>
                         )}
                       </td>
+                      {/* Note */}
+                      <td className="px-4 py-3 text-[13px] font-bold text-slate-500 max-w-[200px] truncate" title={e.note || ""}>
+                        {e.note || "—"}
+                      </td>
+                      {/* Invoice */}
+                      <td className="px-4 py-3 text-center">
+                        {e.invoiceUrl ? (
+                          <a href={e.invoiceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md hover:bg-emerald-100 transition-colors w-fit mx-auto">
+                            <ExternalLink size={10} /> Invoice
+                          </a>
+                        ) : (
+                          <span className="text-[13px] font-bold text-slate-300">—</span>
+                        )}
+                      </td>
+                      {/* Amount */}
+                      <td className="px-4 py-3 text-right">
+                        {e.transactionType === "debit" ? (
+                          <span className="text-[15px] font-black text-red-600 tracking-tight">−₹{Number(e.amount).toLocaleString("en-IN")}</span>
+                        ) : (
+                          <span className="text-[15px] font-black text-emerald-600 tracking-tight">+₹{Number(e.amount).toLocaleString("en-IN")}</span>
+                        )}
+                      </td>
+                      {/* Closing Balance */}
+                      <td className="px-4 py-3 text-right">
+                        <span className={`text-[15px] font-black tracking-tight ${e.closingBalance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                          ₹{e.closingBalance.toLocaleString("en-IN")}
+                        </span>
+                      </td>
                       {/* Debit Breakdown */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         {e.transactionType === "debit" ? (() => {
                           const splitSum = (e.debitBreakdown || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
                           const remaining = Number(e.amount) - splitSum;
@@ -434,7 +501,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                         )}
                       </td>
                       {/* Actions */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => openEdit(e)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                             <FileText size={16} />
@@ -448,7 +515,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                     {/* Expanded Breakdown */}
                     {e.transactionType === "debit" && e.debitBreakdown?.length > 0 && expandedRows.has(e.id) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan="9" className="px-6 py-4">
+                        <td colSpan="8" className="px-4 py-3">
                           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                             <table className="w-full">
                               <thead className="bg-slate-50 border-b border-slate-100">
@@ -467,7 +534,16 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                         {b.category}
                                       </span>
                                     </td>
-                                    <td className="p-4 text-[13px] font-bold text-[#0F172A]">{b.itemName}</td>
+                                    <td className="p-4 text-[13px] font-bold text-[#0F172A]">
+                                      <div className="flex items-center gap-1.5">
+                                        {b.itemName}
+                                        {b.invoiceUrl && (
+                                          <a href={b.invoiceUrl} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-emerald-600 transition-colors" title="View attached invoice">
+                                            <LinkIcon size={12} />
+                                          </a>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td className="p-4 text-[13px] font-black text-slate-800 text-right">₹{Number(b.amount).toLocaleString("en-IN")}</td>
                                   </tr>
                                 ))}
@@ -528,7 +604,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-[14px] font-black text-[#0F172A] tracking-tight mb-1">{e.payee}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-1">
                       <p className="text-[11px] font-bold text-slate-400">{e.date}</p>
                       {e.category && (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
@@ -536,7 +612,13 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                           {e.category}
                         </span>
                       )}
+                      {e.invoiceUrl && (
+                        <a href={e.invoiceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                          <ExternalLink size={8} /> Inv
+                        </a>
+                      )}
                     </div>
+                    {e.note && <p className="text-[12px] font-bold text-slate-500 mt-1">{e.note}</p>}
                   </div>
                   <div className="text-right">
                     {e.transactionType === "debit" ? (
@@ -555,13 +637,18 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Debit Breakdown</p>
                     {(e.debitBreakdown || []).map((b, i) => (
                       <div key={i} className="flex justify-between items-center text-[11px] border-b border-slate-100/70 pb-1 last:border-0 last:pb-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black"
+                        <div className="flex items-center gap-1.5 flex-wrap flex-1 pr-2">
+                          <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black flex-shrink-0"
                             style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "20", color: CAT_COLORS[b.category] || "#94a3b8" }}>
                             {i + 1}
                           </span>
                           <span className="font-bold text-slate-700">{b.itemName}</span>
                           <span className="text-slate-400 text-[9px]">({b.category})</span>
+                          {b.invoiceUrl && (
+                            <a href={b.invoiceUrl} target="_blank" rel="noreferrer" className="text-emerald-500 hover:text-emerald-600 ml-0.5">
+                              <LinkIcon size={10} />
+                            </a>
+                          )}
                         </div>
                         <span className="font-black text-red-600">₹{Number(b.amount).toLocaleString("en-IN")}</span>
                       </div>
@@ -701,16 +788,58 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                   </div>
                 </div>
 
-                {/* Transaction Note */}
-                <div className="mt-4">
-                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Note (Optional)</label>
-                  <textarea
-                    value={form.note || ""}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
-                    placeholder="Add a note about this transaction..."
-                    rows={2}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none resize-none"
-                  />
+                {/* Transaction Note & Invoice */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Note (Optional)</label>
+                    <textarea
+                      value={form.note || ""}
+                      onChange={(e) => setForm({ ...form, note: e.target.value })}
+                      placeholder="Add a note about this transaction..."
+                      rows={2}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Attach Invoice (Optional)</label>
+                    {form.invoiceFile || form.invoiceUrl ? (
+                      <div className="flex items-center justify-between w-full h-[76px] px-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <FileText size={20} />
+                          </div>
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="text-[13px] font-black text-emerald-800 truncate">
+                              {form.invoiceFile ? form.invoiceFile.name : "Existing Invoice Attached"}
+                            </span>
+                            <span className="text-[11px] font-bold text-emerald-600">Ready to save</span>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => {
+                          setForm(prev => {
+                            const rem = [...(prev.removedInvoices || [])];
+                            if (prev.invoiceUrl) rem.push(prev.invoiceUrl);
+                            return { ...prev, invoiceFile: null, invoiceUrl: "", removedInvoices: rem };
+                          });
+                        }} className="p-2 text-emerald-600 hover:bg-emerald-200 rounded-lg transition-colors flex-shrink-0" title="Remove Invoice">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-[76px] px-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl hover:bg-slate-100 hover:border-emerald-400 transition-all cursor-pointer group relative overflow-hidden">
+                        <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) setForm({ ...form, invoiceFile: file });
+                        }} />
+                        <div className="flex items-center gap-2 text-slate-500 group-hover:text-emerald-600 text-center">
+                          <Upload size={18} className="flex-shrink-0" />
+                          <span className="text-[12px] font-bold truncate max-w-[150px] sm:max-w-[200px]">
+                            Upload Image or PDF
+                          </span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 {/* Debit Breakdown (only shown for debit) */}
@@ -803,6 +932,38 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                 onChange={(e) => updateBreakdownItem(index, "itemName", e.target.value)}
                                 className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 focus:border-red-400 focus:outline-none focus:bg-white transition-all"
                                 placeholder="Item name (e.g. Aplus Detergent)" />
+                                
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {item.invoiceFile || item.invoiceUrl ? (
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 max-w-[140px]">
+                                    <Paperclip size={12} className="flex-shrink-0" />
+                                    <span className="text-[10px] font-bold truncate">
+                                      {item.invoiceFile ? item.invoiceFile.name : "Attached"}
+                                    </span>
+                                    <button onClick={(e) => {
+                                      e.preventDefault();
+                                      setForm(prev => {
+                                        const newBd = [...prev.debitBreakdown];
+                                        const newRem = [...(prev.removedInvoices || [])];
+                                        if (newBd[index].invoiceUrl) newRem.push(newBd[index].invoiceUrl);
+                                        newBd[index] = { ...newBd[index], invoiceFile: null, invoiceUrl: "" };
+                                        return { ...prev, debitBreakdown: newBd, removedInvoices: newRem };
+                                      });
+                                    }} className="p-0.5 hover:bg-emerald-200 rounded-full transition-colors flex-shrink-0 text-emerald-600">
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="p-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors" title="Attach Invoice">
+                                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
+                                      const file = e.target.files[0];
+                                      if (file) updateBreakdownItem(index, "invoiceFile", file);
+                                    }} />
+                                    <Paperclip size={14} className="text-slate-400" />
+                                  </label>
+                                )}
+                              </div>
+
                               <div className="relative flex-shrink-0 w-28">
                                 <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 font-bold"><BiRupee size={13} /></div>
                                 <input type="number" min="0" step="0.01" value={item.amount}
