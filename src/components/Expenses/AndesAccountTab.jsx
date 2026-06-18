@@ -42,6 +42,7 @@ const emptyAndesForm = {
   category: "Other",
   transactionType: "debit",
   date: "",
+  note: "",
   debitBreakdown: [],
   unspentNote: "",
 };
@@ -140,6 +141,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       category: entry.category || "Other",
       transactionType: entry.transactionType || "debit",
       date: entry.date || "",
+      note: entry.note || "",
       debitBreakdown: entry.debitBreakdown || [],
       unspentNote: entry.unspentNote || "",
     });
@@ -184,6 +186,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         category: form.category,
         transactionType: form.transactionType,
         date: form.date,
+        note: form.note || "",
         unspentNote: form.unspentNote || "",
         debitBreakdown: form.transactionType === "debit"
           ? (form.debitBreakdown || []).map(b => ({
@@ -321,6 +324,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
               <tr>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Date</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Beneficiary</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Note</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Debit</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Credit</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Closing Balance</th>
@@ -332,14 +336,14 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-20 text-center text-slate-300">
+                  <td colSpan="9" className="px-6 py-20 text-center text-slate-300">
                     <Loader2 size={32} className="animate-spin mx-auto mb-4" />
                     <p className="text-[13px] font-bold">Synchronizing with Cloud...</p>
                   </td>
                 </tr>
               ) : computedEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-20 text-center">
+                  <td colSpan="9" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-200"><Wallet size={32} /></div>
                       <p className="text-[15px] font-black text-slate-400">No entries for this period</p>
@@ -357,6 +361,8 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                       <td className="px-6 py-4">
                         <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{e.payee}</p>
                       </td>
+                      {/* Note */}
+                      <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{e.note || "—"}</td>
                       {/* Debit */}
                       <td className="px-6 py-4 text-right">
                         {e.transactionType === "debit" ? (
@@ -442,7 +448,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                     {/* Expanded Breakdown */}
                     {e.transactionType === "debit" && e.debitBreakdown?.length > 0 && expandedRows.has(e.id) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan="8" className="px-6 py-4">
+                        <td colSpan="9" className="px-6 py-4">
                           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                             <table className="w-full">
                               <thead className="bg-slate-50 border-b border-slate-100">
@@ -693,6 +699,18 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Transaction Note */}
+                <div className="mt-4">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Note (Optional)</label>
+                  <textarea
+                    value={form.note || ""}
+                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    placeholder="Add a note about this transaction..."
+                    rows={2}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-700 focus:bg-white focus:border-emerald-500 focus:outline-none resize-none"
+                  />
                 </div>
 
                 {/* Debit Breakdown (only shown for debit) */}
