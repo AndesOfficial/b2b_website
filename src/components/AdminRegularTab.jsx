@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { FiPlus, FiX, FiCheck, FiSmartphone, FiMessageSquare, FiShoppingBag, FiPhone, FiUser, FiEdit2, FiTrash2, FiInbox, FiCheckCircle, FiCalendar, FiChevronRight, FiMapPin } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "./Shared/EmptyState";
@@ -56,6 +56,25 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
   // All historical orders are passed in — analytics hook handles current vs previous period internally
   const analytics = useRegularAnalytics(orders, localDateFrom, localDateTo);
 
+  // Human-readable label for the Lost Users lookback window.
+  // Mirrors the 3× period logic in useRegularAnalytics so the info banner is accurate.
+  const lookbackLabel = useMemo(() => {
+    const from = new Date(localDateFrom);
+    const to   = new Date(localDateTo);
+    const periodDays = Math.max(1, Math.round((to - from) / (1000 * 3600 * 24)) + 1);
+    const MIN_LOOKBACK_DAYS = 7;
+    const MAX_LOOKBACK_DAYS = 365;
+    const lookbackDays = Math.min(
+      Math.max(periodDays * 3, MIN_LOOKBACK_DAYS),
+      MAX_LOOKBACK_DAYS
+    );
+    // Describe in the most natural unit
+    if (lookbackDays < 14)  return `past ${lookbackDays} days`;
+    if (lookbackDays < 60)  return `past ${Math.round(lookbackDays / 7)} weeks`;
+    if (lookbackDays < 365) return `past ${Math.round(lookbackDays / 30)} months`;
+    return `past year`;
+  }, [localDateFrom, localDateTo]);
+
   // Existing Transactions Log State
   const [channelFilter, setChannelFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
@@ -67,24 +86,6 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
   // Feed the filtered currentOrders to the existing hook for the transactions log
   const { channelStats, filteredOrders } = useRegularOrders(analytics.currentOrders, channelFilter);
 
-  useEffect(() => {
-    const ramnathOrders = filteredOrders.filter((order) =>
-      String(order.customerName || order.userName || "").toLowerCase().includes("ramnath")
-    );
-
-    if (ramnathOrders.length > 0) {
-      console.table(ramnathOrders.map((order) => ({
-        id: order.id,
-        source: order.source,
-        channel: order.channel,
-        customerName: order.customerName,
-        amount: order.amount,
-        date: order.date,
-        status: order.status,
-      })));
-      console.log("Ramnath full order objects:", ramnathOrders);
-    }
-  }, [filteredOrders]);
 
   const openEditModal = useCallback((order) => {
     const breakdownFromOrder = (order.serviceBreakdown && order.serviceBreakdown.length > 0)
@@ -276,7 +277,7 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
 
       {/* Tab Contents */}
       {activeSubTab === "Overview" && <OverviewDashboard analytics={analytics} />}
-      {activeSubTab === "Customers" && <CustomersDashboard analytics={analytics} />}
+      {activeSubTab === "Customers" && <CustomersDashboard analytics={analytics} lookbackLabel={lookbackLabel} />}
       {activeSubTab === "Analytics" && <AnalyticsDashboard analytics={analytics} />}
 
       {activeSubTab === "Transactions Log" && (

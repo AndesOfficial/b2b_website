@@ -1,7 +1,12 @@
 import { BiRupee } from 'react-icons/bi';
+import { FiInfo } from 'react-icons/fi';
 
 export default function AnalyticsDashboard({ analytics }) {
   const { channelData } = analytics;
+  // Fix #8 — show "—" when no TAT data is available (most orders lack createdAtRaw+updatedAtRaw)
+  const tatDisplay = analytics.avgTatHours > 0
+    ? `${analytics.avgTatHours.toFixed(1)}h`
+    : '—';
 
   return (
     <div className="space-y-6">
@@ -63,7 +68,10 @@ export default function AnalyticsDashboard({ analytics }) {
             </div>
             <div className="bg-slate-50 p-3 rounded-xl">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Avg Process Time</span>
-              <span className="text-[16px] font-black text-slate-800">{analytics.avgTatHours.toFixed(1)}h</span>
+              <span className="text-[16px] font-black text-slate-800">{tatDisplay}</span>
+              {analytics.avgTatHours === 0 && (
+                <span className="text-[9px] text-slate-400 block mt-0.5">No TAT data</span>
+              )}
             </div>
           </div>
         </div>
@@ -84,6 +92,10 @@ export default function AnalyticsDashboard({ analytics }) {
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <span className="text-3xl font-black text-rose-600 mb-1">{analytics.churnRate.toFixed(1)}%</span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Churn Rate</span>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <FiInfo size={10} className="text-slate-300" />
+                  <span className="text-[9px] text-slate-400">vs lookback window</span>
+                </div>
             </div>
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <div className="flex items-center text-3xl font-black text-emerald-600 mb-1">

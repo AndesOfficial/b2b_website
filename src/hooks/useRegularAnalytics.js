@@ -21,9 +21,33 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     
     const periodDurationMs = to.getTime() - from.getTime();
     
-    // Previous period
+    // Previous period (same length, immediately before current)
     const prevFrom = new Date(from.getTime() - periodDurationMs);
-    const prevTo = new Date(to.getTime() - periodDurationMs);
+    const prevTo   = new Date(from.getTime() - 1); // up to 1ms before current period starts
+
+    // ── Lookback window for Lost Users ──────────────────────────────────────
+    // A user is only "lost" if they were RECENTLY active (within the lookback
+    // window) but did NOT order during the current period.
+    //
+    // Using all-time history inflates the lost count — e.g. on "Daily", anyone
+    // who has ever ordered but didn't order today shows as "lost" (280 users!).
+    //
+    // Lookback = 3× the period length, bounded between 7 days and 365 days:
+    //   Daily    (1d period)  → 7-day  lookback (floor)
+    //   Weekly   (7d period)  → 21-day lookback
+    //   Monthly  (30d period) → 90-day lookback
+    //   Quarterly(90d period) → 180-day lookback (half-year)
+    //   Yearly  (365d period) → 365-day lookback (cap)
+    const MIN_LOOKBACK_MS = 7  * 24 * 60 * 60 * 1000;  // 7-day floor
+    const MAX_LOOKBACK_MS = 365 * 24 * 60 * 60 * 1000; // 365-day cap
+    const lookbackMs = Math.min(
+      Math.max(periodDurationMs * 3, MIN_LOOKBACK_MS),
+      MAX_LOOKBACK_MS
+    );
+    // lookbackFrom = start of the recent-activity window, before current period
+    const lookbackFrom = new Date(from.getTime() - lookbackMs);
+    // lookbackTo   = the moment just before the current period starts
+    const lookbackTo   = new Date(from.getTime() - 1);
 
     const getOrderDate = (o) => {
       if (o.date) {
@@ -40,23 +64,26 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
           const d = typeof o.createdAtRaw.toDate === 'function' ? o.createdAtRaw.toDate() : new Date(o.createdAtRaw);
           if (!isNaN(d)) return d;
       }
-      return new Date(0); // Treat missing/invalid date as epoch (historical) so it doesn't pollute current stats
+      return new Date(0); // Treat missing/invalid date as epoch so it doesn't pollute current stats
     };
 
     // 3. Segment orders by timeframe
-    const currentOrders = [];
+    const currentOrders  = [];
     const previousOrders = [];
-    const historicalOrders = []; // Orders before `dateFrom`
+    const historicalOrders = []; // Orders within the lookback window (recent, before current period)
 
     regularOrders.forEach((order) => {
       const orderDate = getOrderDate(order);
       if (orderDate >= from && orderDate <= to) {
         currentOrders.push(order);
       }
+      // Previous period: same duration, immediately before current period
       if (orderDate >= prevFrom && orderDate <= prevTo) {
         previousOrders.push(order);
       }
-      if (orderDate < from) {
+      // Historical (for Lost Users): ONLY within the lookback window before current period.
+      // This keeps Lost Users contextually relevant to the selected period.
+      if (orderDate >= lookbackFrom && orderDate <= lookbackTo) {
         historicalOrders.push(order);
       }
     });
@@ -91,15 +118,16 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     const historicalUsersMap = new Map();
     historicalOrders.forEach(o => historicalUsersMap.set(getUserId(o), o));
 
-    // New Users: First order was during current period
+    // New Users: First order was during current period (never ordered before in lookback)
     const newUsers = [];
-    // Returning Users: Active in current, and active in historical
+    // Returning Users: Ordered in current period AND also ordered before (in lookback)
     const returningUsers = [];
-    // Retention Users: Active in previous, and active in current
+    // Retention Users: Ordered in BOTH previous period AND current period
     const retentionUsers = [];
-    // Lost Users: Active in historical, but NOT in current
+    // Lost Users: Ordered within the lookback window before this period, but NOT in current period.
+    //             The lookback window is period-aware (e.g. 7 days for Daily, 90 days for Monthly).
     const lostUsers = [];
-    // Dormant Users: No orders in the last 30 days from `to` date
+    // Dormant Users: No orders in the last 30 days from `to` date (absolute measure)
     const dormantUsers = [];
 
     const thirtyDaysBeforeTo = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
