@@ -1,12 +1,11 @@
-import { FiDownload } from "react-icons/fi";
+import { useState, useCallback } from "react";
+import { FiDownload, FiX } from "react-icons/fi";
 
-// Utility to convert array of objects to CSV
+// Utility to convert array of objects to CSV and trigger download
 function downloadCSV(data, filename) {
   if (!data || !data.length) return;
   const headers = Object.keys(data[0]);
-  const csvRows = [];
-  
-  csvRows.push(headers.join(','));
+  const csvRows = [headers.join(',')];
 
   for (const row of data) {
     const values = headers.map(header => {
@@ -17,10 +16,8 @@ function downloadCSV(data, filename) {
     csvRows.push(values.join(','));
   }
 
-  const csvString = csvRows.join('\n');
-  const blob = new Blob([csvString], { type: 'text/csv' });
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  
   const a = document.createElement('a');
   a.href = url;
   a.download = `${filename}.csv`;
@@ -30,61 +27,153 @@ function downloadCSV(data, filename) {
   URL.revokeObjectURL(url);
 }
 
+const EXPORT_OPTIONS = [
+  { key: 'orders_log',    label: 'Orders Log',          desc: 'All transactions this period' },
+  { key: 'user_database', label: 'Active Customers',     desc: 'Customers who ordered this period' },
+  { key: 'lost_users',    label: 'Lost Customers',       desc: 'Recently churned customers' },
+  { key: 'channels',      label: 'Channel Performance',  desc: 'Revenue by acquisition channel' },
+  { key: 'revenue',       label: 'Revenue Summary',      desc: 'Key revenue KPIs' },
+  { key: 'retention',     label: 'Retention Metrics',    desc: 'Churn, retention, CLV stats' },
+];
+
 export default function ExportReports({ analytics }) {
-  const handleExport = (type) => {
-    switch(type) {
-      case 'user_database':
-        downloadCSV(analytics.activeUsersList, 'user_database');
+  // Fix #10 — click-based dropdown (not CSS hover which closes on mouse move)
+  const [open, setOpen] = useState(false);
+  const [lastExported, setLastExported] = useState(null);
+
+  const handleExport = useCallback((type) => {
+    setOpen(false);
+    setLastExported(type);
+    setTimeout(() => setLastExported(null), 2000);
+
+    switch (type) {
+      case 'orders_log':
+        downloadCSV(
+          (analytics.currentOrders || []).map(o => ({
+            ID: o.id,
+            Date: o.date,
+            Customer: o.customerName || '',
+            Phone: o.customerNumber || '',
+            Channel: o.channel || '',
+            Service: o.service || '',
+            Amount: o.amount || 0,
+            Weight_KG: o.weight || '',
+            Status: o.status || '',
+          })),
+          'orders_log'
+        );
         break;
+
+      case 'user_database':
+        downloadCSV(analytics.activeUsersList || [], 'active_customers');
+        break;
+
+      // Fix #5 & #11 — Lost users now exportable
+      case 'lost_users':
+        downloadCSV(
+          (analytics.lostUsers || []).map(u => ({
+            Name: u.name,
+            Phone: u.phone,
+            Address: u.address || '',
+            Total_Orders: u.totalOrders,
+            Total_Revenue: u.totalRevenue,
+            Last_Order_Date: u.lastOrderDate,
+            Days_Since_Last_Order: u.daysSinceLastOrder,
+          })),
+          'lost_customers'
+        );
+        break;
+
+      case 'channels':
+        downloadCSV(
+          (analytics.channelData || []).filter(c => c.orders > 0).map(c => ({
+            Channel: c.channel,
+            Orders: c.orders,
+            Revenue: c.revenue,
+            Unique_Users: c.uniqueUsers,
+            New_Users: c.newUsers,
+            Returning_Users: c.returningUsers,
+            AOV: Math.round(c.aov),
+          })),
+          'channel_performance'
+        );
+        break;
+
       case 'revenue':
         downloadCSV([{
-            Total_Revenue: analytics.currentRevenue,
-            Total_Orders: analytics.totalOrdersCount,
-            Total_KG: analytics.currentKg,
-            AOV: analytics.aov,
-            ARPU: analytics.arpu,
-            Revenue_Per_KG: analytics.revenuePerKg
+          Total_Revenue: analytics.currentRevenue,
+          Previous_Revenue: analytics.previousRevenue,
+          Revenue_Growth_Pct: analytics.revenueGrowth?.toFixed(1),
+          Total_Orders: analytics.totalOrdersCount,
+          Total_KG: analytics.currentKg?.toFixed(1),
+          AOV: analytics.aov?.toFixed(0),
+          ARPU: analytics.arpu?.toFixed(0),
+          Revenue_Per_KG: analytics.revenuePerKg?.toFixed(0),
         }], 'revenue_report');
         break;
+
       case 'retention':
         downloadCSV([{
-            Retention_Rate: analytics.retentionRate,
-            Repeat_Purchase_Rate: analytics.repeatPurchaseRate,
-            Churn_Rate: analytics.churnRate,
-            CLV: analytics.clv
+          Retention_Rate_Pct: analytics.retentionRate?.toFixed(1),
+          Repeat_Purchase_Rate_Pct: analytics.repeatPurchaseRate?.toFixed(1),
+          Churn_Rate_Pct: analytics.churnRate?.toFixed(1),
+          Customer_LTV: analytics.clv?.toFixed(0),
+          New_Users: analytics.newUsersCount,
+          Lost_Users: analytics.lostUsersCount,
+          Dormant_Users: analytics.dormantUsersCount,
         }], 'retention_report');
         break;
-      case 'channels':
-        downloadCSV(analytics.channelData, 'channel_performance');
-        break;
-      case 'orders':
-        downloadCSV([{
-            Total_Orders: analytics.totalOrdersCount,
-            Completed: analytics.completedOrdersCount,
-            Cancelled: analytics.cancelledOrdersCount,
-            Failed: analytics.failedOrdersCount,
-            Avg_TAT_Hours: analytics.avgTatHours
-        }], 'order_analytics');
+
+      default:
         break;
     }
-  };
+  }, [analytics]);
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative group">
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
-          <FiDownload size={14} /> Export Options
-        </button>
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-          <div className="p-2 flex flex-col gap-1">
-            <button onClick={() => handleExport('user_database')} className="text-left px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg">User Database</button>
-            <button onClick={() => handleExport('revenue')} className="text-left px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg">Revenue Report</button>
-            <button onClick={() => handleExport('retention')} className="text-left px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg">Retention Metrics</button>
-            <button onClick={() => handleExport('channels')} className="text-left px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg">Channel Performance</button>
-            <button onClick={() => handleExport('orders')} className="text-left px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg">Order Analytics</button>
+    <div className="relative">
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold border transition-all shadow-sm ${
+          lastExported
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+        }`}
+      >
+        <FiDownload size={14} />
+        {lastExported ? 'Exported!' : 'Export Options'}
+      </button>
+
+      {/* Fix #10 — click-controlled dropdown */}
+      {open && (
+        <>
+          {/* Backdrop — click outside to close */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">Export Data</span>
+              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
+                <FiX size={14} />
+              </button>
+            </div>
+            <div className="p-2">
+              {EXPORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => handleExport(opt.key)}
+                  className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                >
+                  <p className="text-[13px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{opt.label}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
