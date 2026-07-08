@@ -375,7 +375,7 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
           <button onClick={onClose} className="flex-1 py-4 bg-slate-100 text-slate-500 font-black text-[13px] rounded-xl hover:bg-slate-200 transition-all uppercase tracking-widest">Cancel</button>
           <button
             onClick={handleSubmit}
-            disabled={!form.customerName || !form.amount}
+            disabled={!form.customerName || (parseNumberValue(form.amount) <= 0 && breakdownAmountTotal <= 0)}
             className="flex-[2] py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-[13px] rounded-xl transition-all shadow-xl active:scale-95 uppercase tracking-widest"
           >
             {form.id ? "Validate & Update" : "Commit Transaction"}

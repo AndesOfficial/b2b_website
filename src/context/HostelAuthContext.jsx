@@ -17,7 +17,7 @@ function isVisibleMergedOrder(order) {
   const isRegularRetailOrder = order.type === ORDER_TYPES.REGULAR || order.category === ORDER_CATEGORIES.B2C_RETAIL;
   if (!isRegularRetailOrder) return true;
 
-  return Number(order.amount) > 0;
+  return true;
 }
 
 export function HostelAuthProvider({ children }) {
@@ -111,7 +111,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 5) setIsDataLoaded(true);
+        if (loadedCount >= 4) setIsDataLoaded(true);
       };
 
       const getAllAliases = (canonicalNames) => {
@@ -221,19 +221,9 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
 
       if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
-        const unsubWeb = onSnapshot(
-          collection(db, "orders"),
-          (snapshot) => {
-            setWebsiteOrders(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, "website")));
-            checkAllLoaded();
-          },
-          (error) => {
-            console.error("Website Orders sync error:", error.message);
-            checkAllLoaded();
-          }
-        );
-        activeSubscriptions.push(unsubWeb);
-
+        // "orders" collection is deprecated. All data comes from "cartdetails" and other sources.
+        setWebsiteOrders([]);
+        
         const unsubCart = onSnapshot(
           collection(db, "cartdetails"),
           (snapshot) => {
@@ -247,7 +237,6 @@ export function HostelAuthProvider({ children }) {
         );
         activeSubscriptions.push(unsubCart);
       } else {
-        checkAllLoaded();
         checkAllLoaded();
       }
     });
@@ -266,6 +255,27 @@ export function HostelAuthProvider({ children }) {
     // - b2b_orders stores Hostels & Hotels & Airbnb
     const primaryRecordsMap = new Map();
 
+    const smartMergeOrders = (existing, order) => {
+      const merged = { ...existing, ...order };
+      // Preserve existing valid fields if the incoming order has missing or fallback data
+      if (!order.amount && existing.amount) merged.amount = existing.amount;
+      if ((!order.service || order.service === "Web Store Order" || order.service === "Regular Service" || order.service === "Order") && existing.service) merged.service = existing.service;
+      if (!order.customerNumber && existing.customerNumber) merged.customerNumber = existing.customerNumber;
+      if ((!order.customerName || order.customerName === "Website Customer" || order.customerName === "Regular Customer") && existing.customerName) merged.customerName = existing.customerName;
+      if (!order.address && existing.address) merged.address = existing.address;
+      if (!order.items && existing.items) merged.items = existing.items;
+      if (!order.weight && existing.weight) merged.weight = existing.weight;
+      if (!order.serviceBreakdown || order.serviceBreakdown.length === 0) {
+        if (existing.serviceBreakdown && existing.serviceBreakdown.length > 0) {
+          merged.serviceBreakdown = existing.serviceBreakdown;
+          merged.serviceBreakdownSummary = existing.serviceBreakdownSummary;
+        }
+      }
+      if (!order.deliveryDate && existing.deliveryDate) merged.deliveryDate = existing.deliveryDate;
+      if (!order.channel && existing.channel) merged.channel = existing.channel;
+      return merged;
+    };
+
     // 1. Base Data: Cartdetails
     cartOrders.forEach(order => {
       if (order.status === ORDER_STATUSES.CANCELLED) return;
@@ -277,7 +287,7 @@ export function HostelAuthProvider({ children }) {
       if (order.status === ORDER_STATUSES.CANCELLED) return;
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
-        primaryRecordsMap.set(order.id, { ...existing, ...order });
+        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
       } else {
         primaryRecordsMap.set(order.id, order);
       }
@@ -287,7 +297,7 @@ export function HostelAuthProvider({ children }) {
     b2bOrders.forEach(order => {
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
-        primaryRecordsMap.set(order.id, { ...existing, ...order });
+        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
       } else {
         primaryRecordsMap.set(order.id, order);
       }
@@ -297,7 +307,7 @@ export function HostelAuthProvider({ children }) {
     hostelsOrders.forEach(order => {
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
-        primaryRecordsMap.set(order.id, { ...existing, ...order });
+        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
       } else {
         primaryRecordsMap.set(order.id, order);
       }
@@ -307,11 +317,7 @@ export function HostelAuthProvider({ children }) {
     firestoreEdits.forEach(order => {
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
-        const merged = { ...existing, ...order };
-        if (!order.deliveryDate && existing.deliveryDate) merged.deliveryDate = existing.deliveryDate;
-        if (!order.customerNumber && existing.customerNumber) merged.customerNumber = existing.customerNumber;
-        if (!order.channel && existing.channel) merged.channel = existing.channel;
-        primaryRecordsMap.set(order.id, merged);
+        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
       } else {
         primaryRecordsMap.set(order.id, order);
       }

@@ -11,6 +11,7 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     const regularOrders = orders.filter(
       (o) =>
         o.source === 'cartdetails' ||
+        o.source === 'website' ||
         (o.source === 'admin' && o.type === 'regular')
     );
 

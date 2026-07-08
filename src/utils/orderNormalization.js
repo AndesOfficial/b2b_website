@@ -250,6 +250,8 @@ function normalizeCartServiceName(rawName) {
 function mapCartSelectionSource(source) {
   if (!source) return ORDER_CHANNELS.APP;
   const normalized = String(source).toLowerCase();
+  if (normalized.includes("whatsapp") || normalized.includes("wa")) return ORDER_CHANNELS.WHATSAPP;
+
   // App sources
   if (
     normalized.includes("map") || 
@@ -260,7 +262,6 @@ function mapCartSelectionSource(source) {
   
   if (normalized.includes("gps") || normalized.includes("auto")) return ORDER_CHANNELS.AUTO;
   if (normalized.includes("website")) return ORDER_CHANNELS.WEBSITE;
-  if (normalized.includes("whatsapp")) return ORDER_CHANNELS.WHATSAPP;
   if (normalized.includes("call")) return ORDER_CHANNELS.CALL;
   if (normalized.includes("outlet")) return ORDER_CHANNELS.OUTLET;
   if (normalized.includes("student")) return ORDER_CHANNELS.STUDENT;
@@ -288,6 +289,7 @@ function buildCartServiceBreakdown(rawOrder) {
 
   Object.entries(perKgDetails).forEach(([key, detail]) => {
     if (breakdownMap.has(key)) return;
+    if (key === "items" && Array.isArray(detail)) return; // Skip new schema items array
     const name = normalizeCartServiceName(key);
     breakdownMap.set(key, {
       id: key,
@@ -296,6 +298,47 @@ function buildCartServiceBreakdown(rawOrder) {
       weight: normalizeNumber(detail.weight),
       amount: normalizeNumber(detail.subtotal ?? detail.amount ?? 0),
     });
+  });
+
+  // Support for final 'orders' collection schema
+  const perPieceItems = rawOrder.perPiece?.items || [];
+  const perKgItems = rawOrder.perKg?.items || [];
+
+  perPieceItems.forEach(item => {
+    const name = normalizeCartServiceName(item.name);
+    if (!name) return;
+    if (breakdownMap.has(name)) {
+       const existing = breakdownMap.get(name);
+       existing.quantity += normalizeNumber(item.quantity);
+       existing.amount += normalizeNumber(item.subtotal);
+    } else {
+       breakdownMap.set(name, {
+         id: name,
+         name,
+         quantity: normalizeNumber(item.quantity),
+         weight: 0,
+         amount: normalizeNumber(item.subtotal)
+       });
+    }
+  });
+
+  perKgItems.forEach(item => {
+    const name = normalizeCartServiceName(item.name);
+    if (!name) return;
+    if (breakdownMap.has(name)) {
+       const existing = breakdownMap.get(name);
+       existing.quantity += normalizeNumber(item.quantity);
+       existing.weight += normalizeNumber(item.weight);
+       existing.amount += normalizeNumber(item.subtotal);
+    } else {
+       breakdownMap.set(name, {
+         id: name,
+         name,
+         quantity: normalizeNumber(item.quantity),
+         weight: normalizeNumber(item.weight),
+         amount: normalizeNumber(item.subtotal)
+       });
+    }
   });
 
   return [...breakdownMap.values()].filter((item) => item.name && (item.quantity || item.weight || item.amount));
@@ -345,26 +388,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     source,
   };
 
-  if (source === "website") {
-    normalized.category = ORDER_CATEGORIES.B2C_RETAIL;
-    normalized.type = ORDER_TYPES.REGULAR;
-    normalized.property = "Regular Customers";
-    normalized.channel = ORDER_CHANNELS.WEBSITE;
-    normalized.customerName = rawOrder.userName || rawOrder.customerName || "Website Customer";
-    normalized.customerNumber = rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact";
-    normalized.service = rawOrder.service || (Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order";
-    normalized.items = normalizeNumber(rawOrder.totalItems, Array.isArray(rawOrder.items) ? rawOrder.items.length : normalized.items);
-
-    // If the website order includes a business property/hotel name, use it so B2B clients can filter their own orders.
-    const websiteProperty = getWebsitePropertyCandidate(rawOrder);
-    if (websiteProperty && String(websiteProperty).trim()) {
-      normalized.property = normalizePropertyName(websiteProperty);
-      normalized.category = inferCategoryFromProperty(normalized.property);
-      normalized.type = getTypeForCategory(normalized.category);
-    }
-  }
-
-  if (source === "cartdetails") {
+  if (source === "website" || source === "cartdetails") {
     const breakdown = buildCartServiceBreakdown(rawOrder);
     const summaryParts = breakdown.map((item) => {
       const metrics = [
@@ -379,37 +403,60 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.category = ORDER_CATEGORIES.B2C_RETAIL;
     normalized.type = ORDER_TYPES.REGULAR;
     normalized.property = "Regular Customers";
-    normalized.channel = mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel);
+    normalized.channel = mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : ""));
     normalized.serviceBreakdown = breakdown;
     normalized.serviceBreakdownSummary = summaryParts.join(", ");
-    const firstService = breakdown[0]?.name || "Regular Service";
+    
+    // For website orders, we might want a slightly different fallback name
+    const fallbackCustomer = source === "website" ? "Website Customer" : "Regular Customer";
+    
+    // Fallback for service name if breakdown is empty
+    const firstService = breakdown[0]?.name || (source === "website" ? "Web Store Order" : "Regular Service");
     normalized.service = breakdown.length <= 1 ? firstService : `${firstService} + ${breakdown.length - 1} more`;
+    
+    // If the legacy items array was used instead of services map, append its items
+    if (Array.isArray(rawOrder.items) && breakdown.length === 0) {
+      normalized.service = rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") || firstService;
+      normalized.items = normalizeNumber(rawOrder.totalItems, rawOrder.items.length);
+    }
+
+    const amountFromBreakdown = breakdown.reduce((sum, item) => sum + (item.amount || 0), 0);
     normalized.amount = firstPositiveNumber(
       rawOrder.totalCost,
       rawOrder.totalWithFee,
       rawOrder.originalTotalCost,
       rawOrder.originalAmount,
       rawOrder.amount,
+      rawOrder.total,
+      rawOrder.paymentData?.totalWithFee,
+      rawOrder.paymentData?.originalAmount,
+      amountFromBreakdown
     );
     const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
+    if (!normalized.items || normalized.items === 0) {
+       normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
+    }
     const weightFromBreakdown = breakdown.reduce((sum, item) => sum + (item.weight || 0), 0);
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, weightFromBreakdown);
     normalized.status = normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus || rawOrder.paymentStatus);
+    
     if (cartCreatedDate) {
       normalized.date = normalizeDate(cartCreatedDate);
     }
-    normalized.customerName = (rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
-    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerPhone || rawOrder.userPhone || "";
+    
+    normalized.customerName = (rawOrder.userName || rawOrder.customerName || fallbackCustomer).trim();
+    // Added userMobile since cartdetails/website orders often use it
+    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerPhone || rawOrder.userPhone || rawOrder.phoneNumber || "";
     normalized.details = normalized.details || rawOrder.breakdown || {};
+    
     const addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || "";
     normalized.address = addressCandidate ? addressCandidate.trim() : "";
     normalized.deliveryDate = rawOrder.deliveryDate || rawOrder.dropTime || "";
 
-    // Some cart records can be created for B2B hotel/hostel partners; if so, respect the provided property name.
-    const cartProperty = getWebsitePropertyCandidate(rawOrder);
-    if (cartProperty && String(cartProperty).trim()) {
-      normalized.property = normalizePropertyName(cartProperty);
+    // Some cart/website records can be created for B2B hotel/hostel partners; if so, respect the provided property name.
+    const propertyCandidate = getWebsitePropertyCandidate(rawOrder);
+    if (propertyCandidate && String(propertyCandidate).trim()) {
+      normalized.property = normalizePropertyName(propertyCandidate);
       normalized.category = inferCategoryFromProperty(normalized.property);
       normalized.type = getTypeForCategory(normalized.category);
     }
