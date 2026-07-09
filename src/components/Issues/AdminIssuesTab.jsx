@@ -294,14 +294,10 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
                     <p className="text-[12px] text-emerald-800 font-medium italic select-none">Resolution: {issue.solution}</p>
                   </div>
                 )}
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
+                <div className="mt-3 flex items-center gap-4 text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
                   <span>{issue.date}</span>
                   {issue.reportedBy && <span className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full bg-gray-300" /> reported by {issue.reportedBy}</span>}
                   {issue.linkedHostel && <span className="flex items-center gap-1.5 text-blue-500"><div className="w-1 h-1 rounded-full bg-blue-300" /> {issue.linkedHostel}</span>}
-                  {issue.customerName && issue.customerName !== issue.reportedBy && <span className="flex items-center gap-1.5 text-fuchsia-500"><div className="w-1 h-1 rounded-full bg-fuchsia-300" /> student: {issue.customerName}</span>}
-                  {issue.pickupDate && <span className="flex items-center gap-1.5 text-teal-500"><div className="w-1 h-1 rounded-full bg-teal-300" /> picked: {issue.pickupDate}</span>}
-                  {issue.deliveryDate && <span className="flex items-center gap-1.5 text-orange-500"><div className="w-1 h-1 rounded-full bg-orange-300" /> delivered: {issue.deliveryDate}</span>}
-                  {issue.linkedOrderId && <span className="flex items-center gap-1.5 text-indigo-500"><div className="w-1 h-1 rounded-full bg-indigo-300" /> Order ID: {issue.linkedOrderId}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
