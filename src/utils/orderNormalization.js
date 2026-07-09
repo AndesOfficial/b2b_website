@@ -538,7 +538,14 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   if (source === "hostels") {
     normalized.category = ORDER_CATEGORIES.STUDENT_LAUNDRY;
     normalized.type = ORDER_TYPES.STUDENT;
-    normalized.items = firstPositiveNumber(rawOrder.clothesCount, rawOrder.clothes, normalized.items);
+    
+    // Extract both claimed and verified counts to show discrepancy
+    normalized.claimedItems = normalizeNumber(rawOrder.clothes);
+    normalized.verifiedItems = normalizeNumber(rawOrder.clothesCount);
+    
+    // Fallback logic: verified first, then claimed, then items
+    normalized.items = firstPositiveNumber(normalized.verifiedItems, normalized.claimedItems, normalized.items);
+    
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, normalized.weight);
     normalized.customerName = rawOrder.userName || normalized.customerName;
     normalized.customerNumber = rawOrder.userMobile || normalized.customerNumber;
@@ -550,6 +557,12 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
 
   if (normalized.category === ORDER_CATEGORIES.ISSUES) {
     normalized.type = ORDER_TYPES.ISSUE;
+  }
+
+  // FORCE merge any legacy "Student Direct Orders" into "Student Laundry (B2B)"
+  if (normalized.category === ORDER_CATEGORIES.INDIVIDUAL_STUDENT) {
+    normalized.category = ORDER_CATEGORIES.STUDENT_LAUNDRY;
+    normalized.type = ORDER_TYPES.STUDENT;
   }
 
   return normalized;
