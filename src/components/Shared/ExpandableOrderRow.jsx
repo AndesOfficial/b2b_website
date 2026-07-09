@@ -131,18 +131,18 @@ export default function ExpandableOrderRow({ order, showProperty = false, viewMo
         <div className={`flex flex-col gap-1.5 ${alignRight ? "items-end" : "items-start"}`}>
           {isDiscrepancy ? (
             <>
-              <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm opacity-90" title="Claimed by Student">
-                <FiShoppingBag size={11} /> <span className="line-through">{claimed}</span> <span className="text-[9px] font-semibold tracking-wide">(CLAIMED)</span>
+              <span className="inline-flex items-center gap-1 bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm opacity-90" title="Reported by User">
+                <FiShoppingBag size={11} /> <span className="line-through">{claimed}</span> <span className="text-[9px] font-semibold tracking-wide">(USER INPUT)</span>
               </span>
               <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm" title="Verified by Rider">
-                <FiShoppingBag size={12} /> {verified} <span className="text-[9px] text-green-600 font-semibold tracking-wide ml-0.5">(VERIFIED)</span>
+                <FiShoppingBag size={12} /> {verified} <span className="text-[9px] text-green-600 font-semibold tracking-wide ml-0.5">(RIDER INPUT)</span>
               </span>
             </>
           ) : (
-            <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm" title={verified > 0 ? "Verified by Rider" : "Claimed by Student"}>
+            <span className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 text-gray-700 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm" title={verified > 0 ? "Verified by Rider" : "Reported by User"}>
               <FiShoppingBag size={12} className={verified > 0 ? "text-green-600" : "text-blue-600 opacity-80"} /> 
               {verified > 0 ? verified : claimed}
-              {verified > 0 && <span className="text-[9px] text-green-600 font-bold ml-1 border-l border-gray-300 pl-1 uppercase tracking-wide">Verified</span>}
+              {verified > 0 && <span className="text-[9px] text-green-600 font-bold ml-1 border-l border-gray-300 pl-1 uppercase tracking-wide">RIDER VERIFIED</span>}
             </span>
           )}
         </div>
