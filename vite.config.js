@@ -10,8 +10,8 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          'vendor-ui': ['react-icons', 'recharts', 'lucide-react', 'framer-motion'],
-          'vendor-utils': ['jspdf', 'html2canvas', 'date-fns']
+          'vendor-ui': ['react-icons', 'recharts', 'lucide-react'],
+          'vendor-utils': ['jspdf', 'jspdf-autotable', 'exceljs', 'jszip']
         }
       }
     },
