@@ -40,6 +40,8 @@ export const CANONICAL_PROPERTY_NAMES = {
   // Gurukul
   gurukul: "Gurukul",
   "gurukul hostel": "Gurukul",
+  "gurukul hostel bhavdan": "Gurukul",
+  "gurukul hostel bavdhan": "Gurukul",
 
   // Keerti
   kirti: "Keerti",
@@ -371,7 +373,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     property,
     ...(rawOrder.createdAt !== undefined ? { createdAtRaw: rawOrder.createdAt } : {}),
     ...(rawOrder.updatedAt !== undefined ? { updatedAtRaw: rawOrder.updatedAt } : {}),
-    date: normalizeDate(rawOrder.date || rawOrder.createdAt),
+    date: normalizeDate(rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : (rawOrder.date || rawOrder.createdAt)),
     amount: firstPositiveNumber(rawOrder.amount, rawOrder.totalPrice),
     items: normalizeNumber(rawOrder.items ?? rawOrder.clothes, itemsFromPartnerMap),
     weight: normalizeNumber(rawOrder.weight),
@@ -388,7 +390,29 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     source,
   };
 
-  if (source === "website" || source === "cartdetails") {
+  if (source === "website") {
+    normalized.category = ORDER_CATEGORIES.B2C_RETAIL;
+    normalized.type = ORDER_TYPES.REGULAR;
+    normalized.property = "Regular Customers";
+    normalized.channel = ORDER_CHANNELS.WEBSITE;
+    normalized.customerName = rawOrder.userName || rawOrder.customerName || "Website Customer";
+    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact";
+    normalized.service = rawOrder.service || (Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order";
+    normalized.items = normalizeNumber(rawOrder.totalItems, Array.isArray(rawOrder.items) ? rawOrder.items.length : normalized.items);
+    if (!normalized.items || normalized.items === 0) {
+      normalized.items = normalizeNumber(rawOrder.clothesCount, normalized.items);
+    }
+
+    // If the website order includes a business property/hotel name, use it so B2B clients can filter their own orders.
+    const websiteProperty = getWebsitePropertyCandidate(rawOrder);
+    if (websiteProperty && String(websiteProperty).trim()) {
+      normalized.property = normalizePropertyName(websiteProperty);
+      normalized.category = inferCategoryFromProperty(normalized.property);
+      normalized.type = getTypeForCategory(normalized.category);
+    }
+  }
+
+  if (source === "cartdetails") {
     const breakdown = buildCartServiceBreakdown(rawOrder);
     const summaryParts = breakdown.map((item) => {
       const metrics = [
@@ -398,28 +422,16 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       return `${item.name}${metrics ? ` (${metrics})` : ""}`;
     }).filter(Boolean);
 
-    const cartCreatedDate = rawOrder.createdAt || (rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : undefined);
+    const cartCreatedDate = rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : rawOrder.createdAt;
 
     normalized.category = ORDER_CATEGORIES.B2C_RETAIL;
     normalized.type = ORDER_TYPES.REGULAR;
     normalized.property = "Regular Customers";
-    normalized.channel = mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : ""));
+    normalized.channel = mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel);
     normalized.serviceBreakdown = breakdown;
     normalized.serviceBreakdownSummary = summaryParts.join(", ");
-    
-    // For website orders, we might want a slightly different fallback name
-    const fallbackCustomer = source === "website" ? "Website Customer" : "Regular Customer";
-    
-    // Fallback for service name if breakdown is empty
-    const firstService = breakdown[0]?.name || (source === "website" ? "Web Store Order" : "Regular Service");
+    const firstService = breakdown[0]?.name || "Regular Service";
     normalized.service = breakdown.length <= 1 ? firstService : `${firstService} + ${breakdown.length - 1} more`;
-    
-    // If the legacy items array was used instead of services map, append its items
-    if (Array.isArray(rawOrder.items) && breakdown.length === 0) {
-      normalized.service = rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") || firstService;
-      normalized.items = normalizeNumber(rawOrder.totalItems, rawOrder.items.length);
-    }
-
     const amountFromBreakdown = breakdown.reduce((sum, item) => sum + (item.amount || 0), 0);
     normalized.amount = firstPositiveNumber(
       rawOrder.totalCost,
@@ -433,8 +445,9 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       amountFromBreakdown
     );
     const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
     if (!normalized.items || normalized.items === 0) {
-       normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
+      normalized.items = normalizeNumber(Array.isArray(rawOrder.items) ? rawOrder.items.length : 0);
     }
     const weightFromBreakdown = breakdown.reduce((sum, item) => sum + (item.weight || 0), 0);
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, weightFromBreakdown);
@@ -444,9 +457,16 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalized.date = normalizeDate(cartCreatedDate);
     }
     
-    normalized.customerName = (rawOrder.userName || rawOrder.customerName || fallbackCustomer).trim();
-    // Added userMobile since cartdetails/website orders often use it
-    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerPhone || rawOrder.userPhone || rawOrder.phoneNumber || "";
+    normalized.customerName = (rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
+    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "";
+    
+    // Flag empty carts
+    if (normalized.amount === 0 && (!normalized.items || normalized.items === 0) && (!normalized.weight || normalized.weight === 0)) {
+      normalized.category = "ABANDONED_CART";
+      normalized.type = "abandoned";
+      normalized.status = "Abandoned";
+    }
+    
     normalized.details = normalized.details || rawOrder.breakdown || {};
     
     const addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || "";
@@ -516,7 +536,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   }
 
   if (source === "hostels") {
-    normalized.category = ORDER_CATEGORIES.INDIVIDUAL_STUDENT;
+    normalized.category = ORDER_CATEGORIES.STUDENT_LAUNDRY;
     normalized.type = ORDER_TYPES.STUDENT;
     normalized.items = firstPositiveNumber(rawOrder.clothesCount, rawOrder.clothes, normalized.items);
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, normalized.weight);
