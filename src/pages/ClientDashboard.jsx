@@ -118,7 +118,10 @@ export default function ClientDashboard() {
   const [issueForm, setIssueForm] = useState({
     property: clientProperties[0] || "",
     issueType: "Missing Items",
-    description: ""
+    description: "",
+    studentName: "",
+    pickupDate: "",
+    deliveryDate: ""
   });
 
   // Keep issue form in sync if client properties load late
@@ -309,7 +312,9 @@ export default function ClientDashboard() {
       resolveStatus: "Unresolved",
       status: "Pending",
       reportedBy: client.name,
-      customerName: client.name,
+      customerName: issueForm.studentName || client.name,
+      pickupDate: issueForm.pickupDate,
+      deliveryDate: issueForm.deliveryDate,
       items: 0,
       weight: 0,
       amount: 0
@@ -317,7 +322,7 @@ export default function ClientDashboard() {
 
     await addIssue(newIssue);
     setShowIssueModal(false);
-    setIssueForm({ ...issueForm, description: "" });
+    setIssueForm({ ...issueForm, description: "", studentName: "", pickupDate: "", deliveryDate: "" });
   };
 
   return (
@@ -713,6 +718,38 @@ export default function ClientDashboard() {
                     <option value="Weight Dispute">Weight Dispute</option>
                     <option value="Bags Pending">Bags Pending</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Customer / Student Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={issueForm.studentName}
+                    onChange={(e) => setIssueForm({ ...issueForm, studentName: e.target.value })}
+                    placeholder="E.g., Rahul Kumar"
+                    className="w-full rounded-xl border border-gray-200 text-sm px-4 py-2.5 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Pickup Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={issueForm.pickupDate}
+                      onChange={(e) => setIssueForm({ ...issueForm, pickupDate: e.target.value })}
+                      className="w-full rounded-xl border border-gray-200 text-sm px-4 py-2.5 focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">Delivery Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={issueForm.deliveryDate}
+                      onChange={(e) => setIssueForm({ ...issueForm, deliveryDate: e.target.value })}
+                      className="w-full rounded-xl border border-gray-200 text-sm px-4 py-2.5 focus:outline-none focus:border-red-500"
+                    />
+                  </div>
                 </div>
 
                 <div>
