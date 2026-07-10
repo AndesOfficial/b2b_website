@@ -217,7 +217,6 @@ export function HostelAuthProvider({ children }) {
       };
 
       setupCollectionListener("b2b_admin_edits", "admin", setFirestoreEdits);
-      setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
 
       if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {

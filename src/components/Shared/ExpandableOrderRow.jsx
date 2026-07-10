@@ -187,6 +187,16 @@ export default function ExpandableOrderRow({ order, showProperty = false, viewMo
           </>
         ) : (
           <>
+            <td className="px-4 py-3 text-xs text-gray-500">
+              {order.customerName || order.customerNumber ? (
+                <>
+                  <span className="block font-bold text-gray-800">{order.customerName || "N/A"}</span>
+                  <span className="block text-gray-400">{order.customerNumber || ""}</span>
+                </>
+              ) : (
+                 <span className="block text-gray-400">—</span>
+              )}
+            </td>
             <td className="px-4 py-3">
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
@@ -248,7 +258,7 @@ export default function ExpandableOrderRow({ order, showProperty = false, viewMo
       {/* Expanded detail panel */}
       {open && (
         <tr className="bg-gradient-to-br from-brand-50/40 to-white">
-          <td colSpan={showProperty ? (viewMode === "student" ? 7 : 8) : (viewMode === "student" ? 6 : 7)} className="px-6 py-5">
+          <td colSpan={showProperty ? (viewMode === "student" ? 7 : 9) : (viewMode === "student" ? 6 : 8)} className="px-6 py-5">
             {/* Key metrics row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
               <MetricCard label="Property" value={order.property} />
@@ -260,8 +270,7 @@ export default function ExpandableOrderRow({ order, showProperty = false, viewMo
                       (order.status === "Pending" || !order.status) ? "text-amber-600" : "text-gray-600"
                 }
               />
-              {order.customerName ? <MetricCard label="Customer" value={order.customerName} /> : null}
-              {order.customerNumber ? <MetricCard label="Phone" value={order.customerNumber} /> : null}
+
               {order.issueType ? <MetricCard label="Issue Type" value={order.issueType} /> : null}
               {order.reportedBy ? <MetricCard label="Reported By" value={order.reportedBy} /> : null}
               {order.solution ? <MetricCard label="Solution" value={order.solution} /> : null}

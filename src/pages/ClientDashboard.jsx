@@ -641,6 +641,7 @@ export default function ClientDashboard() {
                   {isGroup && (
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Property</th>
                   )}
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1.5"><FiShoppingBag size={13} className="text-gray-400" /> {isTreeboClient ? "Pieces" : "Clothes"}</div>
