@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiMenu, FiUpload, FiUsers, FiSave, FiCheck, FiAlertCircle, FiX, FiDatabase } from "react-icons/fi";
+import { FiMenu, FiUpload, FiUsers, FiSave, FiCheck, FiAlertCircle, FiX, FiDatabase, FiEdit2 } from "react-icons/fi";
 import * as XLSX from "xlsx";
-import { collection, getDocs, writeBatch, doc, Timestamp, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, writeBatch, doc, getDoc, setDoc, Timestamp, query, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { db, auth } from "../firebase";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const COLLECTION = "meta_ads_leads";
+const COLLECTION        = "meta_ads_leads";
+const SETTINGS_DOC      = "meta_ads_settings/config"; // stores admin-entered values like CPC
 
 // Well-known statuses get hand-picked, consistent colours.
 // Any unknown status is automatically assigned a unique colour via hash.
@@ -90,6 +91,12 @@ export default function AdminMetaAdsLeads() {
   const [toast,              setToast]                 = useState(null);   // { type, message }
   const [skippedCount,       setSkippedCount]          = useState(0);
 
+  // CPC state
+  const [cpc,         setCpc]         = useState(null);   // stored value from Firestore
+  const [cpcInput,    setCpcInput]    = useState("");      // editing input value
+  const [isEditingCpc, setIsEditingCpc] = useState(false);
+  const [isSavingCpc,  setIsSavingCpc]  = useState(false);
+
   // ── Sidebar resize ──────────────────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
@@ -108,9 +115,16 @@ export default function AdminMetaAdsLeads() {
     unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) { setIsLoadingDb(false); return; }
       try {
+        // Load leads
         const snap = await getDocs(query(collection(db, COLLECTION), orderBy("uploadedAt", "desc")));
         const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setSavedData(rows);
+
+        // Load CPC setting
+        const settingsSnap = await getDoc(doc(db, SETTINGS_DOC));
+        if (settingsSnap.exists() && settingsSnap.data().cpc != null) {
+          setCpc(settingsSnap.data().cpc);
+        }
       } catch (err) {
         console.error("Failed to load meta_ads_leads:", err);
       } finally {
@@ -119,6 +133,25 @@ export default function AdminMetaAdsLeads() {
     });
     return () => unsubAuth();
   }, []);
+
+  // ── Save CPC to Firestore ───────────────────────────────────────────────
+  const handleSaveCpc = async () => {
+    const val = parseFloat(cpcInput);
+    if (isNaN(val) || val < 0) return;
+    setIsSavingCpc(true);
+    try {
+      await setDoc(doc(db, SETTINGS_DOC), { cpc: val }, { merge: true });
+      setCpc(val);
+      setIsEditingCpc(false);
+      setCpcInput("");
+      showToast("success", `Cost per click updated to ₹${val.toFixed(2)}`);
+    } catch (err) {
+      console.error("CPC save error:", err);
+      showToast("error", "Failed to save CPC. Check your permissions.");
+    } finally {
+      setIsSavingCpc(false);
+    }
+  };
 
   // ── Sidebar tab routing ─────────────────────────────────────────────────
   const handleSidebarTabChange = useCallback((tab) => {
@@ -305,6 +338,17 @@ export default function AdminMetaAdsLeads() {
 
   const displayData = activeView === "preview" ? previewData : savedData;
 
+  // ── KPI stats — computed from saved DB data only ──────────────────────
+  const kpiStats = useMemo(() => {
+    const total = savedData.length;
+    const statusCounts = {};
+    savedData.forEach(lead => {
+      const s = lead.status || "Unknown";
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    });
+    return { total, statusCounts };
+  }, [savedData]);
+
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
@@ -436,6 +480,79 @@ export default function AdminMetaAdsLeads() {
 
         {/* ── Main Content ── */}
         <div className="flex flex-1 flex-col p-4 lg:p-8">
+
+          {/* ── KPI Cards — shown only in saved view ── */}
+          {activeView === "saved" && !isLoadingDb && (
+            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+
+              {/* Total Impressions */}
+              <div className="flex flex-col justify-between rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-600 to-indigo-600 p-5 shadow-sm shadow-blue-200 min-w-[180px]">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-200">Total Impressions</p>
+                <p className="mt-3 text-4xl font-black text-white leading-none">
+                  {kpiStats.total > 0 ? kpiStats.total.toLocaleString() : "—"}
+                </p>
+                <p className="mt-2 text-[11px] font-semibold text-blue-200">Leads from Meta Ads</p>
+              </div>
+
+              {/* Cost Per Click — admin editable */}
+              <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm min-w-[180px] relative group">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Cost Per Click</p>
+                  {!isEditingCpc && (
+                    <button
+                      onClick={() => { setIsEditingCpc(true); setCpcInput(cpc != null ? String(cpc) : ""); }}
+                      title="Edit CPC"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <FiEdit2 size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {isEditingCpc ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-slate-400 font-black text-lg">₹</span>
+                    <input
+                      autoFocus
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={cpcInput}
+                      onChange={e => setCpcInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveCpc(); if (e.key === "Escape") setIsEditingCpc(false); }}
+                      className="w-24 border-b-2 border-blue-500 bg-transparent text-2xl font-black text-slate-900 focus:outline-none"
+                      placeholder="0.00"
+                    />
+                    <button
+                      onClick={handleSaveCpc}
+                      disabled={isSavingCpc}
+                      className="ml-1 flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isSavingCpc
+                        ? <span className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                        : <FiCheck size={12} />}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setIsEditingCpc(false)}
+                      className="p-1 text-slate-400 hover:text-slate-600"
+                    >
+                      <FiX size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-4xl font-black text-slate-900 leading-none">
+                    {cpc != null ? `₹${Number(cpc).toFixed(2)}` : <span className="text-slate-300 text-2xl">Not set</span>}
+                  </p>
+                )}
+
+                <p className="mt-2 text-[11px] font-semibold text-slate-400">
+                  {cpc != null ? "Hover card to edit" : "Click ✏ to set value"}
+                </p>
+              </div>
+
+            </div>
+          )}
 
           {/* Info banner for preview mode */}
           {activeView === "preview" && previewData.length > 0 && (
