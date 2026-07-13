@@ -111,7 +111,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 4) setIsDataLoaded(true);
+        if (loadedCount >= 3) setIsDataLoaded(true);
       };
 
       const getAllAliases = (canonicalNames) => {
