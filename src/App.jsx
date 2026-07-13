@@ -11,6 +11,7 @@ import Calculator from "./pages/Calculator";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientCategoryOrders from "./pages/ClientCategoryOrders";
 import ClientOrderDetail from "./pages/ClientOrderDetail";
+import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
           <Route path="/admin/investors" element={<AdminRoute><InvestorDashboard /></AdminRoute>} />
           <Route path="/admin/calculator" element={<AdminRoute><Calculator /></AdminRoute>} />
+          <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
 
           {/* Client Portal */}
           <Route path="/client/dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />

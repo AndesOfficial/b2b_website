@@ -91,6 +91,11 @@ export default function AdminDashboard() {
       navigate("/admin/calculator");
       return;
     }
+    if (tab === "metaleads") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/meta-leads");
+      return;
+    }
 
     setActiveTab(tab);
     setIsMobileMenuOpen(false);

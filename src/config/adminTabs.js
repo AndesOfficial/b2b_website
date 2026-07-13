@@ -94,6 +94,16 @@ export const ADMIN_TAB_CONFIG = {
     showKpis: false,
     kpiColumnsClass: "",
   },
+  metaleads: {
+    key: "metaleads",
+    title: "Meta Ads Leads",
+    navLabel: "Meta Leads",
+    navIcon: FiUsers,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
 };
 
 export const ADMIN_SIDEBAR_TABS = Object.values(ADMIN_TAB_CONFIG).filter((tab) => tab.showSidebar);
