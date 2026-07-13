@@ -42,7 +42,7 @@ export function normalizeOrderStatus(status) {
   if (["paid", "shipped", "confirmed"].includes(normalized)) return ORDER_STATUSES.CONFIRMED;
   if (normalized === "resolved") return ORDER_STATUSES.RESOLVED;
   if (["cancelled", "canceled"].includes(normalized)) return ORDER_STATUSES.CANCELLED;
-  return status || ORDER_STATUSES.PENDING;
+  return (typeof status === 'string' && status) ? status : ORDER_STATUSES.PENDING;
 }
 
 export function getOrderTypeLabel(type) {

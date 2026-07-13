@@ -378,15 +378,15 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     items: normalizeNumber(rawOrder.items ?? rawOrder.clothes, itemsFromPartnerMap),
     weight: normalizeNumber(rawOrder.weight),
     studentCount: normalizeNumber(rawOrder.studentCount),
-    category: rawOrder.category || inferredCategory,
-    type: rawOrder.type || inferredType,
+    category: typeof rawOrder.category === 'string' ? rawOrder.category : (typeof inferredCategory === 'string' ? inferredCategory : ""),
+    type: typeof rawOrder.type === 'string' ? rawOrder.type : (typeof inferredType === 'string' ? inferredType : ""),
     status: normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus),
     details: normalizeDetails(rawOrder),
-    customerName: rawOrder.customerName || rawOrder.userName || "",
-    customerNumber: rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "",
+    customerName: String(rawOrder.customerName || rawOrder.userName || "").trim(),
+    customerNumber: String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim(),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
-    deliveryDate: rawOrder.deliveryDate || rawOrder.dropTime || "",
-    service: rawOrder.service || "Order",
+    deliveryDate: (rawOrder.deliveryDate && typeof rawOrder.deliveryDate === 'object' && rawOrder.deliveryDate.toDate) ? normalizeDate(rawOrder.deliveryDate) : String(rawOrder.deliveryDate || rawOrder.dropTime || "").trim(),
+    service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",
     source,
   };
 
@@ -395,9 +395,9 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.type = ORDER_TYPES.REGULAR;
     normalized.property = "Regular Customers";
     normalized.channel = ORDER_CHANNELS.WEBSITE;
-    normalized.customerName = rawOrder.userName || rawOrder.customerName || "Website Customer";
-    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact";
-    normalized.service = rawOrder.service || (Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order";
+    normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Website Customer").trim();
+    normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact").trim();
+    normalized.service = (typeof rawOrder.service === 'string' && rawOrder.service) ? rawOrder.service : ((Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order");
     normalized.items = normalizeNumber(rawOrder.totalItems, Array.isArray(rawOrder.items) ? rawOrder.items.length : normalized.items);
     if (!normalized.items || normalized.items === 0) {
       normalized.items = normalizeNumber(rawOrder.clothesCount, normalized.items);
@@ -457,8 +457,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalized.date = normalizeDate(cartCreatedDate);
     }
     
-    normalized.customerName = (rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
-    normalized.customerNumber = rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "";
+    normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
+    normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim();
     
     // Flag empty carts
     if (normalized.amount === 0 && (!normalized.items || normalized.items === 0) && (!normalized.weight || normalized.weight === 0)) {
@@ -471,7 +471,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     
     const addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || "";
     normalized.address = addressCandidate ? addressCandidate.trim() : "";
-    normalized.deliveryDate = rawOrder.deliveryDate || rawOrder.dropTime || "";
+    const dDate = rawOrder.deliveryDate || rawOrder.dropTime;
+    normalized.deliveryDate = (dDate && typeof dDate === "object" && dDate.toDate) ? normalizeDate(dDate) : String(dDate || "").trim();
 
     // Some cart/website records can be created for B2B hotel/hostel partners; if so, respect the provided property name.
     const propertyCandidate = getWebsitePropertyCandidate(rawOrder);
@@ -547,8 +548,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.items = firstPositiveNumber(normalized.verifiedItems, normalized.claimedItems, normalized.items);
     
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, normalized.weight);
-    normalized.customerName = rawOrder.userName || normalized.customerName;
-    normalized.customerNumber = rawOrder.userMobile || normalized.customerNumber;
+    normalized.customerName = String(rawOrder.userName || normalized.customerName).trim();
+    normalized.customerNumber = String(rawOrder.userMobile || normalized.customerNumber).trim();
     normalized.studentCount = 1; // Each individual hostel order represents 1 student
     if (rawOrder.room) {
       normalized.service = `Room: ${rawOrder.room}`;
