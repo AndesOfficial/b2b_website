@@ -131,13 +131,13 @@ export function normalizeDate(raw) {
   if (typeof raw === "string") {
     const trimmed = raw.trim();
     // Check for DD/MM/YYYY or DD-MM-YYYY
-    const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+    const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
     if (dmyMatch) {
       const [, day, month, year] = dmyMatch;
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
     // Check for YYYY-MM-DD or YYYY-MM-DD...
-    const ymdMatch = trimmed.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    const ymdMatch = trimmed.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
     if (ymdMatch) {
       const [, year, month, day] = ymdMatch;
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
@@ -433,17 +433,61 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     const firstService = breakdown[0]?.name || "Regular Service";
     normalized.service = breakdown.length <= 1 ? firstService : `${firstService} + ${breakdown.length - 1} more`;
     const amountFromBreakdown = breakdown.reduce((sum, item) => sum + (item.amount || 0), 0);
-    normalized.amount = firstPositiveNumber(
-      rawOrder.totalCost,
-      rawOrder.totalWithFee,
-      rawOrder.originalTotalCost,
-      rawOrder.originalAmount,
-      rawOrder.amount,
-      rawOrder.total,
-      rawOrder.paymentData?.totalWithFee,
-      rawOrder.paymentData?.originalAmount,
-      amountFromBreakdown
-    );
+
+    // ── Context-aware Amount Resolution ──────────────────────────────────────
+    // Two distinct schemas exist in cartdetails:
+    //
+    //  WEIGHED order (service items confirmed):
+    //    breakdown.perKg.items or perPiece.items have entries with amounts.
+    //    → totalCost = actual service cost (most reliable)
+    //
+    //  UNWEIGHED order (rider hasn't collected/weighed yet):
+    //    breakdown.perKg.items AND perPiece.items are BOTH empty arrays.
+    //    → totalCost = delivery surcharge placeholder ONLY (e.g. ₹10 distance fee)
+    //    → paymentData.totalWithFee = the customer-agreed estimated price (₹99)
+    //
+    // Sujal example: totalCost=10 (delivery only), paymentData.totalWithFee=99 → show ₹99
+    // Atharv example: totalCost=0 (wallet), paymentData.totalWithFee=0, originalAmount=79 → show ₹79
+    const rawBdPerKgItems   = rawOrder.breakdown?.perKg?.items;
+    const rawBdPerPieceItems = rawOrder.breakdown?.perPiece?.items;
+    const hasBreakdownServiceItems =
+      (Array.isArray(rawBdPerKgItems)   && rawBdPerKgItems.length   > 0) ||
+      (Array.isArray(rawBdPerPieceItems) && rawBdPerPieceItems.length > 0);
+
+    const bdTotal        = normalizeNumber(rawOrder.breakdown?.total);
+    const chargesSubtotal = normalizeNumber(rawOrder.breakdown?.fees?.chargesSubtotal);
+
+    if (hasBreakdownServiceItems) {
+      // Clothes have been weighed/counted — totalCost is the confirmed service cost.
+      normalized.amount = firstPositiveNumber(
+        rawOrder.totalCost,
+        rawOrder.originalTotalCost,
+        bdTotal,
+        rawOrder.amount,
+        rawOrder.paymentData?.totalWithFee,
+        rawOrder.paymentData?.originalAmount,
+        rawOrder.totalWithFee,
+        rawOrder.originalAmount,
+        rawOrder.total,
+        amountFromBreakdown > 0 ? amountFromBreakdown : chargesSubtotal
+      );
+    } else {
+      // Clothes NOT yet weighed — totalCost is only the delivery surcharge.
+      // Customer-agreed price is in paymentData.totalWithFee (or originalAmount for wallet orders).
+      normalized.amount = firstPositiveNumber(
+        rawOrder.paymentData?.totalWithFee,
+        rawOrder.paymentData?.originalAmount,
+        rawOrder.totalCost,
+        rawOrder.originalTotalCost,
+        bdTotal,
+        rawOrder.amount,
+        rawOrder.totalWithFee,
+        rawOrder.originalAmount,
+        rawOrder.total,
+        amountFromBreakdown > 0 ? amountFromBreakdown : chargesSubtotal
+      );
+    }
+
     const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
     normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
     if (!normalized.items || normalized.items === 0) {
@@ -460,8 +504,37 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
     normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim();
     
-    // Flag empty carts
-    if (normalized.amount === 0 && (!normalized.items || normalized.items === 0) && (!normalized.weight || normalized.weight === 0)) {
+    // ── Rider Tracking Record Detection ──────────────────────────────────────
+    // The `cartdetails` collection contains two types of documents:
+    //   1. Real customer orders: have `breakdown`, `paymentData`, `totalCost` / `originalTotalCost`
+    //   2. Rider tracking records: created by riders during pickup, have NONE of the above.
+    //      Their `services` map only contains `{ servicesConfirmed: false }` (a boolean flag).
+    // Rider records must NOT count as B2C orders in any metric.
+    const hasCustomerPaymentData = !!(rawOrder.breakdown || rawOrder.paymentData ||
+      rawOrder.totalCost || rawOrder.originalTotalCost);
+    const hasNumericServices = rawOrder.services &&
+      !Array.isArray(rawOrder.services) &&
+      Object.entries(rawOrder.services).some(([, v]) => typeof v === 'number' && v > 0);
+
+    if (!hasCustomerPaymentData && !hasNumericServices) {
+      // This is a rider tracking / ops record — not a customer order.
+      normalized.category = "RIDER_TRACKING";
+      normalized.type = "rider_tracking";
+      normalized.status = rawOrder.status || "Tracking";
+      return normalized; // Skip all further B2C processing
+    }
+
+    // ── Flag genuinely empty/abandoned carts ─────────────────────────────────
+    // Check ALL available quantity/weight signals to avoid mis-classifying
+    // wallet-covered (totalCost=0) or coupon-zeroed orders.
+    const hasAnyItems =
+      normalized.items > 0 ||
+      normalized.weight > 0 ||
+      normalizeNumber(rawOrder.totalItems) > 0 ||
+      normalizeNumber(rawOrder.clothesWeightKg) > 0 ||
+      normalizeNumber(rawOrder.clothesCount) > 0 ||
+      hasNumericServices; // Only counts keys with numeric values > 0
+    if (normalized.amount === 0 && !hasAnyItems) {
       normalized.category = "ABANDONED_CART";
       normalized.type = "abandoned";
       normalized.status = "Abandoned";

@@ -85,7 +85,12 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     }))
   );
 
-  const b2cOrders = orders.filter((o) => o.type === "regular" || o.source === "cartdetails" || o.source === "website");
+  const b2cOrders = orders.filter((o) =>
+    (o.type === "regular" || o.source === "cartdetails" || o.source === "website") &&
+    o.type !== "rider_tracking" &&  // exclude rider tracking records from B2C count
+    o.type !== "abandoned"          // exclude abandoned carts from B2C count
+  );
+
   const b2bOrders = orders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b");
 
   const b2cPickups = b2cOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
@@ -313,13 +318,26 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
   const handleEditOrder = useCallback(async (updatedOrder) => {
     try {
       if (!updatedOrder.id) throw new Error("Order ID missing");
-      const isB2B =
-        updatedOrder.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
-        updatedOrder.category === ORDER_CATEGORIES.LINEN ||
-        updatedOrder.category === ORDER_CATEGORIES.AIRBNB;
+      const id = String(updatedOrder.id);
 
-      const targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
-      await setDoc(doc(db, targetCollection, String(updatedOrder.id)), cleanObject(updatedOrder), { merge: true });
+      // Route writes back to the original source collection so the customer app
+      // and all other dashboard views see the updated status immediately.
+      let targetCollection;
+      if (updatedOrder.source === "cartdetails") {
+        // Cart orders: write status/notes back to cartdetails so the customer
+        // mobile app reflects the correct order state.
+        targetCollection = "cartdetails";
+      } else if (updatedOrder.source === "website") {
+        targetCollection = "orders";
+      } else {
+        const isB2B =
+          updatedOrder.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
+          updatedOrder.category === ORDER_CATEGORIES.LINEN ||
+          updatedOrder.category === ORDER_CATEGORIES.AIRBNB;
+        targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
+      }
+
+      await setDoc(doc(db, targetCollection, id), cleanObject(updatedOrder), { merge: true });
     } catch (error) {
       console.error("Failed to edit order", error);
     }

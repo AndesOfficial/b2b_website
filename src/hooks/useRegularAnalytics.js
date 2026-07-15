@@ -8,11 +8,17 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     // 1. Filter to only regular orders
     // All cartdetails orders are regular customer orders (app, website, whatsapp etc.)
     // + orders manually logged by admin from this portal (b2b_admin_edits, type: "regular")
-    const regularOrders = orders.filter(
+    const allRegularOrders = orders.filter(
       (o) =>
         o.source === 'cartdetails' ||
         o.source === 'website' ||
         (o.source === 'admin' && o.type === 'regular')
+    );
+
+    // Explicitly exclude Cancelled and Abandoned orders from all metric calculations.
+    const EXCLUDED_STATUSES = new Set(['Cancelled', 'Abandoned', 'cancelled', 'canceled']);
+    const regularOrders = allRegularOrders.filter(
+      (o) => !EXCLUDED_STATUSES.has(o.status) && o.type !== 'abandoned'
     );
 
     // 2. Parse dates for periods
@@ -69,10 +75,20 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     };
 
     // 3. Segment orders by timeframe
-    const currentOrders  = [];
+    const allCurrentOrders = []; // Full list including cancelled (for the UI log)
+    const currentOrders  = [];   // Filtered list (for revenue/user metrics)
     const previousOrders = [];
     const historicalOrders = []; // Orders within the lookback window (recent, before current period)
 
+    // Segment the FULL list for the UI log
+    allRegularOrders.forEach((order) => {
+      const orderDate = getOrderDate(order);
+      if (orderDate >= from && orderDate <= to) {
+        allCurrentOrders.push(order);
+      }
+    });
+
+    // Segment the FILTERED list for metrics calculations
     regularOrders.forEach((order) => {
       const orderDate = getOrderDate(order);
       if (orderDate >= from && orderDate <= to) {
@@ -88,6 +104,7 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
         historicalOrders.push(order);
       }
     });
+
 
     // Helper to get unique user identifier (prefer phone, fallback to name)
     const getUserId = (order) => order.customerNumber || order.customerName || 'unknown';
@@ -317,7 +334,7 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
         dailyTrends,
         
         // Raw Data mapping
-        currentOrders,
+        currentOrders: allCurrentOrders, // Pass FULL list (including cancelled) to the Transactions Log
         previousOrders
     };
   }, [orders, dateFrom, dateTo]);

@@ -276,14 +276,17 @@ export function HostelAuthProvider({ children }) {
     };
 
     // 1. Base Data: Cartdetails
+    // NOTE: We no longer drop Cancelled orders here — admin needs to see them.
+    // Revenue counts in useRegularAnalytics already exclude Cancelled by status check.
+    // Rider tracking records (type=rider_tracking) are internal ops records — skip them entirely.
     cartOrders.forEach(order => {
-      if (order.status === ORDER_STATUSES.CANCELLED) return;
+      if (order.type === "rider_tracking") return;
       primaryRecordsMap.set(order.id, order);
     });
 
     // 2. Base Data: Website Orders
+    // NOTE: Cancelled website orders are also kept for admin visibility.
     websiteOrders.forEach((order) => {
-      if (order.status === ORDER_STATUSES.CANCELLED) return;
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
         primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
@@ -473,6 +476,28 @@ export function HostelAuthProvider({ children }) {
 
 export function useHostelAuth() {
   const ctx = useContext(HostelAuthContext);
-  if (!ctx) throw new Error("useHostelAuth must be inside HostelAuthProvider");
+  if (!ctx) {
+    // During Vite HMR, the context can momentarily be null while the module
+    // graph re-mounts. Throw only in production to avoid false-positive crashes.
+    if (import.meta.env.PROD) {
+      throw new Error("useHostelAuth must be inside HostelAuthProvider");
+    }
+    // In dev/HMR: return a safe empty context so the component can render
+    // without crashing — the real context value will arrive on next render.
+    return {
+      client: null,
+      orders: [],
+      isAdmin: false,
+      isViewer: false,
+      profileNeedsSetup: false,
+      isDataLoaded: false,
+      login: async () => ({ success: false, error: "Context not ready" }),
+      logout: async () => {},
+      setAuthenticatedUser: () => {},
+      addIssue: async () => {},
+      verifyOrder: async () => {},
+      verifyAllOrders: async () => {},
+    };
+  }
   return ctx;
 }
