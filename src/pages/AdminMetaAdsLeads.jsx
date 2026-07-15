@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMenu, FiUpload, FiUsers, FiSave, FiCheck, FiAlertCircle, FiX, FiDatabase, FiEdit2 } from "react-icons/fi";
-import * as XLSX from "xlsx";
+import readXlsxFile from "read-excel-file/browser";
 import { collection, getDocs, writeBatch, doc, getDoc, setDoc, Timestamp, query, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import AdminSidebar from "../components/Layout/AdminSidebar";
@@ -170,7 +170,7 @@ export default function AdminMetaAdsLeads() {
     setTimeout(() => setToast(null), 4500);
   };
 
-  // ── Excel parsing with SheetJS ──────────────────────────────────────────
+  // ── Excel parsing with read-excel-file ──────────────────────────────────
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -179,12 +179,12 @@ export default function AdminMetaAdsLeads() {
     setSkippedCount(0);
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook    = XLSX.read(arrayBuffer, { type: "array" });
-      const sheet       = workbook.Sheets[workbook.SheetNames[0]];
+      // readXlsxFile automatically reads the File object and returns a 2D array of rows
+      const rows = await readXlsxFile(file);
 
-      // Convert to array-of-arrays; header:1 gives us raw rows
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      if (!rows || rows.length === 0) {
+        throw new Error("Empty file");
+      }
 
       let skipped = 0;
       const parsed = [];
@@ -192,12 +192,13 @@ export default function AdminMetaAdsLeads() {
       // Skip row[0] (header), then map each row to our schema
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
+        // In read-excel-file, empty cells are null, so we convert them to empty strings
         const raw = {
-          srNo:     r[0],
-          phone:    r[1],
-          location: r[2],
-          status:   r[3],
-          remarks:  r[4],
+          srNo:     r[0] != null ? String(r[0]) : "",
+          phone:    r[1] != null ? String(r[1]) : "",
+          location: r[2] != null ? String(r[2]) : "",
+          status:   r[3] != null ? String(r[3]) : "",
+          remarks:  r[4] != null ? String(r[4]) : "",
         };
         const valid = validateRow(raw);
         if (!valid) { skipped++; continue; }

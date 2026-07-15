@@ -38,10 +38,23 @@ export function normalizeOrderStatus(status) {
   const normalized = String(status || "").trim().toLowerCase();
 
   if (["completed", "delivered"].includes(normalized)) return ORDER_STATUSES.DELIVERED;
-  if (["processing", "active", "in progress"].includes(normalized)) return ORDER_STATUSES.PROCESSING;
+
+  // Live rider/delivery statuses from the customer app (seen in Firestore cartdetails docs)
+  if ([
+    "processing", "active", "in progress",
+    "reached laundry facility",
+    "pickup on the way",
+    "rider on the way",
+    "picked up",
+    "at laundry",
+  ].includes(normalized)) return ORDER_STATUSES.PROCESSING;
+
   if (["paid", "shipped", "confirmed"].includes(normalized)) return ORDER_STATUSES.CONFIRMED;
   if (normalized === "resolved") return ORDER_STATUSES.RESOLVED;
   if (["cancelled", "canceled"].includes(normalized)) return ORDER_STATUSES.CANCELLED;
+  if (normalized === "pending") return ORDER_STATUSES.PENDING;
+
+  // Passthrough for values like "Pickup Done", "In Progress" set by admin
   return (typeof status === 'string' && status) ? status : ORDER_STATUSES.PENDING;
 }
 

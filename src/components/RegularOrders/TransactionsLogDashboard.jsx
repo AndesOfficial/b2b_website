@@ -11,10 +11,15 @@ import { calculateTAT } from "../../utils/dateUtils";
 const CHANNEL_ICONS = { App: FiSmartphone, Auto: FiMapPin, Website: FiShoppingBag, WhatsApp: FiMessageSquare, Outlet: FiShoppingBag, Call: FiPhone, Student: FiUser };
 const CHANNEL_COLORS = { App: "#1976D2", Auto: "#0EA5E9", Website: "#6366F1", WhatsApp: "#25D366", Outlet: "#D97706", Call: "#7C3AED", Student: "#059669" };
 const STATUS_BADGE = {
-  Delivered: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  Confirmed: "bg-blue-50 text-blue-700 border-blue-100",
-  Pending: "bg-amber-50 text-amber-700 border-amber-100",
-  Processing: "bg-indigo-50 text-indigo-700 border-indigo-100",
+  Delivered:      "bg-emerald-50 text-emerald-700 border-emerald-100",
+  Confirmed:      "bg-blue-50 text-blue-700 border-blue-100",
+  Pending:        "bg-amber-50 text-amber-700 border-amber-100",
+  Processing:     "bg-indigo-50 text-indigo-700 border-indigo-100",
+  "Pickup Done":  "bg-cyan-50 text-cyan-700 border-cyan-100",
+  "In Progress":  "bg-violet-50 text-violet-700 border-violet-100",
+  Cancelled:      "bg-red-50 text-red-600 border-red-100",
+  Resolved:       "bg-teal-50 text-teal-700 border-teal-100",
+  Abandoned:      "bg-gray-50 text-gray-400 border-gray-100",
 };
 
 export default function TransactionsLogDashboard({ currentOrders, onAddOrder, onEditOrder, onDeleteOrder }) {
@@ -110,7 +115,9 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                 <tr
                   key={order.id}
                   onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
-                  className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer"
+                  className={`border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer ${
+                    (order.status === "Cancelled" || order.type === "abandoned") ? "opacity-50" : ""
+                  }`}
                 >
                   <td className="px-6 py-4">
                     <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{order.customerName || "Anonymous"}</p>
@@ -154,6 +161,16 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       <BiRupee size={13} className="mb-0.5" />
                       <span>{order.amount?.toLocaleString()}</span>
                     </div>
+                    {(order.walletAmountUsed > 0) && (
+                      <div className="text-[9px] font-bold text-violet-500 mt-0.5 text-right">
+                        💳 W: ₹{order.walletAmountUsed?.toLocaleString()}
+                      </div>
+                    )}
+                    {order.couponDiscount > 0 && (
+                      <div className="text-[9px] font-bold text-emerald-500 mt-0.5 text-right">
+                        🏷️ -₹{order.couponDiscount?.toLocaleString()}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.date}</td>
                   <td className="px-6 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{order.deliveryDate || "Pending"}</td>
@@ -186,6 +203,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
               ))}
             </tbody>
           </table>
+
         </div>
 
         <div className="md:hidden divide-y divide-gray-50 uppercase tracking-tight">
@@ -195,7 +213,9 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
             <div
               key={order.id}
               onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
-              className="p-4 active:bg-slate-50 transition-colors cursor-pointer"
+              className={`p-4 active:bg-slate-50 transition-colors cursor-pointer ${
+                (order.status === "Cancelled" || order.type === "abandoned") ? "opacity-50" : ""
+              }`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
@@ -216,6 +236,16 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                     <BiRupee size={12} className="text-blue-400" />
                     <span>{order.amount?.toLocaleString()}</span>
                   </div>
+                  {order.walletAmountUsed > 0 && (
+                    <div className="text-[9px] font-bold text-violet-500 text-right">
+                      💳 W: ₹{order.walletAmountUsed?.toLocaleString()}
+                    </div>
+                  )}
+                  {order.couponDiscount > 0 && (
+                    <div className="text-[9px] font-bold text-emerald-500 text-right">
+                      🏷️ -₹{order.couponDiscount?.toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </div>
 

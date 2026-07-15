@@ -11,7 +11,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
           'vendor-ui': ['react-icons', 'recharts', 'lucide-react'],
-          'vendor-utils': ['jspdf', 'jspdf-autotable', 'exceljs', 'jszip']
+          'vendor-utils': ['jspdf', 'jspdf-autotable', 'jszip']
         }
       }
     },

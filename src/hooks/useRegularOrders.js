@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-export const REGULAR_CHANNELS = ["All", "App", "Auto", "Website", "WhatsApp", "Outlet", "Call", "Student"];
+export const REGULAR_CHANNELS = ["All", "App", "Auto", "Website", "WhatsApp", "Outlet", "Call", "Student", "Cancelled"];
 export const REGULAR_SERVICE_TYPES = ["Wash & Fold", "Wash & Iron", "Wash & Fold + Iron", "Dry Clean", "Other"];
 export const REGULAR_RATE_MAP = {
   "Wash & Fold": 55,
@@ -52,11 +52,18 @@ export function useRegularOrders(orders, channelFilter) {
   );
 
   const filteredOrders = useMemo(() => {
-    const scopedOrders = channelFilter === "All"
-      ? regularOrders
-      : regularOrders.filter((order) => order.channel === channelFilter);
+    let scopedOrders;
+    const isCancelled = (order) => order.status === "Cancelled" || order.status === "Abandoned" || order.type === "abandoned";
 
-    return [...scopedOrders].sort((left, right) => new Date(right.date) - new Date(left.date));
+    if (channelFilter === "All") {
+      scopedOrders = regularOrders.filter((order) => !isCancelled(order));
+    } else if (channelFilter === "Cancelled") {
+      scopedOrders = regularOrders.filter((order) => isCancelled(order));
+    } else {
+      scopedOrders = regularOrders.filter((order) => order.channel === channelFilter && !isCancelled(order));
+    }
+
+    return [...scopedOrders].sort((left, right) => new Date(right.date || 0) - new Date(left.date || 0));
   }, [channelFilter, regularOrders]);
 
   const channelStats = useMemo(() => {
@@ -65,6 +72,16 @@ export function useRegularOrders(orders, channelFilter) {
     );
 
     regularOrders.forEach((order) => {
+      const isCancelled = order.status === "Cancelled" || order.status === "Abandoned" || order.type === "abandoned";
+      
+      if (isCancelled) {
+        if (stats["Cancelled"]) {
+          stats["Cancelled"].count += 1;
+          stats["Cancelled"].revenue += order.amount || 0;
+        }
+        return; // Skip adding to the original channel (e.g. App)
+      }
+
       if (!stats[order.channel]) return;
       stats[order.channel].count += 1;
       stats[order.channel].revenue += order.amount || 0;
