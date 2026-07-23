@@ -38,6 +38,7 @@ export function HostelAuthProvider({ children }) {
   const [websiteOrders, setWebsiteOrders] = useState([]);
   const [cartOrders, setCartOrders] = useState([]);
   const [hostelsOrders, setHostelsOrders] = useState([]); // NEW
+  const [appComplaints, setAppComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
 
@@ -59,6 +60,7 @@ export function HostelAuthProvider({ children }) {
         setWebsiteOrders([]);
         setCartOrders([]);
         setHostelsOrders([]);
+        setAppComplaints([]);
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         return;
@@ -97,8 +99,6 @@ export function HostelAuthProvider({ children }) {
           setProfileNeedsSetup(true);
         }
 
-        // NOTE: Firestore rules often restrict website/cart collections to admin users.
-        // Avoid subscribing for clients to prevent "Missing or insufficient permissions" errors.
         if (resolvedRole !== "admin" && resolvedRole !== "admin_viewer") {
           setWebsiteOrders([]);
           setCartOrders([]);
@@ -111,7 +111,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 4) setIsDataLoaded(true);
+        if (loadedCount >= 5) setIsDataLoaded(true);
       };
 
       const getAllAliases = (canonicalNames) => {
@@ -164,13 +164,11 @@ export function HostelAuthProvider({ children }) {
 
           const allPossibleStrings = getAllAliases(allowed);
 
-          // Use chunk size of 5 to avoid exceeding Firestore's 30 condition OR limit when checking multiple fields
           const chunks = [];
           for (let i = 0; i < allPossibleStrings.length; i += 5) {
             chunks.push(allPossibleStrings.slice(i, i + 5));
           }
 
-          // Define which fields to search depending on the collection
           let fieldsToCheck = ["property", "linkedHostel"];
           if (collectionName === "hostels_orders") {
             fieldsToCheck = ["property", "hostelName", "hostel", "location"];
@@ -219,9 +217,9 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("b2b_admin_edits", "admin", setFirestoreEdits);
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
       setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
+      setupCollectionListener("normal_complaint", "complaint", setAppComplaints);
 
       if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
-        // "orders" collection is deprecated. All data comes from "cartdetails" and other sources.
         setWebsiteOrders([]);
         
         const unsubCart = onSnapshot(
@@ -249,15 +247,10 @@ export function HostelAuthProvider({ children }) {
 
 
   const allOrdersMerged = useMemo(() => {
-    // Partition 1: Build a map of "Primary" records (Admin edits & B2B logged orders)
-    // In our new architecture:
-    // - b2b_admin_edits stores Regular Orders & Issues
-    // - b2b_orders stores Hostels & Hotels & Airbnb
     const primaryRecordsMap = new Map();
 
     const smartMergeOrders = (existing, order) => {
       const merged = { ...existing, ...order };
-      // Preserve existing valid fields if the incoming order has missing or fallback data
       if (!order.amount && existing.amount) merged.amount = existing.amount;
       if ((!order.service || order.service === "Web Store Order" || order.service === "Regular Service" || order.service === "Order") && existing.service) merged.service = existing.service;
       if (!order.customerNumber && existing.customerNumber) merged.customerNumber = existing.customerNumber;
@@ -276,17 +269,11 @@ export function HostelAuthProvider({ children }) {
       return merged;
     };
 
-    // 1. Base Data: Cartdetails
-    // NOTE: We no longer drop Cancelled orders here — admin needs to see them.
-    // Revenue counts in useRegularAnalytics already exclude Cancelled by status check.
-    // Rider tracking records (type=rider_tracking) are internal ops records — skip them entirely.
     cartOrders.forEach(order => {
       if (order.type === "rider_tracking") return;
       primaryRecordsMap.set(order.id, order);
     });
 
-    // 2. Base Data: Website Orders
-    // NOTE: Cancelled website orders are also kept for admin visibility.
     websiteOrders.forEach((order) => {
       const existing = primaryRecordsMap.get(order.id);
       if (existing) {
@@ -294,6 +281,10 @@ export function HostelAuthProvider({ children }) {
       } else {
         primaryRecordsMap.set(order.id, order);
       }
+    });
+
+    appComplaints.forEach((order) => {
+      primaryRecordsMap.set(order.id, order);
     });
 
     // 3. Base Data: B2B Orders
