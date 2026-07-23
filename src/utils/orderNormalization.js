@@ -637,6 +637,22 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     }
   }
 
+  if (source === "complaint") {
+    normalized.category = ORDER_CATEGORIES.ISSUES;
+    normalized.type = "issue";
+    normalized.issueType = rawOrder.category || "Other";
+    normalized.service = rawOrder.issue || "App Complaint";
+    normalized.date = normalizeDate(rawOrder.createdAt);
+    normalized.reportedBy = rawOrder.userName || "Customer";
+    normalized.linkedHostel = rawOrder.location?.address || "";
+    normalized.resolveStatus = (rawOrder.status === "resolved" || rawOrder.status === "closed") ? "Resolved" : "Unresolved";
+    normalized.severity = "pending";
+    normalized.customerNumber = rawOrder.userMobile || "";
+    normalized.customerName = rawOrder.userName || "Customer";
+    normalized.id = rawOrder.id;
+    return normalized;
+  }
+
   if (normalized.category === ORDER_CATEGORIES.ISSUES) {
     normalized.type = ORDER_TYPES.ISSUE;
   }
