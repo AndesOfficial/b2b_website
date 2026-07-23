@@ -43,6 +43,7 @@ export default function AdminRegularOrders() {
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "expenses") { navigate("/admin/expenses"); return; }
     if (tab === "calculator") { navigate("/admin/calculator"); return; }
+    if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     navigate("/admin");
   }, [navigate]);
 

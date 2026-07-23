@@ -96,6 +96,11 @@ export default function AdminDashboard() {
       navigate("/admin/meta-leads");
       return;
     }
+    if (tab === "dailyReport") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/daily-report");
+      return;
+    }
 
     setActiveTab(tab);
     setIsMobileMenuOpen(false);

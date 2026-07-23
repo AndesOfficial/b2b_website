@@ -12,6 +12,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientCategoryOrders from "./pages/ClientCategoryOrders";
 import ClientOrderDetail from "./pages/ClientOrderDetail";
 import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
+import AdminDailyReport from "./pages/AdminDailyReport";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/admin/investors" element={<AdminRoute><InvestorDashboard /></AdminRoute>} />
           <Route path="/admin/calculator" element={<AdminRoute><Calculator /></AdminRoute>} />
           <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
+          <Route path="/admin/daily-report" element={<AdminRoute><AdminDailyReport /></AdminRoute>} />
 
           {/* Client Portal */}
           <Route path="/client/dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />
