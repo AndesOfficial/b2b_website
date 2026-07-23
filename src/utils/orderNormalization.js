@@ -534,7 +534,15 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalizeNumber(rawOrder.clothesWeightKg) > 0 ||
       normalizeNumber(rawOrder.clothesCount) > 0 ||
       hasNumericServices; // Only counts keys with numeric values > 0
-    if (normalized.amount === 0 && !hasAnyItems) {
+    // Protect valid 0-item pickup requests (where the customer checked out but skipped adding specific items)
+    const isCheckoutComplete = !!(
+      rawOrder.pickupTime ||
+      rawOrder.paymentMethod ||
+      rawOrder.whatsappConfirmationSent ||
+      rawOrder.paymentStatus
+    );
+
+    if (normalized.amount === 0 && !hasAnyItems && !isCheckoutComplete) {
       normalized.category = "ABANDONED_CART";
       normalized.type = "abandoned";
       normalized.status = "Abandoned";
