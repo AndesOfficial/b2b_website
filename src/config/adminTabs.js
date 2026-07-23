@@ -1,4 +1,4 @@
-import { FiActivity, FiAlertCircle, FiDollarSign, FiHome, FiInbox, FiLayout, FiPieChart, FiUsers } from "react-icons/fi";
+import { FiActivity, FiAlertCircle, FiDollarSign, FiFileText, FiHome, FiInbox, FiLayout, FiPieChart, FiUsers } from "react-icons/fi";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
@@ -79,6 +79,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "Revenue Calculator",
     navLabel: "Calculator",
     navIcon: FaCalculator,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  dailyReport: {
+    key: "dailyReport",
+    title: "Daily Operations Report",
+    navLabel: "Daily Report",
+    navIcon: FiFileText,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

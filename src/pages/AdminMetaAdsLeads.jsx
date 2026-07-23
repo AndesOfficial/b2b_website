@@ -161,6 +161,7 @@ export default function AdminMetaAdsLeads() {
     if (tab === "expenses")  { navigate("/admin/expenses");  return; }
     if (tab === "regular")   { navigate("/admin/regular-orders"); return; }
     if (tab === "calculator"){ navigate("/admin/calculator"); return; }
+    if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     navigate("/admin");
   }, [navigate]);
 

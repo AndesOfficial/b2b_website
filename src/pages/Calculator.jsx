@@ -1598,6 +1598,7 @@ export default function Calculator() {
     if (t === "investors") { navigate("/admin/investors"); return; }
     if (t === "expenses") { navigate("/admin/expenses"); return; }
     if (t === "regular") { navigate("/admin/regular-orders"); return; }
+    if (t === "dailyReport") { navigate("/admin/daily-report"); return; }
     navigate("/admin");
   }, [navigate]);
 
