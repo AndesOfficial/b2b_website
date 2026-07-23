@@ -118,6 +118,13 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
       return orderDate === selectedDate && wasPickedUp(o.status);
     });
 
+    // ── Pending Orders ──────────────────────────────────────────────────────
+    // Orders created on selectedDate that are not yet picked up or cancelled
+    const pendingOrders = b2cOrders.filter(o => {
+      const orderDate = o.date || toDateString(o.createdAtRaw);
+      return orderDate === selectedDate && !wasPickedUp(o.status) && !wasDelivered(o.status);
+    });
+
     // ── Delivery Detection ──────────────────────────────────────────────────
     // An order counts as "delivered on selectedDate" if:
     //   1. Its deliveryOtpVerifiedAt falls on selectedDate, OR
@@ -196,6 +203,17 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
         isInstant: o.ultraFastDelivery || false,
       };
     });
+
+    // ── B2C Pending Details Table ──────────────────────────────────────────
+    const b2cPendingDetails = pendingOrders.map(o => ({
+      id: o.id,
+      customer: o.userName || o.customerName || 'Unknown',
+      service: getServiceInfo(o).service,
+      weightDisplay: getServiceInfo(o).weightDisplay,
+      weight: o.weight,
+      count: getServiceInfo(o).count,
+      status: o.status || 'Pending',
+    })).sort((a, b) => b.count - a.count);
 
     // ── B2C Delivery Details Table ──────────────────────────────────────────
     const b2cDeliveryDetails = deliveryOrders.map(o => {
@@ -376,6 +394,7 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
     return {
       b2cSummary,
       b2cPickupDetails,
+      b2cPendingDetails,
       b2cDeliveryDetails,
       b2bSummary,
       hostelDeliveryDetails,

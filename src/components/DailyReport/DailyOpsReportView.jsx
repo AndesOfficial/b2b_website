@@ -148,7 +148,7 @@ const B2B_STUDENT_COLUMNS = [
 export default function DailyOpsReportView({ report, selectedDate }) {
   if (!report) return null;
 
-  const { b2cSummary, b2cPickupDetails, b2cDeliveryDetails, b2bSummary, hostelDeliveryDetails, hostelStudentDetails, customerIssues, remarks } = report;
+  const { b2cSummary, b2cPickupDetails, b2cPendingDetails, b2cDeliveryDetails, b2bSummary, hostelDeliveryDetails, hostelStudentDetails, customerIssues, remarks } = report;
 
   const pb = b2cSummary.paymentBreakdown || {};
   const b2cSummaryRows = [
@@ -198,12 +198,18 @@ export default function DailyOpsReportView({ report, selectedDate }) {
         <h3 className={SECTION_TITLE_CLASS}>B2C Summary</h3>
         <SummaryTable rows={b2cSummaryRows} />
 
-        {/* ── B2C Pickup Details ───────────────────────────────────── */}
-        <h3 className={SECTION_TITLE_CLASS}>B2C Pickup Details</h3>
+        <h3 className={SECTION_TITLE_CLASS}>B2C Completed Pickups</h3>
         <DetailTable
           columns={B2C_PICKUP_COLUMNS}
           rows={b2cPickupDetails}
-          emptyMessage="No pickups recorded for this date."
+          emptyMessage="No pickups completed for this date."
+        />
+
+        <h3 className="mb-4 mt-6 text-sm font-bold text-blue-400">B2C Pending Pickups</h3>
+        <DetailTable
+          columns={B2C_PICKUP_COLUMNS}
+          rows={b2cPendingDetails}
+          emptyMessage="No pending orders recorded for this date."
         />
 
         {/* ── B2C Delivery Details ─────────────────────────────────── */}
