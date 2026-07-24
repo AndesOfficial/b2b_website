@@ -63,6 +63,7 @@ export function HostelAuthProvider({ children }) {
         setAppComplaints([]);
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
+        setIsDataLoaded(true);
         return;
       }
 
