@@ -12,7 +12,7 @@ import RegularOrderFormModal from "./RegularOrders/RegularOrderFormModal";
 
 import { useRegularAnalytics } from "../hooks/useRegularAnalytics";
 
-const SUB_TABS = ["Overview", "Customers", "Analytics", "Transactions Log"];
+const SUB_TABS = ["Overview", "Customers", "Analytics", "Placed Orders"];
 
 // Computed once at module load — avoids Date() allocation on every render
 const _today = new Date();
@@ -65,32 +65,33 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
         </div>
       )}
 
-      {/* Header Controls: Date Filter & Export */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <RegularDateFilter 
-          dateFrom={localDateFrom} 
-          dateTo={localDateTo} 
-          setDateFrom={setLocalDateFrom} 
-          setDateTo={setLocalDateTo} 
-        />
-        <ExportReports analytics={analytics} />
-      </div>
-
-      {/* Sub-Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-gray-200 mb-6 overflow-x-auto pb-[-1px]">
-        {SUB_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveSubTab(tab)}
-            className={`px-5 py-3 text-[14px] font-bold transition-all border-b-2 whitespace-nowrap ${
-              activeSubTab === tab
-                ? "border-blue-600 text-blue-600 bg-blue-50/50"
-                : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Combined Nav: Section Tabs + Date Filter + Export */}
+      <div className="flex items-end justify-between border-b border-gray-200">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {SUB_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveSubTab(tab)}
+              className={`px-5 py-3 text-[14px] font-bold transition-all border-b-2 whitespace-nowrap -mb-px ${
+                activeSubTab === tab
+                  ? "border-blue-600 text-blue-600 bg-blue-50/50"
+                  : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 pb-2">
+          <RegularDateFilter 
+            dateFrom={localDateFrom} 
+            dateTo={localDateTo} 
+            setDateFrom={setLocalDateFrom} 
+            setDateTo={setLocalDateTo}
+            compact
+          />
+          <ExportReports analytics={analytics} />
+        </div>
       </div>
 
       {/* Tab Contents */}
@@ -98,7 +99,7 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
       {activeSubTab === "Customers" && <CustomersDashboard analytics={analytics} lookbackLabel={analytics.lookbackLabel} />}
       {activeSubTab === "Analytics" && <AnalyticsDashboard analytics={analytics} />}
       
-      {activeSubTab === "Transactions Log" && (
+      {activeSubTab === "Placed Orders" && (
         <TransactionsLogDashboard 
           currentOrders={analytics.currentOrders}
           onAddOrder={onAddOrder ? handleOpenAddModal : undefined}

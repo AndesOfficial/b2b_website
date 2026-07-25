@@ -371,8 +371,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     id: String(rawOrder.id || rawOrder.orderId || `${source}-${Date.now()}`),
     ...rawOrder,
     property,
-    ...(rawOrder.createdAt !== undefined ? { createdAtRaw: rawOrder.createdAt } : {}),
-    ...(rawOrder.updatedAt !== undefined ? { updatedAtRaw: rawOrder.updatedAt } : {}),
+    createdAtRaw: rawOrder.createdAt || rawOrder.orderTimestamp || rawOrder.orderDate || rawOrder.date || null,
+    updatedAtRaw: rawOrder.updatedAt || rawOrder.lastModified || null,
     date: normalizeDate(rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : (rawOrder.date || rawOrder.createdAt)),
     amount: firstPositiveNumber(rawOrder.amount, rawOrder.totalPrice),
     items: normalizeNumber(rawOrder.items ?? rawOrder.clothes, itemsFromPartnerMap),
@@ -386,6 +386,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     customerNumber: String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim(),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
     deliveryDate: (rawOrder.deliveryDate && typeof rawOrder.deliveryDate === 'object' && rawOrder.deliveryDate.toDate) ? normalizeDate(rawOrder.deliveryDate) : String(rawOrder.deliveryDate || rawOrder.dropTime || "").trim(),
+    pickupDate: (rawOrder.pickupDate && typeof rawOrder.pickupDate === 'object' && rawOrder.pickupDate.toDate) ? normalizeDate(rawOrder.pickupDate) : String(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.date || "").trim(),
     service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",
     source,
   };
@@ -499,6 +500,9 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     
     if (cartCreatedDate) {
       normalized.date = normalizeDate(cartCreatedDate);
+      if (!normalized.createdAtRaw) {
+        normalized.createdAtRaw = cartCreatedDate;
+      }
     }
     
     normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
