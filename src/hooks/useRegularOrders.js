@@ -45,7 +45,7 @@ export function getServiceLabel(service = "") {
   return label || "Wash & Fold";
 }
 
-export function useRegularOrders(orders, channelFilter) {
+export function useRegularOrders(orders, channelFilter, searchQuery = "") {
   const regularOrders = useMemo(
     () => orders.filter((order) => order.type === "regular"),
     [orders]
@@ -66,26 +66,29 @@ export function useRegularOrders(orders, channelFilter) {
     return [...scopedOrders].sort((left, right) => new Date(right.date || 0) - new Date(left.date || 0));
   }, [channelFilter, regularOrders]);
 
+  // Search filter — runs after channel filter so it operates on the smallest dataset
+  // Single-string comparison: 1 toLowerCase + 1 includes per order instead of 3 each
+  const searchedOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return filteredOrders;
+    return filteredOrders.filter((order) =>
+      `${order.customerName || ""}\0${order.customerNumber || ""}\0${order.address || ""}`.toLowerCase().includes(q)
+    );
+  }, [filteredOrders, searchQuery]);
+
   const channelStats = useMemo(() => {
     const stats = Object.fromEntries(
       REGULAR_CHANNELS.filter((channel) => channel !== "All").map((channel) => [channel, { count: 0, revenue: 0 }])
     );
 
-    regularOrders.forEach((order) => {
+    for (const order of regularOrders) {
       const isCancelled = order.status === "Cancelled" || order.status === "Abandoned" || order.type === "abandoned";
-      
-      if (isCancelled) {
-        if (stats["Cancelled"]) {
-          stats["Cancelled"].count += 1;
-          stats["Cancelled"].revenue += order.amount || 0;
-        }
-        return; // Skip adding to the original channel (e.g. App)
+      const bucket = stats[isCancelled ? "Cancelled" : order.channel];
+      if (bucket) {
+        bucket.count += 1;
+        bucket.revenue += order.amount || 0;
       }
-
-      if (!stats[order.channel]) return;
-      stats[order.channel].count += 1;
-      stats[order.channel].revenue += order.amount || 0;
-    });
+    }
 
     return stats;
   }, [regularOrders]);
@@ -93,5 +96,6 @@ export function useRegularOrders(orders, channelFilter) {
   return {
     channelStats,
     filteredOrders,
+    searchedOrders,
   };
 }

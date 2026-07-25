@@ -119,7 +119,14 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
           <div>
             <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{order.customerName || order.property || order.tenant || 'Unknown Property'}</h2>
             <div className="flex items-center gap-2 mt-1.5">
-              <p className="text-[12px] font-bold text-slate-500">{order.date}</p>
+              <p className="text-[12px] font-bold text-slate-500">
+                Placed: {order.date} {(() => {
+                  const raw = order.createdAtRaw || order.orderTimestamp || order.createdAt;
+                  if (!raw) return "";
+                  let d = typeof raw === "object" && typeof raw.toDate === "function" ? raw.toDate() : new Date(typeof raw === "number" && raw < 100000000000 ? raw * 1000 : raw);
+                  return !isNaN(d.getTime()) ? `(${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : "";
+                })()}
+              </p>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
               {isEditing ? (
                 <select
