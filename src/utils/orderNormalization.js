@@ -346,6 +346,46 @@ function buildCartServiceBreakdown(rawOrder) {
   return [...breakdownMap.values()].filter((item) => item.name && (item.quantity || item.weight || item.amount));
 }
 
+function normalizeSlot(val) {
+  if (val === null || val === undefined || val === "") return "";
+  if (typeof val === "object") {
+    if (typeof val.toDate === "function") {
+      try {
+        const d = val.toDate();
+        if (!isNaN(d.getTime())) return normalizeDate(d);
+      } catch (e) {
+        return "—";
+      }
+    } else if (typeof val.seconds === "number" || typeof val._seconds === "number") {
+      const sec = val.seconds ?? val._seconds;
+      const d = new Date(sec * 1000);
+      if (!isNaN(d.getTime())) return normalizeDate(d);
+    } else if (val instanceof Date && !isNaN(val.getTime())) {
+      return normalizeDate(val);
+    }
+    return "—";
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed.startsWith("Timestamp(") || trimmed.includes("seconds=")) {
+      const match = trimmed.match(/seconds=(\d+)/);
+      if (match && match[1]) {
+        const sec = parseInt(match[1], 10);
+        if (!isNaN(sec)) {
+          const d = new Date(sec * 1000);
+          if (!isNaN(d.getTime())) return normalizeDate(d);
+        }
+      }
+      return "—";
+    }
+    if (trimmed === "[object Object]" || trimmed === "undefined" || trimmed === "null") {
+      return "—";
+    }
+    return trimmed;
+  }
+  return "—";
+}
+
 export function normalizeOrder(rawOrder = {}, source = "unknown") {
   const propertyCandidate = rawOrder.property ||
     rawOrder.propertyName ||
@@ -385,8 +425,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     customerName: String(rawOrder.customerName || rawOrder.userName || "").trim(),
     customerNumber: String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim(),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
-    deliveryDate: (rawOrder.deliveryDate && typeof rawOrder.deliveryDate === 'object' && rawOrder.deliveryDate.toDate) ? normalizeDate(rawOrder.deliveryDate) : String(rawOrder.deliveryDate || rawOrder.dropTime || "").trim(),
-    pickupDate: (rawOrder.pickupDate && typeof rawOrder.pickupDate === 'object' && rawOrder.pickupDate.toDate) ? normalizeDate(rawOrder.pickupDate) : String(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.date || "").trim(),
+    deliveryDate: normalizeSlot(rawOrder.deliveryDate || rawOrder.dropTime || ""),
+    pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.pickup || rawOrder.date || ""),
     service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",
     source,
   };
@@ -557,7 +597,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     const addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || "";
     normalized.address = addressCandidate ? addressCandidate.trim() : "";
     const dDate = rawOrder.deliveryDate || rawOrder.dropTime;
-    normalized.deliveryDate = (dDate && typeof dDate === "object" && dDate.toDate) ? normalizeDate(dDate) : String(dDate || "").trim();
+    normalized.deliveryDate = normalizeSlot(dDate);
 
     // Some cart/website records can be created for B2B hotel/hostel partners; if so, respect the provided property name.
     const propertyCandidate = getWebsitePropertyCandidate(rawOrder);

@@ -338,7 +338,34 @@ export default function AdminMetaAdsLeads() {
     }
   };
 
-  const displayData = activeView === "preview" ? previewData : savedData;
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const displayData = useMemo(() => {
+    const list = [...(activeView === "preview" ? previewData : savedData)];
+    if (!sortField) return list;
+    return list.sort((a, b) => {
+      let valA = a[sortField] ?? "";
+      let valB = b[sortField] ?? "";
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortDir === "asc" ? valA - valB : valB - valA;
+      }
+      valA = String(valA).toLowerCase();
+      valB = String(valB).toLowerCase();
+      if (valA < valB) return sortDir === "asc" ? -1 : 1;
+      if (valA > valB) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [activeView, previewData, savedData, sortField, sortDir]);
 
   // ── KPI stats — computed from saved DB data only ──────────────────────
   const kpiStats = useMemo(() => {
@@ -377,6 +404,7 @@ export default function AdminMetaAdsLeads() {
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Toggle mobile menu"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
               >
                 <FiMenu size={20} />
@@ -409,6 +437,7 @@ export default function AdminMetaAdsLeads() {
                 <button
                   onClick={handleSaveToFirebase}
                   disabled={isSaving}
+                  aria-label="Save leads to database"
                   className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:bg-blue-400"
                 >
                   {isSaving
@@ -425,6 +454,7 @@ export default function AdminMetaAdsLeads() {
           <div className="flex items-center gap-1 border-t border-slate-100 bg-white px-4 py-2 lg:px-8">
             <button
               onClick={() => setActiveView("saved")}
+              aria-label="View saved database leads"
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${
                 activeView === "saved"
                   ? "bg-blue-600 text-white shadow"
@@ -444,6 +474,7 @@ export default function AdminMetaAdsLeads() {
 
             <button
               onClick={() => previewData.length > 0 && setActiveView("preview")}
+              aria-label="View preview upload leads"
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${
                 activeView === "preview"
                   ? "bg-amber-500 text-white shadow"
@@ -474,7 +505,7 @@ export default function AdminMetaAdsLeads() {
           }`}>
             {toast.type === "success" ? <FiCheck className="mt-0.5 shrink-0" /> : <FiAlertCircle className="mt-0.5 shrink-0" />}
             <p className="text-sm font-semibold">{toast.message}</p>
-            <button onClick={() => setToast(null)} className="ml-2 text-current opacity-60 hover:opacity-100">
+            <button onClick={() => setToast(null)} aria-label="Close notification" className="ml-2 text-current opacity-60 hover:opacity-100">
               <FiX size={14} />
             </button>
           </div>
@@ -504,6 +535,7 @@ export default function AdminMetaAdsLeads() {
                     <button
                       onClick={() => { setIsEditingCpc(true); setCpcInput(cpc != null ? String(cpc) : ""); }}
                       title="Edit CPC"
+                      aria-label="Edit Cost Per Click"
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                     >
                       <FiEdit2 size={13} />
@@ -528,6 +560,7 @@ export default function AdminMetaAdsLeads() {
                     <button
                       onClick={handleSaveCpc}
                       disabled={isSavingCpc}
+                      aria-label="Save CPC value"
                       className="ml-1 flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                       {isSavingCpc
@@ -537,6 +570,7 @@ export default function AdminMetaAdsLeads() {
                     </button>
                     <button
                       onClick={() => setIsEditingCpc(false)}
+                      aria-label="Cancel editing CPC"
                       className="p-1 text-slate-400 hover:text-slate-600"
                     >
                       <FiX size={14} />
@@ -574,14 +608,40 @@ export default function AdminMetaAdsLeads() {
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50">
                   <tr>
-                    {["Sr. No.", "Phone Number", "Location / Address", "Status", "Remarks"].map(h => (
-                      <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {h}
+                    {[
+                      { key: "srNo", label: "Sr. No." },
+                      { key: "phone", label: "Phone Number" },
+                      { key: "location", label: "Location / Address" },
+                      { key: "status", label: "Status" },
+                      { key: "remarks", label: "Remarks" },
+                    ].map(col => (
+                      <th key={col.key} className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <button
+                          type="button"
+                          onClick={() => handleSort(col.key)}
+                          aria-label={`Sort by ${col.label}`}
+                          className="flex items-center gap-1 hover:text-slate-800 font-semibold"
+                        >
+                          {col.label}
+                          {sortField === col.key && (
+                            <span className="text-[10px] text-blue-600">{sortDir === "asc" ? "▲" : "▼"}</span>
+                          )}
+                        </button>
                       </th>
                     ))}
                     {activeView === "saved" && (
                       <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Uploaded By
+                        <button
+                          type="button"
+                          onClick={() => handleSort("uploadedBy")}
+                          aria-label="Sort by Uploaded By"
+                          className="flex items-center gap-1 hover:text-slate-800 font-semibold"
+                        >
+                          Uploaded By
+                          {sortField === "uploadedBy" && (
+                            <span className="text-[10px] text-blue-600">{sortDir === "asc" ? "▲" : "▼"}</span>
+                          )}
+                        </button>
                       </th>
                     )}
                   </tr>

@@ -25,7 +25,7 @@ export default function AnalyticsDashboard({ analytics }) {
             <div className="bg-slate-50 p-4 rounded-xl">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Average Order Value</span>
               <div className="flex items-center text-[18px] font-black text-slate-800">
-                <BiRupee size={16} />{analytics.aov.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <BiRupee size={16} />{analytics.aov.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
             <div className="bg-slate-50 p-4 rounded-xl">
@@ -142,7 +142,7 @@ export default function AnalyticsDashboard({ analytics }) {
                     <span className="text-[12px] font-bold text-blue-600">{c.returningUsers}</span>
                   </td>
                   <td className="px-6 py-4 text-[13px] font-bold text-slate-600 text-right flex items-center justify-end">
-                    <BiRupee size={13} className="text-slate-400" />{c.aov.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    <BiRupee size={13} className="text-slate-400" />{c.aov.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               ))}

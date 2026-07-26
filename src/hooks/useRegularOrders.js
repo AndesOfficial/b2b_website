@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { humanizeServiceLabel } from "../utils/formatUtils";
 
 export const REGULAR_CHANNELS = ["All", "App", "Auto", "Website", "WhatsApp", "Outlet", "Call", "Student", "Cancelled"];
 export const REGULAR_SERVICE_TYPES = ["Wash & Fold", "Wash & Iron", "Wash & Fold + Iron", "Dry Clean", "Other"];
@@ -42,7 +43,7 @@ export function createEmptyRegularOrderForm() {
 
 export function getServiceLabel(service = "") {
   const [label] = String(service).split(/\s(?:—|-)\s/u);
-  return label || "Wash & Fold";
+  return humanizeServiceLabel(label || "Wash & Fold");
 }
 
 export function useRegularOrders(orders, channelFilter, searchQuery = "") {

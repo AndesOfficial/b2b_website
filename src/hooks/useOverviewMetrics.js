@@ -209,7 +209,12 @@ function getDisplayLabel(fullDate, previousDate) {
 // ── Main Hook ─────────────────────────────────────────────────────
 export function useOverviewMetrics({ orders, daysInRange }) {
   const nonIssueOrders = useMemo(
-    () => orders.filter((order) => order.category !== ORDER_CATEGORIES.ISSUES),
+    () => orders.filter((order) => 
+      order.category !== ORDER_CATEGORIES.ISSUES && 
+      order.status !== "Cancelled" && 
+      order.status !== "Abandoned" && 
+      order.type !== "abandoned"
+    ),
     [orders]
   );
 
@@ -237,8 +242,8 @@ export function useOverviewMetrics({ orders, daysInRange }) {
   );
 
   // ── Fixed date strings ──────────────────────────────────────────
-  const todayString = useMemo(() => getDateString(0), []);
-  const yesterdayString = useMemo(() => getDateString(-1), []);
+  const todayString = getDateString(0);
+  const yesterdayString = getDateString(-1);
 
   // ── Period-aware hero section (Today / Week / Month) ───────────
   // Returns a function so the UI can compute for any period on demand

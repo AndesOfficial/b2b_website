@@ -13,6 +13,7 @@ import ClientCategoryOrders from "./pages/ClientCategoryOrders";
 import ClientOrderDetail from "./pages/ClientOrderDetail";
 import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
 import AdminDailyReport from "./pages/AdminDailyReport";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -38,7 +39,7 @@ export default function App() {
           <Route path="/client/order/:orderId" element={<ClientProtectedRoute><ClientOrderDetail /></ClientProtectedRoute>} />
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </HostelAuthProvider>
     </BrowserRouter>

@@ -175,10 +175,10 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
             daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0
         };
 
-        if (inCurrent && !inHistorical) {
+        if (inCurrent && userMeta.firstOrderDate >= from && userMeta.firstOrderDate <= to) {
             newUsers.push(userObj);
         }
-        if (inCurrent && inHistorical) {
+        if (inCurrent && userMeta.firstOrderDate < from) {
             returningUsers.push(userObj);
         }
         if (inCurrent && inPrevious) {

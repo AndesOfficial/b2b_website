@@ -39,6 +39,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
                 if (window.innerWidth < 1024) setIsMobileOpen(false);
                 else setIsCollapsed(true);
               }}
+              aria-label="Collapse sidebar"
               className="p-1.5 rounded-lg hover:bg-[#1E293B] text-[#64748B] hover:text-white transition-colors"
             >
               <FiChevronLeft size={18} />
@@ -50,6 +51,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
           <div className="px-4 mb-4">
             <button
               onClick={() => setIsCollapsed(false)}
+              aria-label="Expand sidebar"
               className="w-full flex items-center justify-center p-3 rounded-xl bg-[#1E293B] text-blue-400 hover:text-white transition-all shadow-lg"
             >
               <FiMenu size={20} />
@@ -57,7 +59,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
           </div>
         )}
 
-        <nav className="flex-1 mt-4 space-y-1 px-3">
+        <nav className="flex-1 mt-4 space-y-1 px-3 overflow-y-auto scrollbar-hide">
           {ADMIN_SIDEBAR_TABS.map((item) => {
             const badge = item.badgeKey === "issuesCount" ? issuesCount : 0;
 
@@ -91,7 +93,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
           })}
         </nav>
 
-        <div className={`p-4 border-t border-[#1E293B] bg-[#1E293B]/30 mb-2 transition-all ${isCollapsed ? "px-2" : "px-4"}`}>
+        <div className={`p-4 border-t border-[#1E293B] bg-[#1E293B]/30 mb-2 transition-all flex-shrink-0 ${isCollapsed ? "px-2" : "px-4"}`}>
           <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : "px-2"}`}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xs text-white shadow-lg flex-shrink-0">
               {user?.name?.charAt(0) || "A"}
@@ -108,6 +110,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
               <button
                 onClick={onLogout}
                 title="Logout Session"
+                aria-label="Logout Session"
                 className="p-2 text-[#475569] hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
               >
                 <FiLogOut size={18} />
@@ -119,6 +122,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
             <button
               onClick={onLogout}
               title="Logout Session"
+              aria-label="Logout Session"
               className="mt-4 w-full flex items-center justify-center p-2 text-[#475569] hover:text-red-400 transition-all"
             >
               <FiLogOut size={20} />

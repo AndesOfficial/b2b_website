@@ -71,6 +71,7 @@ export default function AdminDashboard() {
   }, [dateFrom, dateTo]);
 
   const handleTabChange = useCallback((tab) => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
     if (tab === "regular") {
       setIsMobileMenuOpen(false);
       navigate("/admin/regular-orders");

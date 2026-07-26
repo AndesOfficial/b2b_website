@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
   FiArrowRight, FiArrowUpRight, FiArrowDownRight, FiChevronDown,
@@ -147,6 +147,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
 
   const expandedCat = periodData.breakdown.find((c) => c.key === expandedCategory);
   const expandedProperties = expandedCategory ? (periodData.propertyBreakdown[expandedCategory] || []) : [];
+  const totalPropsRev = useMemo(() => expandedProperties.reduce((s, r) => s + r.revenue, 0) || 1, [expandedProperties]);
 
   const formattedDate = new Date(todayString + "T00:00:00").toLocaleDateString("en-IN", {
     weekday: "long", day: "numeric", month: "long",
@@ -287,7 +288,6 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
               {expandedProperties.length > 0 ? (
                 <div className="space-y-4 p-4 md:p-6 bg-slate-50/50">
                   {expandedProperties.map((row, i) => {
-                    const totalPropsRev = expandedProperties.reduce((s, r) => s + r.revenue, 0) || 1;
                     const share = ((row.revenue / totalPropsRev) * 100).toFixed(1);
                     const hasEntryModes = row.entryModes && (row.entryModes.bulk.orders > 0 || row.entryModes.student.orders > 0);
 
@@ -302,7 +302,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Property</p>
                               <h4 className="text-[16px] font-bold text-[#0F172A] leading-none mb-1.5">{row.property}</h4>
                               <p className="text-[11px] font-bold text-slate-500">
-                                {row.orders} orders · {row.kg > 0 ? `${row.kg.toFixed(1)} kg · ` : ''}{share}% share
+                                {row.orders} {row.orders === 1 ? "order" : "orders"} · {row.kg > 0 ? `${row.kg.toFixed(1)} kg · ` : ''}{share}% share
                               </p>
                             </div>
                           </div>
@@ -322,7 +322,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                               <div>
                                 <div className="flex justify-between items-center mb-3">
                                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Hostel Bulk</p>
-                                  <p className="text-[10px] font-bold text-slate-400">{row.entryModes.bulk.orders} orders</p>
+                                  <p className="text-[10px] font-bold text-slate-400">{row.entryModes.bulk.orders} {row.entryModes.bulk.orders === 1 ? "order" : "orders"}</p>
                                 </div>
                                 <p className="text-[16px] font-black text-[#0F172A] mb-2">
                                   <span className="text-[12px] mr-0.5">₹</span>
@@ -345,7 +345,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                               <div>
                                 <div className="flex justify-between items-center mb-3">
                                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Student Orders</p>
-                                  <p className="text-[10px] font-bold text-slate-400">{row.entryModes.student.orders} orders</p>
+                                  <p className="text-[10px] font-bold text-slate-400">{row.entryModes.student.orders} {row.entryModes.student.orders === 1 ? "order" : "orders"}</p>
                                 </div>
                                 <p className="text-[16px] font-black text-[#0F172A] mb-2">
                                   <span className="text-[12px] mr-0.5">₹</span>
@@ -421,7 +421,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="p-4 sm:p-6 border-b border-gray-50 flex flex-wrap items-center justify-between gap-4 bg-white">
         <div>
-          <h2 className="text-[15px] font-bold text-[#0F172A] mb-0.5">Property Performance</h2>
+          <h2 className="text-[15px] font-bold text-[#0F172A] mb-0.5">Top Contributors & Property Performance</h2>
           <p className="text-[12px] font-medium text-[#94A3B8]">All-time metrics · Click a row to view orders</p>
         </div>
         <div className="flex items-center gap-2">
@@ -500,6 +500,11 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                           {row.name?.charAt(0)}
                         </div>
                         <span className="text-[13.5px] font-bold text-[#0F172A]">{row.name}</span>
+                        {index < 3 && sortConfig.key === "rev" && sortConfig.direction === "desc" && row.rev > 0 && (
+                          <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-black rounded-full uppercase tracking-wider">
+                            #{index + 1} Top Contributor
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -537,6 +542,11 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-[#0F172A]">{row.name}</h4>
+                      {index < 3 && sortConfig.key === "rev" && sortConfig.direction === "desc" && row.rev > 0 && (
+                        <span className="mr-1 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black rounded-full uppercase tracking-wider">
+                          #{index + 1} Top Contributor
+                        </span>
+                      )}
                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${getStatusBadgeClass(row.hostelType)}`}>{row.hostelType}</span>
                     </div>
                   </div>
@@ -544,7 +554,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                     <div className="flex items-center justify-end gap-0.5 text-sm font-black text-[#0F172A]">
                       <BiRupee size={12} className="text-slate-400" /><span>{row.rev.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{row.orders} Orders</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{row.orders} {row.orders === 1 ? "Order" : "Orders"}</span>
                   </div>
                 </div>
               </div>
@@ -651,12 +661,22 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
   return (
     <div className="space-y-6" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {dateFrom && setDateFrom && dateTo && setDateTo && (
-        <OverviewDateFilter 
-          dateFrom={dateFrom} 
-          setDateFrom={setDateFrom} 
-          dateTo={dateTo} 
-          setDateTo={setDateTo} 
-        />
+        <>
+          <OverviewDateFilter 
+            dateFrom={dateFrom} 
+            setDateFrom={setDateFrom} 
+            dateTo={dateTo} 
+            setDateTo={setDateTo} 
+          />
+          {dateFrom > dateTo && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between">
+              <span>Invalid Date Range: "From" date cannot be later than "To" date. Please adjust your filters.</span>
+              <button onClick={() => { setDateFrom(dateTo); }} className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white text-xs rounded-lg shadow transition">
+                Reset From Date
+              </button>
+            </div>
+          )}
+        </>
       )}
       <ExpandedOverviewLayout orders={orders} />
 
@@ -683,10 +703,11 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={windowWidth < 640 ? 2 : 0} />
+              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval="preserveStartEnd" minTickGap={20} />
               <YAxis tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 500 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} width={windowWidth < 640 ? 35 : 50} />
               <Tooltip content={<RevenueChartTooltip />} cursor={{ stroke: "#3B82F6", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
-              <Area type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={3} fill="url(#revGrad)" dot={{ r: 4, fill: "#3B82F6", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={2000} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }} />
+              <Area type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#3B82F6" strokeWidth={3} fill="url(#revGrad)" dot={{ r: 4, fill: "#3B82F6", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={2000} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -711,7 +732,7 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
                   <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ backgroundColor: category.color, width: `${category.share}%` }} />
                 </div>
                 <div className="mt-1 flex justify-between">
-                  <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{category.orders} Orders</span>
+                  <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{category.orders} {category.orders === 1 ? "Order" : "Orders"}</span>
                   <span className="text-[10px] font-bold" style={{ color: category.color }}>{category.share.toFixed(1)}%</span>
                 </div>
               </div>

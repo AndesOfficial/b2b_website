@@ -67,9 +67,9 @@ const formatCurrencyCompact = (value) => {
   const absolute = Math.abs(numericValue);
   const sign = numericValue < 0 ? "-" : "";
 
-  if (absolute >= 10000000) return `${sign}Rs ${(absolute / 10000000).toFixed(2)} Cr`;
-  if (absolute >= 100000) return `${sign}Rs ${(absolute / 100000).toFixed(2)} L`;
-  if (absolute >= 1000) return `${sign}Rs ${(absolute / 1000).toFixed(1)} k`;
+  if (absolute >= 10000000) return `${sign}₹${(absolute / 10000000).toFixed(2)} Cr`;
+  if (absolute >= 100000) return `${sign}₹${(absolute / 100000).toFixed(2)} L`;
+  if (absolute >= 1000) return `${sign}₹${(absolute / 1000).toFixed(1)} k`;
   return `${sign}${formatCurrency(absolute)}`;
 };
 
@@ -86,7 +86,7 @@ function LabelWithInfo({ text, tooltip }) {
 
   return (
     <div className="flex w-full items-center gap-1.5">
-      <span className="truncate">{text}</span>
+      <span className="break-words leading-tight">{text}</span>
       <span className="relative inline-flex flex-shrink-0 items-center">
         <button
           type="button"
@@ -317,7 +317,7 @@ export default function InvestorMetrics() {
             />
             <SnapshotMetric
               label="EBITDA"
-              tooltip="Earnings before interest, taxes, depreciation, and amortization. This card uses the Feb 2026 EBITDA snapshot."
+              tooltip={`Earnings before interest, taxes, depreciation, and amortization. This card uses the ${metrics.ebitdaBreakdown.monthLabel} EBITDA snapshot.`}
               value={formatCurrency(metrics.ebitdaBreakdown.ebitda)}
               note={`${metrics.ebitdaBreakdown.monthLabel} snapshot`}
               icon={IndianRupee}
@@ -508,7 +508,7 @@ export default function InvestorMetrics() {
           <div className="space-y-4">
             <DetailRow
               label="Revenue"
-              tooltip="Total February 2026 revenue used in the EBITDA calculation."
+              tooltip={`Total ${metrics.ebitdaBreakdown.monthLabel} revenue used in the EBITDA calculation.`}
               value={formatCurrency(metrics.ebitdaBreakdown.revenue)}
             />
             <DetailRow
@@ -523,7 +523,7 @@ export default function InvestorMetrics() {
             />
             <DetailRow
               label="EBITDA"
-              tooltip="Revenue minus variable cost minus fixed cost for the February 2026 snapshot."
+              tooltip={`Revenue minus variable cost minus fixed cost for the ${metrics.ebitdaBreakdown.monthLabel} snapshot.`}
               value={formatCurrency(metrics.ebitdaBreakdown.ebitda)}
               tone={metrics.ebitdaBreakdown.ebitda < 0 ? "danger" : "default"}
             />

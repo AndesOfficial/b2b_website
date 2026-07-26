@@ -47,14 +47,20 @@ function hasMeaningfulHotelData(order) {
 // isHiddenHotelRecord removed - record should be soft-deleted in Firestore instead
 
 function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
-  let focusOrders = orders.filter((order) => order.category !== "ISSUES");
+  const validOrders = orders.filter((order) => 
+    order.category !== "ISSUES" && 
+    order.status !== "Cancelled" && 
+    order.status !== "Abandoned" && 
+    order.type !== "abandoned"
+  );
+  let focusOrders = validOrders;
 
   if (activeTab === "regular") {
-    focusOrders = orders.filter((order) => order.type === "regular");
+    focusOrders = validOrders.filter((order) => order.type === "regular");
   } else if (activeTab === "hostels") {
-    focusOrders = orders.filter((order) => order.type === "student" || order.type === "linen");
+    focusOrders = validOrders.filter((order) => order.type === "student" || order.type === "linen");
   } else if (activeTab === "hotels") {
-    focusOrders = orders.filter((order) => isHotelOrder(order) && hasMeaningfulHotelData(order));
+    focusOrders = validOrders.filter((order) => isHotelOrder(order) && hasMeaningfulHotelData(order));
   }
 
   const issues = orders.filter((order) => order.category === "ISSUES");
@@ -67,31 +73,31 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
       ? new Set(focusOrders.map((order) => order.property)).size
       : allManagers.length;
 
-  const hostelRevenue = orders
+  const hostelRevenue = validOrders
     .filter((order) => order.type === "student" || order.type === "linen")
     .reduce((sum, order) => sum + (order.amount || 0), 0);
-  const retailRevenue = orders
+  const retailRevenue = validOrders
     .filter((order) => order.type === "regular")
     .reduce((sum, order) => sum + (order.amount || 0), 0);
-  const hotelRevenue = orders
+  const hotelRevenue = validOrders
     .filter((order) => isHotelOrder(order) && hasMeaningfulHotelData(order))
     .reduce((sum, order) => sum + (order.amount || 0), 0);
 
   const getTrend = (filterFn) => (
     daysInRange.map((fullDate) => ({
-      v: orders
+      v: validOrders
         .filter((order) => order.date === fullDate && filterFn(order))
         .reduce((sum, order) => sum + (order.amount || order.weight || 1), 0),
     }))
   );
 
-  const b2cOrders = orders.filter((o) =>
+  const b2cOrders = validOrders.filter((o) =>
     (o.type === "regular" || o.source === "cartdetails" || o.source === "website") &&
     o.type !== "rider_tracking" &&  // exclude rider tracking records from B2C count
     o.type !== "abandoned"          // exclude abandoned carts from B2C count
   );
 
-  const b2bOrders = orders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b");
+  const b2bOrders = validOrders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b");
 
   const b2cPickups = b2cOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
   const b2cDeliveries = b2cOrders.filter((o) => o.status === "Delivered").length;

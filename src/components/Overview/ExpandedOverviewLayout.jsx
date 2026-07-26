@@ -158,16 +158,23 @@ const MOCK_DATA = {
 // UI COMPONENTS
 // ═══════════════════════════════════════════════════════════════════
 
-function SectionHeader({ title, subtitle, phase, color }) {
+function SectionHeader({ title, subtitle, phase, color, badge }) {
   return (
-    <div className="flex items-center gap-4 mb-6">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-sm`} style={{ backgroundColor: color }}>
-        P{phase}
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-sm`} style={{ backgroundColor: color }}>
+          P{phase}
+        </div>
+        <div>
+          <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{title}</h2>
+          <p className="text-[12px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{subtitle}</p>
+        </div>
       </div>
-      <div>
-        <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{title}</h2>
-        <p className="text-[12px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{subtitle}</p>
-      </div>
+      {badge && (
+        <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-black uppercase tracking-wider">
+          {badge}
+        </span>
+      )}
     </div>
   );
 }
@@ -210,7 +217,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
 
   const liveB2b = useMemo(() => {
     const b2bOrders = orders.filter(o =>
-      o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b"
+      (o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b") &&
+      o.status !== "Cancelled" && o.status !== "Abandoned" && o.type !== "abandoned"
     );
     const totalActiveStudents = b2bOrders.reduce((s, o) => s + (o.studentCount || 0), 0);
     const totalKgReceived = b2bOrders.reduce((s, o) => s + (o.weight || 0), 0);
@@ -308,7 +316,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
   // ── Real-time B2C Stats from cartdetails + website orders ─────────
   const liveB2c = useMemo(() => {
     const b2cOrders = orders.filter(o =>
-      o.type === "regular" || o.source === "cartdetails" || o.source === "website"
+      (o.type === "regular" || o.source === "cartdetails" || o.source === "website") &&
+      o.status !== "Cancelled" && o.status !== "Abandoned" && o.type !== "abandoned" && o.type !== "rider_tracking"
     );
 
     const totalOrders = b2cOrders.length;
@@ -409,6 +418,8 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       order.category !== "ISSUES"
       && order.type !== "issue"
       && order.status !== "Cancelled"
+      && order.status !== "Abandoned"
+      && order.type !== "abandoned"
       && order.date >= monthStart
       && order.date <= todayStr
     );
@@ -416,13 +427,24 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     const processedKg = capacityOrders.reduce((sum, order) => sum + (Number(order.weight) || 0), 0);
     const totalOrders = capacityOrders.length;
     const remainingKg = Math.max(0, MONTHLY_CAPACITY_KG - processedKg);
-    const utilizationPct = Math.min(100, Math.round((processedKg / MONTHLY_CAPACITY_KG) * 100));
+    const utilizationPct = Math.round((processedKg / MONTHLY_CAPACITY_KG) * 1000) / 10;
     const avgKgPerOrder = totalOrders > 0 ? processedKg / totalOrders : 0;
-    const mixTotals = capacityOrders.reduce((mix, order) => {
-      const key = getServiceMixKey(order);
-      mix[key] += Number(order.weight) || 0;
-      return mix;
-    }, { washFold: 0, washIron: 0, dryClean: 0 });
+    const mixTotals = { washFold: 0, washIron: 0, dryClean: 0 };
+    capacityOrders.forEach((order) => {
+      if (order.serviceBreakdown && Array.isArray(order.serviceBreakdown) && order.serviceBreakdown.length > 0) {
+        order.serviceBreakdown.forEach((line) => {
+          const wt = Number(line.weight) || 0;
+          const text = (line.name || line.serviceType || "").toLowerCase();
+          if (text.includes("dry clean") || text.includes("dryclean")) mixTotals.dryClean += wt;
+          else if (text.includes("iron")) mixTotals.washIron += wt;
+          else mixTotals.washFold += wt;
+        });
+      } else {
+        const wt = Number(order.weight) || 0;
+        const key = getServiceMixKey(order);
+        mixTotals[key] += wt;
+      }
+    });
     const mixKg = Object.values(mixTotals).reduce((sum, value) => sum + value, 0);
     const serviceMix = Object.fromEntries(
       Object.entries(mixTotals).map(([key, value]) => [key, mixKg > 0 ? Math.round((value / mixKg) * 100) : 0])
@@ -446,10 +468,21 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       unsubSnap();
       if (!user) return;
-      unsubSnap = onSnapshot(collection(db, "b2b_expenses"), (snap) => {
-        const total = snap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
-        setTotalExpenses(total);
-      });
+      unsubSnap = onSnapshot(
+        collection(db, "b2b_expenses"),
+        (snap) => {
+          const total = snap.docs.reduce((s, d) => {
+            const data = d.data();
+            if (data.transactionType === "credit") return s;
+            return s + (data.amount || 0);
+          }, 0);
+          setTotalExpenses(total);
+        },
+        (err) => {
+          console.error("b2b_expenses sync error in overview:", err);
+          setTotalExpenses(0);
+        }
+      );
     });
     return () => { unsubAuth(); unsubSnap(); };
   }, []);
@@ -457,7 +490,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
   // ── Phase 4: Live Revenue + Retention ────────────────────────
   const liveP4 = useMemo(() => {
     const nonIssueOrders = orders.filter(
-      o => o.type !== "issue" && o.category !== "ISSUES" && o.status !== "Cancelled"
+      o => o.type !== "issue" && o.category !== "ISSUES" && o.status !== "Cancelled" && o.status !== "Abandoned" && o.type !== "abandoned"
     );
 
     // Revenue split
@@ -736,7 +769,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           PHASE 2: PROCESS / ZONE TIME TRACKING
           ───────────────────────────────────────────────────────────── */}
       <section>
-        <SectionHeader phase="2" title="Process & Zone Tracking" subtitle="How each order moves inside system" color="#8B5CF6" />
+        <SectionHeader phase="2" title="Process & Zone Tracking" subtitle="How each order moves inside system" color="#8B5CF6" badge="Sample Data" />
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-8">
             <div>
@@ -783,7 +816,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           PHASE 3: OPERATIONS / CONTROL
           ───────────────────────────────────────────────────────────── */}
       <section>
-        <SectionHeader phase="3" title="Operations & Control" subtitle="How well operations are running" color="#F59E0B" />
+        <SectionHeader phase="3" title="Operations & Control" subtitle="How well operations are running" color="#F59E0B" badge="Sample Data" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Capacity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -795,9 +828,9 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                   <span className="text-slate-800">{formatKg(livePhase3.processedKg)} / {formatKg(livePhase3.fullCapacity)} kg</span>
                 </div>
                 <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${livePhase3.utilizationPct}%` }} />
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, livePhase3.utilizationPct)}%` }} />
                 </div>
-                <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{livePhase3.utilizationPct}% Utilized · {formatKg(livePhase3.remainingKg)} kg Remaining</p>
+                <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{livePhase3.utilizationPct.toFixed(1)}% Utilized · {formatKg(livePhase3.remainingKg)} kg Remaining</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -823,7 +856,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
 
           {/* Time & Efficiency */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2"><FiClock /> Time & Efficiency</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2"><FiClock /> Time & Efficiency</h3>
+              <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-black uppercase tracking-wider">Sample</span>
+            </div>
             <div className="space-y-4">
               <StatCard label="On-time Pickup" value={`${d.phase3.efficiency.onTimePickup}%`} colorClass="text-emerald-500" highlight />
               <StatCard label="On-time Delivery" value={`${d.phase3.efficiency.onTimeDelivery}%`} colorClass="text-emerald-500" highlight />
@@ -833,7 +869,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
 
           {/* Quality Control */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2"><FiCheckCircle /> Quality Control</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-2"><FiCheckCircle /> Quality Control</h3>
+              <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-black uppercase tracking-wider">Sample</span>
+            </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <StatCard label="Issue Rate" value={`${d.phase3.quality.issueRate}%`} colorClass="text-red-500" highlight />
               <StatCard label="Zero Complaints" value={`${d.phase3.quality.zeroComplaintOrders}%`} colorClass="text-emerald-500" highlight />
@@ -915,7 +954,11 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                   ₹{totalExpenses > 0 ? totalExpenses.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : "0"}
                 </p>
                 {totalExpenses > 0 && liveP4.totalRevenue > 0 && (
-                  <p className="text-[9px] font-bold text-red-400 mt-0.5">{((totalExpenses / liveP4.totalRevenue) * 100).toFixed(1)}% of revenue consumed</p>
+                  <p className="text-[9px] font-bold text-red-400 mt-0.5">
+                    {((totalExpenses / liveP4.totalRevenue) * 100) > 1000
+                      ? "—"
+                      : `${((totalExpenses / liveP4.totalRevenue) * 100).toFixed(1)}% of revenue consumed`}
+                  </p>
                 )}
               </div>
             </div>
