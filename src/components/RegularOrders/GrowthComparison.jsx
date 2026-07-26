@@ -18,11 +18,11 @@ export default function GrowthComparison({ analytics }) {
   );
 
   const renderMetric = (label, current, previous, isCurrency = false) => {
+    const isZeroPrevious = previous === 0 && current > 0;
     let percentage = 0;
     if (previous > 0) percentage = ((current - previous) / previous) * 100;
-    else if (current > 0) percentage = 100;
 
-    const isPositive = percentage > 0;
+    const isPositive = percentage > 0 || isZeroPrevious;
     const isNegative = percentage < 0;
 
     return (
@@ -31,17 +31,30 @@ export default function GrowthComparison({ analytics }) {
         <div className="flex items-center gap-1 mb-2">
           {isCurrency && <BiRupee size={16} className="text-slate-400" />}
           <span className="text-[20px] font-black text-[#0F172A] tracking-tight">
-            {isCurrency ? current.toLocaleString() : current}
+            {isCurrency
+              ? Number(current).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+              : typeof current === "number" ? current.toLocaleString() : current}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded ${
             isPositive ? "bg-emerald-100 text-emerald-700" : isNegative ? "bg-rose-100 text-rose-700" : "bg-slate-200 text-slate-600"
           }`}>
-            {isPositive ? <FiTrendingUp size={10} /> : isNegative ? <FiTrendingDown size={10} /> : <FiMinus size={10} />}
-            {Math.abs(percentage).toFixed(1)}%
+            {isZeroPrevious ? (
+              <>
+                <FiTrendingUp size={10} />
+                <span>NEW</span>
+              </>
+            ) : (
+              <>
+                {isPositive ? <FiTrendingUp size={10} /> : isNegative ? <FiTrendingDown size={10} /> : <FiMinus size={10} />}
+                {Math.abs(percentage).toFixed(1)}%
+              </>
+            )}
           </span>
-          <span className="text-[10px] font-bold text-slate-400">vs Prev. Period ({isCurrency ? `₹${previous.toLocaleString()}` : previous})</span>
+          <span className="text-[10px] font-bold text-slate-400">
+            vs Prev. Period ({isCurrency ? `₹${Number(previous).toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : typeof previous === "number" ? previous.toLocaleString() : previous})
+          </span>
         </div>
       </div>
     );

@@ -7,6 +7,7 @@ import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { useHostelAuth } from "../../context/HostelAuthContext";
 import { getOrAssignInvoiceNumber } from "../../utils/invoiceCounter";
 import { generateSingleInvoicePDF } from "../../utils/pdfGenerator";
+import { formatTimeSlot, humanizeServiceLabel } from "../../utils/formatUtils";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
   const { client } = useHostelAuth();
@@ -124,7 +125,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                   const raw = order.createdAtRaw || order.orderTimestamp || order.createdAt;
                   if (!raw) return "";
                   let d = typeof raw === "object" && typeof raw.toDate === "function" ? raw.toDate() : new Date(typeof raw === "number" && raw < 100000000000 ? raw * 1000 : raw);
-                  return !isNaN(d.getTime()) ? `(${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : "";
+                  return !isNaN(d.getTime()) ? `(${formatTimeSlot(d)})` : "";
                 })()}
               </p>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
@@ -228,7 +229,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
               {order.serviceBreakdown.map((item) => (
                 <div key={`${item.name}-${item.quantity}-${item.amount}`} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
                   <div>
-                    <p className="text-[13px] font-bold text-slate-700">{item.name}</p>
+                    <p className="text-[13px] font-bold text-slate-700">{humanizeServiceLabel(item.name)}</p>
                     <p className="text-[11px] text-slate-500">
                       {item.quantity ? `${item.quantity} pcs` : "—"}
                       {item.weight ? ` • ${item.weight} kg` : ""}

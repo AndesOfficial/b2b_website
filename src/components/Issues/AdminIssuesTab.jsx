@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { FiCheckCircle, FiClock, FiAlertTriangle, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiInbox, FiTrendingUp, FiTrendingDown, FiAward, FiPackage } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "../Shared/EmptyState";
+import { formatTimeSlot } from "../../utils/formatUtils";
 
 const ISSUE_TYPES = ["Missing Items", "Damage", "Quality Issue", "Stain Issue", "Return Pending", "Weight Dispute", "Bags Pending"];
 const SEVERITY_ORDER = { critical: 0, pending: 1 };
@@ -59,7 +60,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
     const critical = allIssues.filter(i => i.severity === "critical").length;
 
     // Resolution Rate
-    const resolutionRate = total > 0 ? ((resolved / total) * 100).toFixed(1) : "0.0";
+    const resolutionRate = total > 0 ? ((resolved / total) * 100).toFixed(1) : "100.0";
 
     // Most Common Issue Type
     const typeCounts = {};
@@ -115,7 +116,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
       trendPct = "100";
     }
 
-    return { resolutionRate, pending, critical, topType, topTypePct, bestMonthLabel, bestMonthRate: bestMonthRate >= 0 ? (bestMonthRate * 100).toFixed(0) : "—", thisMonthCount, lastMonthCount, trendDirection, trendPct };
+    return { total, resolutionRate, pending, critical, topType, topTypePct, bestMonthLabel, bestMonthRate: bestMonthRate >= 0 ? (bestMonthRate * 100).toFixed(0) : "—", thisMonthCount, lastMonthCount, trendDirection, trendPct };
   }, [allIssues]);
 
   const handleSubmit = () => {
@@ -159,7 +160,10 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center"><FiCheckCircle size={16} className="text-emerald-500" /></div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolution Rate</span>
           </div>
-          <p className="text-[28px] font-black text-[#0F172A] tracking-tight leading-none">{kpis.resolutionRate}<span className="text-[16px] text-slate-400">%</span></p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-[28px] font-black text-[#0F172A] tracking-tight leading-none">{kpis.resolutionRate}<span className="text-[16px] text-slate-400">%</span></p>
+            {kpis.total === 0 && <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">No Issues</span>}
+          </div>
           <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
             <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${kpis.resolutionRate}%`, backgroundColor: parseFloat(kpis.resolutionRate) >= 80 ? '#10B981' : parseFloat(kpis.resolutionRate) >= 50 ? '#F59E0B' : '#EF4444' }} />
           </div>
@@ -299,8 +303,8 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
                   {issue.reportedBy && <span className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full bg-gray-300" /> reported by {issue.reportedBy}</span>}
                   {issue.linkedHostel && <span className="flex items-center gap-1.5 text-blue-500"><div className="w-1 h-1 rounded-full bg-blue-300" /> {issue.linkedHostel}</span>}
                   {issue.customerName && issue.customerName !== issue.reportedBy && <span className="flex items-center gap-1.5 text-fuchsia-500"><div className="w-1 h-1 rounded-full bg-fuchsia-300" /> student: {issue.customerName}</span>}
-                  {issue.pickupDate && <span className="flex items-center gap-1.5 text-teal-500"><div className="w-1 h-1 rounded-full bg-teal-300" /> picked: {issue.pickupDate}</span>}
-                  {issue.deliveryDate && <span className="flex items-center gap-1.5 text-orange-500"><div className="w-1 h-1 rounded-full bg-orange-300" /> delivered: {issue.deliveryDate}</span>}
+                  {issue.pickupDate && <span className="flex items-center gap-1.5 text-teal-500"><div className="w-1 h-1 rounded-full bg-teal-300" /> picked: {formatTimeSlot(issue.pickupDate)}</span>}
+                  {issue.deliveryDate && <span className="flex items-center gap-1.5 text-orange-500"><div className="w-1 h-1 rounded-full bg-orange-300" /> delivered: {formatTimeSlot(issue.deliveryDate)}</span>}
                   {issue.linkedOrderId && <span className="flex items-center gap-1.5 text-indigo-500"><div className="w-1 h-1 rounded-full bg-indigo-300" /> Order ID: {issue.linkedOrderId}</span>}
                 </div>
               </div>

@@ -418,7 +418,20 @@ export function HostelAuthProvider({ children }) {
       return { success: true, role: userData.role, client: clientData };
     } catch (error) {
       console.error("Login failed:", error);
-      return { success: false, error: error.message || "Invalid email or password." };
+      let message = "Invalid email or password. Please check your credentials.";
+      const code = error.code || "";
+      if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/invalid-email") {
+        message = "Invalid email or password. Please check your credentials.";
+      } else if (code === "auth/too-many-requests") {
+        message = "Too many failed login attempts. Please try again later.";
+      } else if (code === "auth/user-disabled") {
+        message = "This account has been disabled. Please contact support.";
+      } else if (code === "auth/network-request-failed") {
+        message = "Network error. Please check your internet connection and try again.";
+      } else if (error.message === "User record not found in b2b_managers collection.") {
+        message = "Your account is not authorized for portal access. Please contact administrator.";
+      }
+      return { success: false, error: message };
     }
   }, []);
 

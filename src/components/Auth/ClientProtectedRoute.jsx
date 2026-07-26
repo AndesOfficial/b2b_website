@@ -9,7 +9,10 @@ export default function ClientProtectedRoute({ children }) {
   // during initial load and Vite HMR re-mounts.
   if (client === null && !isDataLoaded) return null;
 
-  if (!client || client.role === "admin" || client.role === "admin_viewer") {
+  if (!client) {
+    return <Navigate to="/login" replace />;
+  }
+  if (client.role === "admin" || client.role === "admin_viewer") {
     return <Navigate to="/admin" replace />;
   }
   return children;

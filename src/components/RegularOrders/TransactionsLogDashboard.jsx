@@ -6,6 +6,7 @@ import AdminOrderModal from "../Shared/AdminOrderModal";
 import FilterPills from "../Shared/FilterPills";
 import TabSectionCard from "../Shared/TabSectionCard";
 import { REGULAR_CHANNELS, getServiceLabel, useRegularOrders } from "../../hooks/useRegularOrders";
+import { formatTimeSlot, humanizeServiceLabel } from "../../utils/formatUtils";
 import { calculateTAT } from "../../utils/dateUtils";
 
 const CHANNEL_ICONS = { App: FiSmartphone, Auto: FiMapPin, Website: FiShoppingBag, WhatsApp: FiMessageSquare, Outlet: FiShoppingBag, Call: FiPhone, Student: FiUser };
@@ -49,9 +50,7 @@ function getFormattedCreatedDate(order) {
   const seconds = d.getSeconds();
   const hasTime = hours !== 0 || minutes !== 0 || seconds !== 0;
   
-  const timeStr = hasTime 
-    ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : "";
+  const timeStr = hasTime ? formatTimeSlot(d) : "";
 
   return { dateStr, timeStr };
 }
@@ -295,8 +294,8 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                         </td>
                       );
                     })()}
-                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{order.pickupDate || order.date || "—"}</td>
-                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{order.deliveryDate || "Pending"}</td>
+                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{formatTimeSlot(order.pickupDate || order.date) || "—"}</td>
+                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{formatTimeSlot(order.deliveryDate) || "Pending"}</td>
                     {/* Status */}
                     <td className="px-3 py-3 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border whitespace-nowrap ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
@@ -336,7 +335,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                             const wt = Number(line.weight);
                             return (
                               <span key={`${line.name}-${index}`} className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white text-slate-600 border border-slate-100 shadow-sm">
-                                {line.name}
+                                {humanizeServiceLabel(line.name)}
                                 {(qty > 0 || wt > 0) && " • "}
                                 {qty > 0 && `${qty} pcs`}
                                 {qty > 0 && wt > 0 && " / "}
@@ -459,12 +458,12 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[9px] uppercase tracking-widest text-slate-400">Pickup:</span>
-                        <span className="text-slate-700 font-bold">{order.pickupDate || order.date || "—"}</span>
+                        <span className="text-slate-700 font-bold">{formatTimeSlot(order.pickupDate || order.date) || "—"}</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] uppercase tracking-widest text-slate-400">Delivery:</span>
-                      <span className={order.deliveryDate ? "text-slate-700 font-bold" : "text-amber-500 font-bold"}>{order.deliveryDate || "TBD"}</span>
+                      <span className={order.deliveryDate ? "text-slate-700 font-bold" : "text-amber-500 font-bold"}>{formatTimeSlot(order.deliveryDate) || "TBD"}</span>
                     </div>
                   </div>
                 );

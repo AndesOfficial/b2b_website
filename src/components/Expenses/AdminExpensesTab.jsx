@@ -68,14 +68,8 @@ export default function AdminExpensesTab() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState(null);
-  const [dateFrom, setDateFrom] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  });
-  const [dateTo, setDateTo] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  });
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [catFilter, setCatFilter] = useState("All");
   const [expandedRows, setExpandedRows] = useState(new Set());
 
@@ -148,12 +142,16 @@ export default function AdminExpensesTab() {
         if (!e.date) return false;
         return e.date >= dateFrom && e.date <= dateTo;
       });
+    } else if (dateFrom) {
+      list = list.filter((e) => e.date && e.date >= dateFrom);
+    } else if (dateTo) {
+      list = list.filter((e) => e.date && e.date <= dateTo);
     }
     if (catFilter !== "All") {
       list = list.filter((e) => e.category === catFilter);
     }
     return list;
-  }, [personalExpenses, dateFrom, dateTo, catFilter]);
+  }, [andesExpenses, dateFrom, dateTo, catFilter]);
 
   /* ─── KPIs ─── */
   const kpis = useMemo(() => {

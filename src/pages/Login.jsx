@@ -99,7 +99,10 @@ export default function Login() {
                                 <div className="relative">
                                     <FiMail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                     <input
+                                        id="email"
+                                        name="email"
                                         type="email"
+                                        autoComplete="username"
                                         required
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
@@ -112,11 +115,14 @@ export default function Login() {
 
                             {/* Password */}
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                                 <div className="relative">
                                     <FiLock size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                     <input
+                                        id="password"
+                                        name="password"
                                         type={showPass ? "text" : "password"}
+                                        autoComplete="current-password"
                                         required
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}

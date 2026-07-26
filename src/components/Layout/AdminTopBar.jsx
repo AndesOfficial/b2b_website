@@ -9,6 +9,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
             <div className="flex items-center gap-3">
                 <button 
                     onClick={onMenuClick}
+                    aria-label="Open mobile navigation menu"
                     className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden"
                 >
                     <FiMenu size={20} />
@@ -23,6 +24,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                     <FiCalendar size={14} className="text-gray-400 hidden sm:block" />
                     <input
                         type="date"
+                        aria-label="Filter from date"
                         value={dateFrom}
                         onChange={(e) => setDateFrom(e.target.value)}
                         className="bg-transparent text-[11px] sm:text-[13px] font-medium text-gray-700 outline-none border-none w-[90px] sm:w-[115px]"
@@ -30,6 +32,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                     <span className="text-gray-300 text-xs">—</span>
                     <input
                         type="date"
+                        aria-label="Filter to date"
                         value={dateTo}
                         onChange={(e) => setDateTo(e.target.value)}
                         className="bg-transparent text-[11px] sm:text-[13px] font-medium text-gray-700 outline-none border-none w-[90px] sm:w-[115px]"

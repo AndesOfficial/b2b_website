@@ -128,7 +128,7 @@ function LinenSummaryCard({ name, color, orders, revenue }) {
         </div>
         <div className="text-right">
           <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-wider block mb-1">
-            {orders.length} pckp • {Object.values(totals).reduce((a, b) => a + b, 0)} items
+            {orders.length} {orders.length === 1 ? "pickup" : "pickups"} • {Object.values(totals).reduce((a, b) => a + b, 0)} {Object.values(totals).reduce((a, b) => a + b, 0) === 1 ? "item" : "items"}
           </span>
           {revenue !== undefined && (
             <div className="flex items-center justify-end gap-0.5 text-[13px] font-black text-green-600">
@@ -265,6 +265,11 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     [orders]
   );
 
+  const unknownOrdersCount = useMemo(
+    () => orders.filter((order) => normalizePropertyName(order.property) === "Unknown Property").length,
+    [orders]
+  );
+
   const studentOrders = useMemo(() => visibleOrders.filter(o => o.type === "student"), [visibleOrders]);
   const linenOrders = useMemo(() => visibleOrders.filter(o => o.type === "linen"), [visibleOrders]);
 
@@ -369,6 +374,14 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+      {unknownOrdersCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-xs rounded-lg font-black uppercase tracking-wider">Warning</span>
+            <span>{unknownOrdersCount} {unknownOrdersCount === 1 ? "order has an" : "orders have an"} "Unknown Property" and {unknownOrdersCount === 1 ? "is" : "are"} currently excluded from hostel metrics.</span>
+          </div>
+        </div>
+      )}
       {/* Toggle */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm w-fit gap-1 text-[12px] font-bold">
@@ -391,7 +404,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight uppercase tracking-widest">Unified Property Summary</h2>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Combining {unifiedSummaries.length} Properties</span>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Combining {unifiedSummaries.length} {unifiedSummaries.length === 1 ? "Property" : "Properties"}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
               {/* NOW MAPPING OVER OUR NEW UNIFIED LIST */}

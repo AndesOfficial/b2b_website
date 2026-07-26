@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMenu, FiFileText, FiChevronLeft, FiChevronRight, FiCalendar } from 'react-icons/fi';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
 import AdminSidebar from '../components/Layout/AdminSidebar';
 import { useHostelAuth } from '../context/HostelAuthContext';
 import LoadingSpinner from '../components/Shared/LoadingSpinner';
@@ -17,29 +15,7 @@ export default function AdminDailyReport() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => getTodayString());
-  const [complaints, setComplaints] = useState([]);
-  const [complaintsLoaded, setComplaintsLoaded] = useState(false);
-
-  // Fetch normal_complaint collection
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, 'normal_complaint'),
-      (snapshot) => {
-        setComplaints(
-          snapshot.docs.map((docSnap) => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-          }))
-        );
-        setComplaintsLoaded(true);
-      },
-      (error) => {
-        console.error('normal_complaint sync error:', error.message);
-        setComplaintsLoaded(true);
-      }
-    );
-    return () => unsub();
-  }, []);
+  // Complaints are already fetched and merged into baseOrders by HostelAuthContext
 
   // Responsive sidebar
   useEffect(() => {
@@ -53,7 +29,7 @@ export default function AdminDailyReport() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const report = useDailyOpsReport(baseOrders, complaints, selectedDate);
+  const report = useDailyOpsReport(baseOrders, [], selectedDate);
 
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
@@ -90,7 +66,7 @@ export default function AdminDailyReport() {
 
   const isToday = selectedDate === getTodayString();
 
-  const loading = !isDataLoaded || !complaintsLoaded;
+  const loading = !isDataLoaded;
 
   if (loading) return <LoadingSpinner fullscreen />;
 

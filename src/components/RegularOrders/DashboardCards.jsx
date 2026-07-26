@@ -113,7 +113,7 @@ export default function DashboardCards({ analytics }) {
     },
     {
       title: "Avg Order Value",
-      value: analytics.aov.toFixed(0),
+      value: analytics.aov.toFixed(2),
       icon: BiRupee,
       color: "text-blue-600",
       bg: "bg-blue-50",
