@@ -230,9 +230,17 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     if (window.confirm("Are you sure you want to permanently remove this record from Firebase? This action cannot be undone.")) {
       try {
         // 1. Identify Target Collection
-        let targetCollection = "b2b_orders";
-        if (order.source === "website") {
+        let targetCollection;
+        if (order.source === "hostels") {
+          targetCollection = "hostels_orders";
+        } else if (order.source === "website") {
           targetCollection = "orders";
+        } else if (order.source === "cartdetails") {
+          targetCollection = "cartdetails";
+        } else if (order.source === "b2b") {
+          targetCollection = "b2b_orders";
+        } else if (order.source === "admin") {
+          targetCollection = "b2b_admin_edits";
         } else {
           const isB2B = 
             order.category === "STUDENT_LAUNDRY" || 
