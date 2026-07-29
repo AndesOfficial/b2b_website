@@ -309,12 +309,19 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
 
   const handleAddOrder = useCallback(async (order) => {
     try {
-      const isB2B =
-        order.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
+      let targetCollection = "b2b_admin_edits";
+      
+      if (order.category === ORDER_CATEGORIES.STUDENT_LAUNDRY || order.category === "STUDENT_LAUNDRY") {
+        targetCollection = "hostels_orders";
+      } else if (
         order.category === ORDER_CATEGORIES.LINEN ||
-        order.category === ORDER_CATEGORIES.AIRBNB;
+        order.category === ORDER_CATEGORIES.AIRBNB ||
+        order.category === "LINEN" ||
+        order.category === "AIRBNB"
+      ) {
+        targetCollection = "b2b_orders";
+      }
 
-      const targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
       await setDoc(doc(db, targetCollection, order.id), cleanObject(order), { merge: true });
     } catch (error) {
       console.error("Failed to add order", error);
@@ -329,12 +336,16 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
       // Route writes back to the original source collection so the customer app
       // and all other dashboard views see the updated status immediately.
       let targetCollection;
-      if (updatedOrder.source === "cartdetails") {
-        // Cart orders: write status/notes back to cartdetails so the customer
-        // mobile app reflects the correct order state.
+      if (updatedOrder.source === "hostels") {
+        targetCollection = "hostels_orders";
+      } else if (updatedOrder.source === "cartdetails") {
         targetCollection = "cartdetails";
       } else if (updatedOrder.source === "website") {
         targetCollection = "orders";
+      } else if (updatedOrder.source === "b2b") {
+        targetCollection = "b2b_orders";
+      } else if (updatedOrder.source === "admin") {
+        targetCollection = "b2b_admin_edits";
       } else {
         const isB2B =
           updatedOrder.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
@@ -373,13 +384,19 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
       if (!item.id) throw new Error("ID missing for delete action");
       const id = String(item.id);
       
-      let targetCollection = "b2b_admin_edits"; // Default fallback
+      let targetCollection;
       
       // 1. Identify Target Collection
-      if (item.source === "website") {
+      if (item.source === "hostels") {
+        targetCollection = "hostels_orders";
+      } else if (item.source === "website") {
         targetCollection = "orders";
       } else if (item.source === "cartdetails") {
         targetCollection = "cartdetails";
+      } else if (item.source === "b2b") {
+        targetCollection = "b2b_orders";
+      } else if (item.source === "admin") {
+        targetCollection = "b2b_admin_edits";
       } else {
         const isB2B =
           item.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||

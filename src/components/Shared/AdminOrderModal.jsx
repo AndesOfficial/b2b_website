@@ -58,12 +58,25 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
     setIsSubmitting(true);
     try {
       // Branch collection based on category roles
-      const isB2B = 
-        order.category === "STUDENT_LAUNDRY" || 
-        order.category === "LINEN" || 
-        order.category === "AIRBNB";
+      let targetCollection;
+      if (order.source === "hostels") {
+        targetCollection = "hostels_orders";
+      } else if (order.source === "website") {
+        targetCollection = "orders";
+      } else if (order.source === "cartdetails") {
+        targetCollection = "cartdetails";
+      } else if (order.source === "b2b") {
+        targetCollection = "b2b_orders";
+      } else if (order.source === "admin") {
+        targetCollection = "b2b_admin_edits";
+      } else {
+        const isB2B = 
+          order.category === "STUDENT_LAUNDRY" || 
+          order.category === "LINEN" || 
+          order.category === "AIRBNB";
+        targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
+      }
       
-      const targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
       const docRef = doc(db, targetCollection, String(order.id));
 
       await setDoc(docRef, cleanObject({
