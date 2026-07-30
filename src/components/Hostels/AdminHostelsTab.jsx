@@ -73,7 +73,7 @@ function SummaryCard({ name, color, orders, kg, clothes, students, avgKgPerStude
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Revenue</p>
             <div className="flex items-center gap-0.5 text-[14px] font-black text-green-600">
               <BiRupee size={14} />
-              <span>{revenue.toLocaleString()}</span>
+              <span>{revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         )}
@@ -133,7 +133,7 @@ function LinenSummaryCard({ name, color, orders, revenue }) {
           {revenue !== undefined && (
             <div className="flex items-center justify-end gap-0.5 text-[13px] font-black text-green-600">
               <BiRupee size={13} />
-              <span>{revenue.toLocaleString()}</span>
+              <span>{revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           )}
         </div>
@@ -162,7 +162,7 @@ function UnifiedSummaryCard({ name, color, studentOrderCount, linenOrderCount, k
         </div>
         <div className="flex items-center gap-0.5 text-[14px] font-black text-green-700 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100">
           <BiRupee size={14} />
-          <span>{revenue?.toLocaleString() || 0}</span>
+          <span>{(revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
 
@@ -214,6 +214,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState("All");
   const [chartDateFilter, setChartDateFilter] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const windowWidth = useWindowWidth();
 
   // Helper to remove undefined fields which Firestore doesn't support
@@ -383,11 +384,17 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
   return (
     <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
       {unknownOrdersCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between shadow-sm">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between shadow-sm flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-xs rounded-lg font-black uppercase tracking-wider">Warning</span>
             <span>{unknownOrdersCount} {unknownOrdersCount === 1 ? "order has an" : "orders have an"} "Unknown Property" and {unknownOrdersCount === 1 ? "is" : "are"} currently excluded from hostel metrics.</span>
           </div>
+          <button
+            onClick={() => setPropertyFilter("Unknown Property")}
+            className="px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-black rounded-lg transition-colors cursor-pointer"
+          >
+            View Unknown Order{unknownOrdersCount > 1 ? "s" : ""}
+          </button>
         </div>
       )}
       {/* Toggle */}
@@ -486,7 +493,19 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Search Box */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search student, room, phone, ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-slate-700 text-[12px] font-bold rounded-lg pl-8 pr-3 py-1.5 outline-none focus:border-blue-500 w-[180px] sm:w-[220px]"
+              />
+              <span className="absolute left-2.5 top-2 text-slate-400">🔍</span>
+            </div>
+
             {chartDateFilter && (
               <button
                 onClick={() => setChartDateFilter(null)}
@@ -507,6 +526,9 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
               className="bg-slate-50 border border-slate-200 text-slate-700 text-[12px] font-bold rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="All">All {view === "all" ? "Properties" : view === "student" ? "Student Hostels" : "Linen Hostels"}</option>
+              {unknownOrdersCount > 0 && (
+                <option value="Unknown Property">⚠️ Unknown Property ({unknownOrdersCount})</option>
+              )}
               {(view === "all" ? [...studentProperties, ...linenProperties] : view === "student" ? studentProperties : linenProperties).map(h => (
                 <option key={h} value={h}>{h}</option>
               ))}
@@ -528,9 +550,22 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
               </tr>
             </thead>
             <tbody>
-              {(view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders)
-                .filter(o => propertyFilter === "All" || o.property === propertyFilter)
+              {(propertyFilter === "Unknown Property"
+                ? orders.map(o => ({ ...o, property: normalizePropertyName(o.property) })).filter(o => o.property === "Unknown Property")
+                : (view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders).filter(o => propertyFilter === "All" || o.property === propertyFilter)
+              )
                 .filter(o => !chartDateFilter || o.date === chartDateFilter)
+                .filter(o => {
+                  if (!searchQuery.trim()) return true;
+                  const q = searchQuery.toLowerCase().trim();
+                  return (
+                    (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+                    (o.customerNumber && o.customerNumber.toLowerCase().includes(q)) ||
+                    (o.property && o.property.toLowerCase().includes(q)) ||
+                    (o.service && o.service.toLowerCase().includes(q)) ||
+                    (o.id && String(o.id).toLowerCase().includes(q))
+                  );
+                })
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .map(o => (
                   <tr
@@ -541,9 +576,14 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                     <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{o.date}</td>
                     <td className="px-6 py-4">
                       <p className="text-[13.5px] font-black text-[#0F172A]">{o.property}</p>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                        {o.type === 'student' ? 'Student' : 'Linen'}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                          {o.type === 'student' ? 'Student' : 'Linen'}
+                        </span>
+                        <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono border border-slate-200">
+                          {o.source === "hostels" ? "hostels_orders" : o.source === "b2b" ? "b2b_orders" : o.source === "cartdetails" ? "cartdetails" : o.source === "website" ? "orders" : "b2b_admin_edits"} • ID: {o.id}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       {o.type === 'student' ? (
@@ -619,9 +659,22 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
 
         {/* Mobile Card View */}
         <div className="md:hidden divide-y divide-gray-50 bg-white border border-gray-100 rounded-xl overflow-hidden mt-4">
-          {(view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders)
-            .filter(o => propertyFilter === "All" || o.property === propertyFilter)
+          {(propertyFilter === "Unknown Property"
+            ? orders.map(o => ({ ...o, property: normalizePropertyName(o.property) })).filter(o => o.property === "Unknown Property")
+            : (view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders).filter(o => propertyFilter === "All" || o.property === propertyFilter)
+          )
             .filter(o => !chartDateFilter || o.date === chartDateFilter)
+            .filter(o => {
+              if (!searchQuery.trim()) return true;
+              const q = searchQuery.toLowerCase().trim();
+              return (
+                (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+                (o.customerNumber && o.customerNumber.toLowerCase().includes(q)) ||
+                (o.property && o.property.toLowerCase().includes(q)) ||
+                (o.service && o.service.toLowerCase().includes(q)) ||
+                (o.id && String(o.id).toLowerCase().includes(q))
+              );
+            })
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .map(o => (
               <div
@@ -634,9 +687,14 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{o.date}</span>
                     <h4 className="text-[14px] font-black text-[#0F172A]">{o.property}</h4>
                   </div>
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                    {o.type === 'student' ? 'Student' : 'Linen'}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                      {o.type === 'student' ? 'Student' : 'Linen'}
+                    </span>
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
+                      {o.source === "hostels" ? "hostels_orders" : o.source === "b2b" ? "b2b_orders" : o.source === "cartdetails" ? "cartdetails" : o.source === "website" ? "orders" : "b2b_admin_edits"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-100/50 mb-3">

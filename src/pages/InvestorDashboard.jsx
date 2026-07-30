@@ -30,7 +30,8 @@ export default function InvestorDashboard() {
     if (tab === "regular") { navigate("/admin/regular-orders"); return; }
     if (tab === "calculator") { navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
-    navigate("/admin");
+    if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
+    navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 
   return (

@@ -11,20 +11,20 @@ function getKpiDefinitions({ activeTab, onTabChange, stats }) {
         label: "Revenue (Overall)",
         value: (
           <div>
-            <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight">
+            <span className="text-[26px] sm:text-[28px] font-black text-[#0F172A] leading-none tracking-tight">
               {`₹${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </span>
-            <div className="flex divide-x divide-slate-100 mt-2 gap-4">
-              <div className="pr-4">
-                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">B2C</div>
-                <div className="text-[11.5px] font-extrabold text-slate-800">
-                  {`₹${stats.breakdown.retailRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            <div className="bg-slate-50 border border-slate-100/80 rounded-xl p-2.5 mt-3 flex divide-x divide-slate-200/60 justify-between items-center">
+              <div className="pr-3 flex-1">
+                <div className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest mb-0.5">B2C</div>
+                <div className="text-[12px] font-black text-slate-800">
+                  {`₹${stats.breakdown.retailRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </div>
               </div>
-              <div className="pl-4">
-                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">B2B</div>
-                <div className="text-[11.5px] font-extrabold text-slate-800">
-                  {`₹${(stats.breakdown.hostelRevenue + stats.breakdown.hotelRevenue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              <div className="pl-3 flex-1 text-right">
+                <div className="text-[8.5px] font-black text-slate-400 uppercase tracking-widest mb-0.5">B2B</div>
+                <div className="text-[12px] font-black text-slate-800">
+                  {`₹${(stats.breakdown.hostelRevenue + stats.breakdown.hotelRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </div>
               </div>
             </div>

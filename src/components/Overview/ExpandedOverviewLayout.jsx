@@ -160,9 +160,12 @@ const MOCK_DATA = {
 
 function SectionHeader({ title, subtitle, phase, color, badge }) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-6 pb-5 border-b border-slate-100">
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-sm`} style={{ backgroundColor: color }}>
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-md"
+          style={{ backgroundColor: color, boxShadow: `0 4px 14px ${color}40` }}
+        >
           P{phase}
         </div>
         <div>
@@ -172,7 +175,7 @@ function SectionHeader({ title, subtitle, phase, color, badge }) {
       </div>
       {badge && (
         <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-black uppercase tracking-wider">
-          {badge}
+          ⚠ {badge}
         </span>
       )}
     </div>
@@ -181,7 +184,7 @@ function SectionHeader({ title, subtitle, phase, color, badge }) {
 
 function StatCard({ label, value, subValue, icon: Icon, colorClass, highlight }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm flex flex-col justify-between">
+    <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex justify-between items-start mb-3">
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-snug w-2/3">{label}</span>
         {Icon && <Icon size={16} className={colorClass} />}
@@ -648,10 +651,10 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
               </div>
 
               {/* Issues Raised */}
-              <div className="bg-red-50/60 rounded-xl border border-red-100 p-4">
+              <div className={liveB2c.totalIssues > 0 ? "bg-red-50/60 rounded-xl border border-red-100 p-4" : "bg-emerald-50/60 rounded-xl border border-emerald-100 p-4"}>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[11px] font-black text-red-800 uppercase tracking-widest">Issues Raised</span>
-                  <span className="text-[16px] font-black text-red-600">{liveB2c.totalIssues}</span>
+                  <span className={liveB2c.totalIssues > 0 ? "text-[11px] font-black text-red-800 uppercase tracking-widest" : "text-[11px] font-black text-emerald-800 uppercase tracking-widest"}>Issues Raised</span>
+                  <span className={liveB2c.totalIssues > 0 ? "text-[16px] font-black text-red-600" : "text-[16px] font-black text-emerald-600"}>{liveB2c.totalIssues}</span>
                 </div>
                 {liveB2c.issueBreakdown.length > 0 ? (
                   <ul className="space-y-1.5">
@@ -777,9 +780,15 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
               <p className="text-[32px] font-black text-slate-800 leading-none">{d.phase2.tat}</p>
             </div>
             <div className="flex gap-4">
-              <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl">
-                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-0.5">Bottleneck</p>
-                <p className="text-[12px] font-bold text-red-900">{d.phase2.bottleneck}</p>
+              <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <div>
+                  <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-0.5">Bottleneck</p>
+                  <p className="text-[12px] font-bold text-red-900">{d.phase2.bottleneck}</p>
+                </div>
               </div>
               <div className="bg-amber-50 border border-amber-100 px-4 py-2 rounded-xl">
                 <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Delayed Zone</p>
@@ -800,7 +809,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           {/* Zone Details Grid */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             {d.phase2.zones.map((z, i) => (
-              <div key={i} className={`${z.lightColor} border border-white rounded-xl p-3`}>
+              <div key={i} className={`${z.lightColor} border border-slate-100/80 border-t-4 border-t-${z.color.replace('bg-', '')} rounded-xl p-3 shadow-xs transition-all hover:-translate-y-0.5`}>
                 <div className={`w-3 h-3 rounded-full ${z.color} mb-2 shadow-sm`} />
                 <p className={`text-[10px] font-black uppercase tracking-wider mb-0.5 ${z.textCol}`}>{z.name}</p>
                 <p className="text-[9px] font-bold text-slate-500 mb-2 truncate">{z.subtitle}</p>
@@ -827,10 +836,24 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                   <span>Current Occupied</span>
                   <span className="text-slate-800">{formatKg(livePhase3.processedKg)} / {formatKg(livePhase3.fullCapacity)} kg</span>
                 </div>
-                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, livePhase3.utilizationPct)}%` }} />
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, livePhase3.utilizationPct)}%`,
+                      background: livePhase3.utilizationPct >= 90
+                        ? "linear-gradient(90deg, #f59e0b, #ef4444)"
+                        : livePhase3.utilizationPct >= 70
+                        ? "linear-gradient(90deg, #10b981, #f59e0b)"
+                        : "linear-gradient(90deg, #3b82f6, #10b981)",
+                      transition: "width 0.9s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  />
                 </div>
-                <p className="text-[10px] font-black text-amber-600 mt-1.5 text-right">{livePhase3.utilizationPct.toFixed(1)}% Utilized · {formatKg(livePhase3.remainingKg)} kg Remaining</p>
+                <p className={`text-[10px] font-black mt-1.5 text-right ${
+                  livePhase3.utilizationPct >= 90 ? "text-red-500" :
+                  livePhase3.utilizationPct >= 70 ? "text-amber-600" : "text-emerald-600"
+                }`}>{livePhase3.utilizationPct.toFixed(1)}% Utilized · {formatKg(livePhase3.remainingKg)} kg Remaining</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -948,18 +971,23 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                   <div className="bg-blue-400 h-full" style={{ width: `${(liveP4.b2cRevenue / liveP4.totalRevenue) * 100}%`, transition: "width 0.8s ease" }} />
                 </div>
               )}
-              <div className="bg-red-50/70 border border-red-100 rounded-xl p-4">
-                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Dark Store Expenses</p>
-                <p className="text-[22px] font-black text-red-600">
-                  ₹{totalExpenses > 0 ? totalExpenses.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : "0"}
-                </p>
-                {totalExpenses > 0 && liveP4.totalRevenue > 0 && (
-                  <p className="text-[9px] font-bold text-red-400 mt-0.5">
-                    {((totalExpenses / liveP4.totalRevenue) * 100) > 1000
-                      ? "—"
-                      : `${((totalExpenses / liveP4.totalRevenue) * 100).toFixed(1)}% of revenue consumed`}
+              <div className="bg-red-50/70 border border-red-100 rounded-xl p-4 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-red-500 text-sm font-black">↓</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Dark Store Expenses</p>
+                  <p className="text-[22px] font-black text-red-600 leading-none">
+                    ₹{totalExpenses > 0 ? totalExpenses.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : "0"}
                   </p>
-                )}
+                  {totalExpenses > 0 && liveP4.totalRevenue > 0 && (
+                    <p className="text-[9px] font-bold text-red-400 mt-1">
+                      {((totalExpenses / liveP4.totalRevenue) * 100) > 1000
+                        ? "—"
+                        : `${((totalExpenses / liveP4.totalRevenue) * 100).toFixed(1)}% of revenue consumed`}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

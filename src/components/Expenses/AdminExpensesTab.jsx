@@ -71,7 +71,39 @@ export default function AdminExpensesTab() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [catFilter, setCatFilter] = useState("All");
+  const [activePreset, setActivePreset] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
+
+  /* ─── Date helpers ─── */
+  const getDateStr = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const applyPreset = (key) => {
+    const now = new Date();
+    const today = getDateStr(now);
+    if (key === "today") {
+      setDateFrom(today); setDateTo(today);
+    } else if (key === "yesterday") {
+      const y = new Date(now); y.setDate(now.getDate() - 1);
+      const yStr = getDateStr(y);
+      setDateFrom(yStr); setDateTo(yStr);
+    } else if (key === "thisWeek") {
+      const day = now.getDay(); // 0=Sun
+      const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      setDateFrom(getDateStr(mon)); setDateTo(today);
+    } else if (key === "lastWeek") {
+      const day = now.getDay();
+      const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const lastMon = new Date(thisMonday); lastMon.setDate(thisMonday.getDate() - 7);
+      const lastSun = new Date(thisMonday); lastSun.setDate(thisMonday.getDate() - 1);
+      setDateFrom(getDateStr(lastMon)); setDateTo(getDateStr(lastSun));
+    } else if (key === "thisMonth") {
+      setDateFrom(getDateStr(new Date(now.getFullYear(), now.getMonth(), 1))); setDateTo(today);
+    } else if (key === "all") {
+      setDateFrom(""); setDateTo("");
+    }
+    setActivePreset(key);
+  };
 
   const toggleRow = (id) => {
     setExpandedRows(prev => {
@@ -475,6 +507,31 @@ export default function AdminExpensesTab() {
         </div>
       )}
 
+      {/* Quick Date Presets */}
+      <div className="flex items-center flex-wrap gap-1.5">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-1">Quick Filter:</span>
+        {[
+          { key: "today",     label: "Today" },
+          { key: "yesterday", label: "Yesterday" },
+          { key: "thisWeek",  label: "This Week" },
+          { key: "lastWeek",  label: "Last Week" },
+          { key: "thisMonth", label: "This Month" },
+          { key: "all",       label: "All Time" },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => applyPreset(key)}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all duration-150 border ${
+              activePreset === key
+                ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200"
+                : "bg-white text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Control Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -482,9 +539,9 @@ export default function AdminExpensesTab() {
               <div className="flex items-center px-3 border-r border-gray-100 mr-1 flex-shrink-0">
                 <CalendarDays size={16} className="text-slate-400" />
               </div>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
+              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setActivePreset(null); }} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
               <div className="h-4 w-px bg-gray-200 mx-1 self-center flex-shrink-0" />
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
+              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setActivePreset(null); }} className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer" />
               <div className="h-4 w-px bg-gray-200 mx-1 self-center flex-shrink-0" />
               <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
                 className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer pr-8 whitespace-nowrap">
@@ -520,23 +577,23 @@ export default function AdminExpensesTab() {
         <KpiCard 
           icon={<ArrowDownLeft size={20} />} 
           label="Revenue" 
-          value={`₹${kpis.totalReceived.toLocaleString()}`} 
+          value={`₹${kpis.totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
           sub={
             <div className="flex flex-col gap-0.5 mt-1.5 text-[10px]">
               <div className="flex justify-between gap-6">
                 <span className="text-slate-400">B2C (Regular):</span>
-                <span className="font-extrabold text-slate-600">₹{(kpis.totalReceived - kpis.receivables).toLocaleString()}</span>
+                <span className="font-extrabold text-slate-600">₹{(kpis.totalReceived - kpis.receivables).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between gap-6 border-t border-slate-100 pt-0.5 mt-0.5">
                 <span className="text-slate-400">B2B (Linen/Hostel):</span>
-                <span className="font-extrabold text-slate-600">₹{kpis.receivables.toLocaleString()}</span>
+                <span className="font-extrabold text-slate-600">₹{kpis.receivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           } 
           color="blue" 
         />
-        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString()}`} sub={`${kpis.count} entries`} color="indigo" />
-        <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString()}`} sub="Non-Regular Sources" color="rose" />
+        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub={`${kpis.count} entries`} color="indigo" />
+        <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Non-Regular Sources" color="rose" />
         <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value={`₹${kpis.andesBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Net Account Balance" color="emerald" />
       </div>
 

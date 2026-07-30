@@ -97,13 +97,25 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     o.type !== "abandoned"          // exclude abandoned carts from B2C count
   );
 
-  const b2bOrders = validOrders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b");
+  const b2bOrders = validOrders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b" || o.source === "hostels");
 
-  const b2cPickups = b2cOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
-  const b2cDeliveries = b2cOrders.filter((o) => o.status === "Delivered").length;
+  const b2cPickups = b2cOrders.filter((o) => {
+    const s = String(o.status || "").toLowerCase();
+    return s === "processing" || s === "delivered" || s === "completed" || s === "picked up" || s === "pickup done" || s === "confirmed" || s === "pending";
+  }).length;
+  const b2cDeliveries = b2cOrders.filter((o) => {
+    const s = String(o.status || "").toLowerCase();
+    return s === "delivered" || s === "completed";
+  }).length;
 
-  const b2bPickups = b2bOrders.filter((o) => o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up" || o.status === "Pickup Done").length;
-  const b2bDeliveries = b2bOrders.filter((o) => o.status === "Delivered").length;
+  const b2bPickups = b2bOrders.filter((o) => {
+    const s = String(o.status || "").toLowerCase();
+    return s !== "cancelled" && s !== "abandoned";
+  }).length;
+  const b2bDeliveries = b2bOrders.filter((o) => {
+    const s = String(o.status || "").toLowerCase();
+    return s === "delivered" || s === "completed";
+  }).length;
 
   const b2cKg = b2cOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
   const b2bKg = b2bOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
