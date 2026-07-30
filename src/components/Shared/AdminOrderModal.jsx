@@ -79,7 +79,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
       
       const docRef = doc(db, targetCollection, String(order.id));
 
-      await setDoc(docRef, cleanObject({
+      const updatedPayload = {
         ...order,
         status: editForm.status,
         amount: Number(editForm.amount),
@@ -87,7 +87,13 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         studentCount: Number(editForm.studentCount),
         items: Number(editForm.items),
         updatedAt: new Date().toISOString()
-      }), { merge: true });
+      };
+
+      if (targetCollection === "hostels_orders" || order.source === "hostels") {
+        updatedPayload.clothesWeightKg = Number(editForm.weight);
+      }
+
+      await setDoc(docRef, cleanObject(updatedPayload), { merge: true });
 
       setIsEditing(false);
       onClose();
@@ -131,7 +137,12 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-100 bg-[#F8FAFC]">
           <div>
-            <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{order.customerName || order.property || order.tenant || 'Unknown Property'}</h2>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{order.customerName || order.property || order.tenant || 'Unknown Property'}</h2>
+              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Collection: {order.source === "hostels" ? "hostels_orders" : order.source === "b2b" ? "b2b_orders" : order.source === "cartdetails" ? "cartdetails" : order.source === "website" ? "orders" : "b2b_admin_edits"} • ID: {order.id}
+              </span>
+            </div>
             <div className="flex items-center gap-2 mt-1.5">
               <p className="text-[12px] font-bold text-slate-500">
                 Placed: {order.date} {(() => {

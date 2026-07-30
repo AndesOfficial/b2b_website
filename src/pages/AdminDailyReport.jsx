@@ -39,7 +39,7 @@ export default function AdminDailyReport() {
     if (tab === 'expenses') { navigate('/admin/expenses'); return; }
     if (tab === 'calculator') { navigate('/admin/calculator'); return; }
     if (tab === 'metaleads') { navigate('/admin/meta-leads'); return; }
-    navigate('/admin');
+    navigate('/admin', { state: { initialTab: tab } });
   }, [navigate]);
 
   const goToPreviousDay = () => {

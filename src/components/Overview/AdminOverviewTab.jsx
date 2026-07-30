@@ -238,7 +238,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                   <div className="mb-2">
                     <div className="flex items-end gap-0.5 text-[26px] font-black leading-none" style={{ color: cat.color }}>
                       <span className="text-[15px] mb-0.5">₹</span>
-                      <span>{cat.revenue.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                      <span>{cat.revenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <p className="text-[11px] font-semibold text-[#94A3B8] mt-0.5">
                       {cat.orders} {cat.orders === 1 ? "order" : "orders"}
@@ -552,7 +552,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                   </div>
                   <div className="text-right">
                     <div className="flex items-center justify-end gap-0.5 text-sm font-black text-[#0F172A]">
-                      <BiRupee size={12} className="text-slate-400" /><span>{row.rev.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                      <BiRupee size={12} className="text-slate-400" /><span>{row.rev.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{row.orders} {row.orders === 1 ? "Order" : "Orders"}</span>
                   </div>

@@ -187,10 +187,18 @@ export function normalizePropertyName(value) {
   const collapsed = trimmed.replace(/\s+/g, " ").toLowerCase();
   const alphanumeric = collapsed.replace(/[^a-z0-9 ]/g, "").trim();
 
-  // If "tulsi hostel" is found in our dictionary above, it returns exactly "Tulsi"
-  return CANONICAL_PROPERTY_NAMES[collapsed]
-    || CANONICAL_PROPERTY_NAMES[alphanumeric]
-    || trimmed.split(" ").map((part) => part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part).join(" ");
+  // If exact match is found in our dictionary above, return canonical name
+  if (CANONICAL_PROPERTY_NAMES[collapsed]) return CANONICAL_PROPERTY_NAMES[collapsed];
+  if (CANONICAL_PROPERTY_NAMES[alphanumeric]) return CANONICAL_PROPERTY_NAMES[alphanumeric];
+
+  // Try matching prefix if property name starts with a known key
+  for (const [key, canonical] of Object.entries(CANONICAL_PROPERTY_NAMES)) {
+    if (collapsed.startsWith(key) || alphanumeric.startsWith(key)) {
+      return canonical;
+    }
+  }
+
+  return trimmed.split(" ").map((part) => part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part).join(" ");
 }
 
 function normalizeDetails(rawOrder) {
@@ -387,17 +395,29 @@ function normalizeSlot(val) {
 }
 
 export function normalizeOrder(rawOrder = {}, source = "unknown") {
-  const propertyCandidate = rawOrder.property ||
-    rawOrder.propertyName ||
-    rawOrder.partnerName ||
-    rawOrder.partnername ||
-    rawOrder.hostel ||
-    rawOrder.hostelName ||
-    rawOrder.hotelName ||
-    rawOrder.location ||
-    rawOrder.userName ||
-    rawOrder.customerName ||
-    "Unknown Property";
+  let rawLocationProp = "";
+  if (typeof rawOrder.location === "string") {
+    rawLocationProp = rawOrder.location;
+  } else if (rawOrder.location && typeof rawOrder.location === "object") {
+    rawLocationProp = rawOrder.location.property || rawOrder.location.hostel || rawOrder.location.hostelName || rawOrder.location.name || rawOrder.location.address || "";
+  }
+
+  const propertyCandidate = [
+    rawOrder.property,
+    rawOrder.propertyName,
+    rawOrder.partnerName,
+    rawOrder.partnername,
+    rawOrder.hostel,
+    rawOrder.hostelName,
+    rawOrder.hotelName,
+    rawLocationProp,
+    rawOrder.userName,
+    rawOrder.customerName,
+  ].find((candidate) => {
+    if (!candidate || typeof candidate !== "string") return false;
+    const trimmed = candidate.trim();
+    return trimmed && trimmed !== "[object Object]" && trimmed !== "undefined" && trimmed !== "null";
+  }) || "Unknown Property";
     
   const property = normalizePropertyName(propertyCandidate);
   const inferredCategory = inferCategoryFromProperty(property);
@@ -413,7 +433,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     property,
     createdAtRaw: rawOrder.createdAt || rawOrder.orderTimestamp || rawOrder.orderDate || rawOrder.date || null,
     updatedAtRaw: rawOrder.updatedAt || rawOrder.lastModified || null,
-    date: normalizeDate(rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : (rawOrder.date || rawOrder.createdAt)),
+    date: normalizeDate(rawOrder.orderTimestamp ? Number(rawOrder.orderTimestamp) : (rawOrder.date || rawOrder.createdAt || rawOrder.scheduledPickupDate)),
     amount: firstPositiveNumber(rawOrder.amount, rawOrder.totalPrice),
     items: normalizeNumber(rawOrder.items ?? rawOrder.clothes, itemsFromPartnerMap),
     weight: normalizeNumber(rawOrder.weight),
@@ -426,7 +446,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     customerNumber: String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim(),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
     deliveryDate: normalizeSlot(rawOrder.deliveryDate || rawOrder.dropTime || ""),
-    pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.pickup || rawOrder.date || ""),
+    pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.scheduledPickupDate || rawOrder.pickup || rawOrder.date || ""),
     service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",
     source,
   };
@@ -679,6 +699,16 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     if (rawOrder.room) {
       normalized.service = `Room: ${rawOrder.room}`;
     }
+
+    if (!normalized.amount || normalized.amount === 0) {
+      const rate = normalizeNumber(rawOrder.ratePerKg, STUDENT_RATE_PER_KG);
+      normalized.amount = (normalized.weight || 0) * rate;
+    }
+  }
+
+  if ((!normalized.amount || normalized.amount === 0) && normalized.type === ORDER_TYPES.STUDENT) {
+    const rate = normalizeNumber(rawOrder.ratePerKg, STUDENT_RATE_PER_KG);
+    normalized.amount = (normalized.weight || 0) * rate;
   }
 
   if (source === "complaint") {

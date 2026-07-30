@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminTopBar from "../components/Layout/AdminTopBar";
@@ -20,15 +20,22 @@ import { getMonthStartString, getTodayString, useAdminDashboardData } from "../h
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddOrder, setShowAddOrder] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => location.state?.initialTab || "overview");
   const [dateFrom, setDateFrom] = useState(() => getTodayString());
   const [dateTo, setDateTo] = useState(() => getTodayString());
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.initialTab) {
+      setActiveTab(location.state.initialTab);
+    }
+  }, [location.state?.initialTab]);
 
   useEffect(() => {
     const handleResize = () => {

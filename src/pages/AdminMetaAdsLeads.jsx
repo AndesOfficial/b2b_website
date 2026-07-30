@@ -162,7 +162,7 @@ export default function AdminMetaAdsLeads() {
     if (tab === "regular")   { navigate("/admin/regular-orders"); return; }
     if (tab === "calculator"){ navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
-    navigate("/admin");
+    navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 
   // ── Show toast helper ───────────────────────────────────────────────────

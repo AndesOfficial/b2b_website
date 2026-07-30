@@ -2,7 +2,7 @@ import { FiChevronLeft, FiLogOut, FiMenu } from "react-icons/fi";
 import BrandLogo from "../Shared/BrandLogo";
 import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
 
-const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center rounded-lg text-[13.5px] font-medium transition-all group";
+const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center text-[13.5px] font-medium transition-all duration-200 group relative";
 
 export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, user, onLogout, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
   return (
@@ -68,15 +68,15 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
                 key={item.key}
                 onClick={() => setActiveTab(item.key)}
                 title={isCollapsed ? item.navLabel : ""}
-                className={`${SIDEBAR_ITEM_BASE_CLASS} ${isCollapsed ? "justify-center py-3.5" : "justify-between px-4 py-3"} ${
+                className={`${SIDEBAR_ITEM_BASE_CLASS} ${isCollapsed ? "justify-center py-3.5 rounded-xl mx-1" : "justify-between px-4 py-3 rounded-xl"} ${
                   activeTab === item.key
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
-                    : "text-[#94A3B8] hover:bg-[#1E293B] hover:text-white"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30 border-l-4 border-l-blue-300"
+                    : "text-[#94A3B8] hover:bg-[#1E293B] hover:text-white border-l-4 border-l-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <item.navIcon size={20} className={activeTab === item.key ? "text-white" : "text-[#475569] group-hover:text-blue-400"} />
-                  {!isCollapsed && <span className="animate-fade-in">{item.navLabel}</span>}
+                  <item.navIcon size={20} className={activeTab === item.key ? "text-white" : "text-[#475569] group-hover:text-blue-400 transition-colors"} />
+                  {!isCollapsed && <span className="animate-fade-in font-semibold">{item.navLabel}</span>}
                 </div>
 
                 {!isCollapsed && badge > 0 && (

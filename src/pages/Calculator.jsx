@@ -1599,7 +1599,8 @@ export default function Calculator() {
     if (t === "expenses") { navigate("/admin/expenses"); return; }
     if (t === "regular") { navigate("/admin/regular-orders"); return; }
     if (t === "dailyReport") { navigate("/admin/daily-report"); return; }
-    navigate("/admin");
+    if (t === "metaleads") { navigate("/admin/meta-leads"); return; }
+    navigate("/admin", { state: { initialTab: t } });
   }, [navigate]);
 
   const set         = (key, val) => setAssumptions(prev => ({ ...prev, [key]: val }));
