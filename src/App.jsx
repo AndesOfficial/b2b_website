@@ -14,6 +14,7 @@ import ClientOrderDetail from "./pages/ClientOrderDetail";
 import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
 import AdminDailyReport from "./pages/AdminDailyReport";
 import NotFound from "./pages/NotFound";
+import HostelOrderForm from "./pages/HostelOrderForm";
 
 export default function App() {
   return (
@@ -23,6 +24,8 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/hostel-order" element={<HostelOrderForm />} />
+          
 
           {/* Admin */}
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
