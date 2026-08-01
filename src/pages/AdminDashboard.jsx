@@ -214,6 +214,7 @@ export default function AdminDashboard() {
             <>
               {activeTabConfig.showHeaderActions && !isViewer && (
                 <AdminPageActions
+                  activeTab={activeTab}
                   onGenerateInvoice={() => setShowInvoiceModal(true)}
                   onLogOrder={() => setShowAddOrder(true)}
                 />

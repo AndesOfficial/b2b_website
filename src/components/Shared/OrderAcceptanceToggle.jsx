@@ -47,34 +47,50 @@ export default function OrderAcceptanceToggle() {
 
   if (loading) {
     return (
-      <div className="flex items-center text-sm text-gray-500 px-4 py-2 bg-gray-100 rounded-xl">
-        Loading status...
+      <div className="flex items-center gap-2 text-sm font-medium text-slate-500 px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl animate-pulse">
+        <div className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin"></div>
+        Loading Status...
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-3 bg-white px-4 py-2 border border-gray-200 rounded-xl shadow-sm">
+    <div className={`flex items-center gap-4 px-5 py-2.5 border rounded-xl shadow-sm transition-all duration-300 ${
+      isAccepting ? "bg-emerald-50/50 border-emerald-100" : "bg-rose-50/50 border-rose-100"
+    }`}>
       <div className="flex flex-col">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Store Status</span>
-        <span className={`text-sm font-semibold ${isAccepting ? "text-green-600" : "text-red-600"}`}>
-          {isAccepting ? "Accepting Orders" : "Orders Paused"}
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+          Store Status
         </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`relative flex h-2.5 w-2.5`}>
+            {isAccepting && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isAccepting ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+          </span>
+          <span className={`text-sm font-bold ${isAccepting ? "text-emerald-700" : "text-rose-700"}`}>
+            {isAccepting ? "Accepting Orders" : "Store Paused"}
+          </span>
+        </div>
       </div>
       
       {/* Toggle Switch */}
       <button
         onClick={handleToggle}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
-          isAccepting ? "bg-green-500" : "bg-red-500"
-        }`}
+        className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+          isAccepting 
+            ? "bg-emerald-500 focus:ring-emerald-500" 
+            : "bg-rose-500 focus:ring-rose-500"
+        } hover:opacity-90`}
         role="switch"
         aria-checked={isAccepting}
+        title={isAccepting ? "Pause Orders" : "Start Accepting Orders"}
       >
         <span className="sr-only">Toggle store status</span>
         <span
           aria-hidden="true"
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out ${
             isAccepting ? "translate-x-5" : "translate-x-0"
           }`}
         />
