@@ -4,17 +4,30 @@ import { BiRupee } from "react-icons/bi";
 import EmptyState from "../Shared/EmptyState";
 import { formatTimeSlot } from "../../utils/formatUtils";
 
-const ISSUE_TYPES = ["Missing Items", "Damage", "Quality Issue", "Stain Issue", "Return Pending", "Weight Dispute", "Bags Pending"];
+const ISSUE_TYPES = [
+  // Admin-entered types
+  "Missing Items", "Damage", "Quality Issue", "Stain Issue", "Return Pending", "Weight Dispute", "Bags Pending",
+  // Hostel form categories
+  "Missing Clothes", "Damaged / Torn Clothes", "Wrong Clothes Delivered",
+  "Late Delivery", "Poor Washing Quality", "Incorrect Billing", "Staff Behaviour", "Other",
+];
 const SEVERITY_ORDER = { critical: 0, pending: 1 };
 const RESOLVE_COLORS = { Unresolved: "bg-red-100 text-red-600", Checking: "bg-yellow-100 text-yellow-700", Resolved: "bg-green-100 text-green-600" };
-const TYPE_COLORS = { "Missing Items": "#DC2626", "Damage": "#D97706", "Quality Issue": "#7C3AED", "Stain Issue": "#9333EA", "Return Pending": "#0891B2", "Weight Dispute": "#BE185D", "Bags Pending": "#DC2626" };
+const TYPE_COLORS = {
+  "Missing Items": "#DC2626", "Damage": "#D97706", "Quality Issue": "#7C3AED",
+  "Stain Issue": "#9333EA", "Return Pending": "#0891B2", "Weight Dispute": "#BE185D", "Bags Pending": "#DC2626",
+  // Hostel categories
+  "Missing Clothes": "#DC2626", "Damaged / Torn Clothes": "#D97706", "Wrong Clothes Delivered": "#0891B2",
+  "Late Delivery": "#F59E0B", "Poor Washing Quality": "#7C3AED", "Incorrect Billing": "#BE185D",
+  "Staff Behaviour": "#6B7280", "Other": "#374151",
+};
 
 export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDeleteIssue }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     id: null, date: "", issueType: "Missing Items", description: "",
     linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "",
-    originalService: ""
+    originalService: "", source: ""
   });
   const [statusFilter, setStatusFilter] = useState("All"); // All, Unresolved, Checking, Resolved, Critical
 
@@ -29,7 +42,8 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
       severity: issue.severity || "pending",
       resolveStatus: issue.resolveStatus || "Unresolved",
       solution: issue.solution || "",
-      originalService: issue.service || ""
+      originalService: issue.service || "",
+      source: issue.source || ""
     });
     setShowModal(true);
   };
@@ -136,6 +150,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
       reportedBy: form.assignedTo || "Admin",
       solution: form.solution,
       linkedHostel: form.linkedHostel,
+      source: form.source,
     };
 
     if (form.id) {
@@ -293,6 +308,36 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
               </div>
               <div className="flex-1">
                 <p className="text-[13.5px] font-bold text-[#0F172A] leading-relaxed">{issue.service}</p>
+
+                {/* Room + Source tags */}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {issue.room && (
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full">
+                      Room {issue.room}
+                    </span>
+                  )}
+                  {issue.source === "complaint" && (
+                    <span className="text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100 px-2 py-0.5 rounded-full">
+                      Hostel Form
+                    </span>
+                  )}
+                </div>
+
+                {/* Photo thumbnails */}
+                {issue.photoUrls?.length > 0 && (
+                  <div className="flex gap-1.5 mt-2 flex-wrap">
+                    {issue.photoUrls.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={url}
+                          alt={`photo-${i + 1}`}
+                          className="w-12 h-12 object-cover rounded-lg border border-gray-100 shadow-sm hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
+
                 {issue.solution && (
                   <div className="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                     <p className="text-[12px] text-emerald-800 font-medium italic select-none">Resolution: {issue.solution}</p>
