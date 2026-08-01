@@ -3,10 +3,10 @@ import OrderAcceptanceToggle from "./OrderAcceptanceToggle";
 
 const ACTION_BUTTON_BASE_CLASS = "inline-flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm";
 
-export default function AdminPageActions({ onGenerateInvoice, onLogOrder }) {
+export default function AdminPageActions({ activeTab, onGenerateInvoice, onLogOrder }) {
   return (
     <div className="flex justify-end mb-4 animate-fade-in gap-3">
-      <OrderAcceptanceToggle />
+      {activeTab === "overview" && <OrderAcceptanceToggle />}
       
       {/* Shared actions live in one place so the tab shell stays declarative. */}
       <button
