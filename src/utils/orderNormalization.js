@@ -714,15 +714,34 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   if (source === "complaint") {
     normalized.category = ORDER_CATEGORIES.ISSUES;
     normalized.type = "issue";
-    normalized.issueType = rawOrder.category || "Other";
-    normalized.service = rawOrder.issue || "App Complaint";
+    normalized.source = "complaint";
+
+    // Hostel form stores issue category as prefix of 'issue' field ("Category — details")
+    // App complaints store category in 'category' field
+    const issueText = rawOrder.issue || "";
+    const dashIdx = issueText.indexOf(" — ");
+    if (rawOrder.category) {
+      normalized.issueType = rawOrder.category;
+      normalized.service = issueText || "App Complaint";
+    } else if (dashIdx !== -1) {
+      normalized.issueType = issueText.substring(0, dashIdx).trim() || "Other";
+      normalized.service = issueText;
+    } else {
+      normalized.issueType = issueText || "Other";
+      normalized.service = issueText || "Hostel Complaint";
+    }
+
     normalized.date = normalizeDate(rawOrder.createdAt);
     normalized.reportedBy = rawOrder.userName || "Customer";
-    normalized.linkedHostel = rawOrder.location?.address || "";
+    // Hostel form stores hostel name in 'hostel'; app complaints use location.address
+    normalized.linkedHostel = rawOrder.hostel || rawOrder.location?.address || "";
+    normalized.property = rawOrder.hostel || rawOrder.location?.address || "";
     normalized.resolveStatus = (rawOrder.status === "resolved" || rawOrder.status === "closed") ? "Resolved" : "Unresolved";
-    normalized.severity = "pending";
+    normalized.severity = rawOrder.flagged ? "critical" : "pending";
     normalized.customerNumber = rawOrder.userMobile || "";
     normalized.customerName = rawOrder.userName || "Customer";
+    normalized.room = rawOrder.room || "";
+    normalized.photoUrls = rawOrder.photoUrls || [];
     normalized.id = rawOrder.id;
     return normalized;
   }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
@@ -383,7 +383,26 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
   const handleEditIssue = useCallback(async (updatedIssue) => {
     try {
       if (!updatedIssue.id) throw new Error("Issue ID missing");
+
+      // 1. Always save the full edit to b2b_admin_edits (admin override layer)
       await setDoc(doc(db, "b2b_admin_edits", String(updatedIssue.id)), cleanObject(updatedIssue));
+
+      // 2. If this issue came from the 'complaint' collection (or exists in it),
+      //    write the status back to 'closed', 'checking', or 'open'.
+      try {
+        const complaintRef = doc(db, "complaint", String(updatedIssue.id));
+        const firestoreStatus =
+          updatedIssue.resolveStatus === "Resolved" ? "closed" :
+          updatedIssue.resolveStatus === "Checking" ? "checking" : "open";
+
+        await updateDoc(complaintRef, {
+          status: firestoreStatus,
+          flagged: updatedIssue.severity === "critical",
+          updatedAt: serverTimestamp(),
+        });
+      } catch (complaintErr) {
+        // Ignore if document is not in 'complaint' collection
+      }
     } catch (error) {
       console.error("Failed to edit issue", error);
     }

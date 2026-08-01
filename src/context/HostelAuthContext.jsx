@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { signInWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { getDoc, doc, onSnapshot, collection, setDoc, query, where, or } from "firebase/firestore";
+import { getDoc, doc, onSnapshot, collection, setDoc, query, where, or, limit, orderBy } from "firebase/firestore";
 import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orders";
 import { normalizeOrder, normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
@@ -39,6 +39,7 @@ export function HostelAuthProvider({ children }) {
   const [cartOrders, setCartOrders] = useState([]);
   const [hostelsOrders, setHostelsOrders] = useState([]); // NEW
   const [appComplaints, setAppComplaints] = useState([]);
+  const [hostelComplaints, setHostelComplaints] = useState([]); // hostel form complaints
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
 
@@ -61,6 +62,7 @@ export function HostelAuthProvider({ children }) {
         setCartOrders([]);
         setHostelsOrders([]);
         setAppComplaints([]);
+        setHostelComplaints([]);
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         setIsDataLoaded(true);
@@ -143,8 +145,18 @@ export function HostelAuthProvider({ children }) {
 
       const setupCollectionListener = (collectionName, normalizeType, setOrdersFn) => {
         if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
+          let q;
+          // Tactical Fix: Limit eager-loaded collections to prevent loading the entire DB history
+          if (collectionName === "orders" || collectionName === "b2b_orders" || collectionName === "hostels_orders") {
+            q = query(collection(db, collectionName), orderBy("date", "desc"), limit(2000));
+          } else if (collectionName === "complaint" || collectionName === "normal_complaint") {
+            q = query(collection(db, collectionName), orderBy("createdAt", "desc"), limit(1000));
+          } else {
+            q = query(collection(db, collectionName), limit(500));
+          }
+
           const unsub = onSnapshot(
-            collection(db, collectionName),
+            q,
             (snapshot) => {
               setOrdersFn(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, normalizeType)));
               checkAllLoaded();
@@ -219,6 +231,7 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
       setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
       setupCollectionListener("normal_complaint", "complaint", setAppComplaints);
+      setupCollectionListener("complaint", "complaint", setHostelComplaints);
 
       if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
         setWebsiteOrders([]);
@@ -288,6 +301,12 @@ export function HostelAuthProvider({ children }) {
       primaryRecordsMap.set(order.id, order);
     });
 
+    // Hostel-submitted complaints (from 'complaint' collection via hostel order form)
+    hostelComplaints.forEach((order) => {
+      const existing = primaryRecordsMap.get(order.id);
+      if (!existing) primaryRecordsMap.set(order.id, order);
+    });
+
     // 3. Base Data: B2B Orders
     b2bOrders.forEach(order => {
       const existing = primaryRecordsMap.get(order.id);
@@ -320,7 +339,7 @@ export function HostelAuthProvider({ children }) {
 
     const merged = [...primaryRecordsMap.values()];
     return merged.filter(isVisibleMergedOrder);
-  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders]);
+  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders, appComplaints, hostelComplaints]);
 
   const orders = useMemo(() => {
     if (!client) return [];
