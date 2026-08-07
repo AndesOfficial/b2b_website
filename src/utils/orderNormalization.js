@@ -93,6 +93,7 @@ export const CANONICAL_PROPERTY_NAMES = {
   hostel99: "Hostel 99",
   "hostel 99": "Hostel 99",
   "hostel99 koregaon park": "Hostel99 koregaon park",
+  "hostel 99 koregaon park": "Hostel99 koregaon park",
   "hostel99 yerwada 1": "Hostel99 Yerwada 1",
   "hostel99 yerwada 2": "Hostel99 Yerwada 2",
   "hostel 99 no-88": "Hostel 99 no-88",
@@ -192,7 +193,9 @@ export function normalizePropertyName(value) {
   if (CANONICAL_PROPERTY_NAMES[alphanumeric]) return CANONICAL_PROPERTY_NAMES[alphanumeric];
 
   // Try matching prefix if property name starts with a known key
-  for (const [key, canonical] of Object.entries(CANONICAL_PROPERTY_NAMES)) {
+  // Sort by length descending to match longest prefixes first (e.g. "Hostel 99 no-3" before "Hostel 99")
+  const sortedEntries = Object.entries(CANONICAL_PROPERTY_NAMES).sort((a, b) => b[0].length - a[0].length);
+  for (const [key, canonical] of sortedEntries) {
     if (collapsed.startsWith(key) || alphanumeric.startsWith(key)) {
       return canonical;
     }
@@ -459,7 +462,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Website Customer").trim();
     normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact").trim();
     normalized.service = (typeof rawOrder.service === 'string' && rawOrder.service) ? rawOrder.service : ((Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order");
-    normalized.items = normalizeNumber(rawOrder.totalItems, Array.isArray(rawOrder.items) ? rawOrder.items.length : normalized.items);
+    normalized.items = firstPositiveNumber(rawOrder.totalItems, rawOrder.items, rawOrder.clothesCount, rawOrder.pieces, rawOrder.clothes, normalized.items);
     if (!normalized.items || normalized.items === 0) {
       normalized.items = normalizeNumber(rawOrder.clothesCount, normalized.items);
     }

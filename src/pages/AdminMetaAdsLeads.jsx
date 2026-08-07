@@ -77,7 +77,7 @@ function validateRow(row) {
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function AdminMetaAdsLeads() {
   const navigate = useNavigate();
-  const { client, logout } = useHostelAuth();
+  const { client, logout, isViewer } = useHostelAuth();
   const fileInputRef = useRef(null);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed]   = useState(false);
@@ -420,20 +420,22 @@ export default function AdminMetaAdsLeads() {
 
             <div className="flex items-center gap-3">
               {/* Upload Excel */}
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
-                <FiUpload size={15} />
-                {isUploading ? "Reading…" : "Upload Excel"}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </label>
+              {!isViewer && (
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
+                  <FiUpload size={15} />
+                  {isUploading ? "Reading…" : "Upload Excel"}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </label>
+              )}
 
               {/* Save to Firebase — only visible in preview mode with data */}
-              {activeView === "preview" && previewData.length > 0 && (
+              {!isViewer && activeView === "preview" && previewData.length > 0 && (
                 <button
                   onClick={handleSaveToFirebase}
                   disabled={isSaving}

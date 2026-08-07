@@ -8,6 +8,7 @@ import TabSectionCard from "../Shared/TabSectionCard";
 import { REGULAR_CHANNELS, getServiceLabel, useRegularOrders } from "../../hooks/useRegularOrders";
 import { formatTimeSlot, humanizeServiceLabel } from "../../utils/formatUtils";
 import { calculateTAT } from "../../utils/dateUtils";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 const CHANNEL_ICONS = { App: FiSmartphone, Auto: FiMapPin, Website: FiShoppingBag, WhatsApp: FiMessageSquare, Outlet: FiShoppingBag, Call: FiPhone, Student: FiUser };
 const CHANNEL_COLORS = { App: "#1976D2", Auto: "#0EA5E9", Website: "#6366F1", WhatsApp: "#25D366", Outlet: "#D97706", Call: "#7C3AED", Student: "#059669" };
@@ -56,6 +57,7 @@ function getFormattedCreatedDate(order) {
 }
 
 export default function TransactionsLogDashboard({ currentOrders, onAddOrder, onEditOrder, onDeleteOrder }) {
+  const { isViewer } = useHostelAuth();
   const [channelFilter, setChannelFilter] = useState("All");
   const [selectedDrilldownOrder, setSelectedDrilldownOrder] = useState(null);
   const [isDrilldownOpen, setIsDrilldownOpen] = useState(false);
@@ -182,7 +184,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
             )}
           </div>
         </div>
-        {onAddOrder && (
+        {!isViewer && onAddOrder && (
           <button
             onClick={onAddOrder}
             className="flex items-center justify-center gap-2.5 px-5 py-2.5 bg-blue-600 text-white text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest whitespace-nowrap"
@@ -205,7 +207,6 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
       >
         {/* ── Desktop Table ── */}
         <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
-          {/* Optimization #6: Replace style={{ minWidth: "100%" }} with min-w-full */}
           <table className="w-full min-w-full">
             <thead className="bg-[#F8FAFC] sticky top-0 z-10">
               <tr>
@@ -218,14 +219,15 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                 <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
                 <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Status</th>
                 <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">TAT</th>
-                {/* Optimization #6: Replace inline style boxShadow with arbitrary Tailwind class shadow-[-4px_0_8px_rgba(0,0,0,0.04)] */}
-                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#F8FAFC] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
+                {!isViewer && (
+                  <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#F8FAFC] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {paginatedOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-4 py-12">
+                  <td colSpan={!isViewer ? 10 : 9} className="px-4 py-12">
                     <EmptyState
                       icon={deferredSearch ? FiSearch : FiInbox}
                       title={deferredSearch ? "No results found" : "No matching transactions"}
@@ -309,21 +311,23 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       </span>
                     </td>
                     {/* Actions — sticky right with Tailwind arbitrary shadow */}
-                    <td className="px-4 py-3 text-right sticky right-0 bg-white z-20 group-hover:bg-[#F8FAFC] transition-colors shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">
-                      <div className="flex items-center justify-end gap-1">
-                        {onEditOrder && (
-                          <button onClick={(e) => { e.stopPropagation(); onEditOrder(order); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                            <FiEdit2 size={14} />
-                          </button>
-                        )}
-                        {onDeleteOrder && (
-                          <button onClick={(e) => { e.stopPropagation(); onDeleteOrder(order); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                            <FiTrash2 size={14} />
-                          </button>
-                        )}
-                        <FiChevronRight size={14} className="text-slate-300 ml-0.5" />
-                      </div>
-                    </td>
+                    {!isViewer && (
+                      <td className="px-4 py-3 text-right sticky right-0 bg-white z-20 group-hover:bg-[#F8FAFC] transition-colors shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center justify-end gap-1">
+                          {onEditOrder && (
+                            <button onClick={(e) => { e.stopPropagation(); onEditOrder(order); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                              <FiEdit2 size={14} />
+                            </button>
+                          )}
+                          {onDeleteOrder && (
+                            <button onClick={(e) => { e.stopPropagation(); onDeleteOrder(order); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                              <FiTrash2 size={14} />
+                            </button>
+                          )}
+                          <FiChevronRight size={14} className="text-slate-300 ml-0.5" />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                   {/* ── Expandable Service Breakdown Row ── */}
                   {expandedOrderId === order.id && order.serviceBreakdown?.length > 1 && (

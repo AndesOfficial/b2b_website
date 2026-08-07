@@ -54,7 +54,7 @@ const emptyForm = {
 
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
-  const { orders } = useHostelAuth();
+  const { orders, isViewer } = useHostelAuth();
   const [activeSubTab, setActiveSubTab] = useState("personal");
   const [expenses, setExpenses] = useState([]);
   const [isAndesUnlocked, setIsAndesUnlocked] = useState(() => sessionStorage.getItem("andes_unlocked") === "true");
@@ -566,10 +566,12 @@ export default function AdminExpensesTab() {
                 <Download size={14} /> Export 
             </button>
         </div>
-        <button onClick={openNew}
-          className="flex items-center justify-center gap-2.5 px-6 py-3.5 sm:py-3 bg-blue-600 text-white text-[12px] sm:text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest">
-          <Plus size={18} /> Record Expense
-        </button>
+        {!isViewer && (
+          <button onClick={openNew}
+            className="flex items-center justify-center gap-2.5 px-6 py-3.5 sm:py-3 bg-blue-600 text-white text-[12px] sm:text-[13px] font-black rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest">
+            <Plus size={18} /> Record Expense
+          </button>
+        )}
       </div>
 
       {/* KPI Cards */}

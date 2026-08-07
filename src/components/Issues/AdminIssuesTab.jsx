@@ -3,6 +3,7 @@ import { FiCheckCircle, FiClock, FiAlertTriangle, FiPlus, FiX, FiCheck, FiEdit2,
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "../Shared/EmptyState";
 import { formatTimeSlot } from "../../utils/formatUtils";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 const ISSUE_TYPES = [
   // Admin-entered types
@@ -23,6 +24,7 @@ const TYPE_COLORS = {
 };
 
 export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDeleteIssue }) {
+  const { isViewer } = useHostelAuth();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     id: null, date: "", issueType: "Missing Items", description: "",
@@ -261,7 +263,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
             </div>
           </button>
         ))}
-        {onAddIssue && (
+        {onAddIssue && !isViewer && (
           <button onClick={() => { setForm({ id: null, date: "", issueType: "Missing Items", description: "", linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "", originalService: "" }); setShowModal(true); }} className="col-span-2 lg:ml-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-red-600 text-white text-[12px] font-black rounded-xl hover:bg-red-700 transition-all shadow-md active:scale-95 uppercase tracking-widest">
             <FiPlus size={18} /> Report New Issue
           </button>
@@ -360,18 +362,20 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
                   }`}>
                   {issue.resolveStatus}
                 </span>
-                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {onEditIssue && (
-                    <button onClick={() => openEditModal(issue)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                      <FiEdit2 size={14} />
-                    </button>
-                  )}
-                  {onDeleteIssue && (
-                    <button onClick={() => onDeleteIssue(issue)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                      <FiTrash2 size={14} />
-                    </button>
-                  )}
-                </div>
+                {!isViewer && (
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {onEditIssue && (
+                      <button onClick={() => openEditModal(issue)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <FiEdit2 size={14} />
+                      </button>
+                    )}
+                    {onDeleteIssue && (
+                      <button onClick={() => onDeleteIssue(issue)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <FiTrash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

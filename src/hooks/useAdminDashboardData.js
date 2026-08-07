@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
@@ -47,141 +47,104 @@ function hasMeaningfulHotelData(order) {
 // isHiddenHotelRecord removed - record should be soft-deleted in Firestore instead
 
 function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
-  const validOrders = orders.filter((order) => 
-    order.category !== "ISSUES" && 
-    order.status !== "Cancelled" && 
-    order.status !== "Abandoned" && 
-    order.type !== "abandoned"
-  );
-  let focusOrders = validOrders;
-
-  if (activeTab === "regular") {
-    focusOrders = validOrders.filter((order) => order.type === "regular");
-  } else if (activeTab === "hostels") {
-    focusOrders = validOrders.filter((order) => order.type === "student" || order.type === "linen");
-  } else if (activeTab === "hotels") {
-    focusOrders = validOrders.filter((order) => isHotelOrder(order) && hasMeaningfulHotelData(order));
-  }
-
-  const issues = orders.filter((order) => order.category === "ISSUES");
-  const totalRevenue = focusOrders.reduce((sum, order) => sum + (order.amount || 0), 0);
-  const totalOrders = focusOrders.length;
-  const totalKg = focusOrders.reduce((sum, order) => sum + (order.weight || 0), 0);
-  const totalClients = activeTab === "regular"
-    ? new Set(focusOrders.filter((order) => order.customerName && !order.id.includes("adj")).map((order) => order.customerName)).size
-    : activeTab === "hostels" || activeTab === "hotels"
-      ? new Set(focusOrders.map((order) => order.property)).size
-      : allManagers.length;
-
-  const hostelRevenue = validOrders
-    .filter((order) => order.type === "student" || order.type === "linen")
-    .reduce((sum, order) => sum + (order.amount || 0), 0);
-  const retailRevenue = validOrders
-    .filter((order) => order.type === "regular")
-    .reduce((sum, order) => sum + (order.amount || 0), 0);
-  const hotelRevenue = validOrders
-    .filter((order) => isHotelOrder(order) && hasMeaningfulHotelData(order))
-    .reduce((sum, order) => sum + (order.amount || 0), 0);
-
-  const getTrend = (filterFn) => (
-    daysInRange.map((fullDate) => ({
-      v: validOrders
-        .filter((order) => order.date === fullDate && filterFn(order))
-        .reduce((sum, order) => sum + (order.amount || order.weight || 1), 0),
-    }))
-  );
-
-  const b2cOrders = validOrders.filter((o) =>
-    (o.type === "regular" || o.source === "cartdetails" || o.source === "website") &&
-    o.type !== "rider_tracking" &&  // exclude rider tracking records from B2C count
-    o.type !== "abandoned"          // exclude abandoned carts from B2C count
-  );
-
-  const b2bOrders = validOrders.filter((o) => o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.source === "b2b" || o.source === "hostels");
-
-  const b2cPickups = b2cOrders.filter((o) => {
-    const s = String(o.status || "").toLowerCase();
-    return s === "processing" || s === "delivered" || s === "completed" || s === "picked up" || s === "pickup done" || s === "confirmed" || s === "pending";
-  }).length;
-  const b2cDeliveries = b2cOrders.filter((o) => {
-    const s = String(o.status || "").toLowerCase();
-    return s === "delivered" || s === "completed";
-  }).length;
-
-  const b2bPickups = b2bOrders.filter((o) => {
-    const s = String(o.status || "").toLowerCase();
-    return s !== "cancelled" && s !== "abandoned";
-  }).length;
-  const b2bDeliveries = b2bOrders.filter((o) => {
-    const s = String(o.status || "").toLowerCase();
-    return s === "delivered" || s === "completed";
-  }).length;
-
-  const b2cKg = b2cOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
-  const b2bKg = b2bOrders.reduce((sum, o) => sum + (o.weight || 0), 0);
-
+  let totalRevenue = 0, totalOrders = 0, totalKg = 0;
+  let hostelRevenue = 0, retailRevenue = 0, hotelRevenue = 0;
+  let b2cPickups = 0, b2cDeliveries = 0, b2cKg = 0;
+  let b2bPickups = 0, b2bDeliveries = 0, b2bKg = 0;
+  let openIssuesCount = 0;
+  
+  const clientSet = new Set();
   const b2cServicesKg = {};
+  
+  const trendsByDate = {};
+  daysInRange.forEach(d => trendsByDate[d] = { sparkVal: 0, issues: 0 });
 
-  b2cOrders.forEach(o => {
-    if (o.serviceBreakdown && Array.isArray(o.serviceBreakdown) && o.serviceBreakdown.length > 0) {
-      o.serviceBreakdown.forEach(item => {
-        const name = item.name || "Other";
-        const itemWt = Number(item.weight) || 0;
-        const itemQty = Number(item.quantity) || 0;
-        if (!b2cServicesKg[name]) {
-          b2cServicesKg[name] = { weight: 0, quantity: 0 };
-        }
-        b2cServicesKg[name].weight += itemWt;
-        b2cServicesKg[name].quantity += itemQty;
-      });
-    } else {
-      const name = o.service || "Other";
-      const wt = Number(o.weight) || 0;
-      const qty = Number(o.items) || 0;
-      if (!b2cServicesKg[name]) {
-        b2cServicesKg[name] = { weight: 0, quantity: 0 };
+  orders.forEach(order => {
+    if (order.category === "ISSUES") {
+      if (order.resolveStatus !== "Resolved") openIssuesCount++;
+      if (trendsByDate[order.date]) trendsByDate[order.date].issues += (order.amount || order.weight || 1);
+      return;
+    }
+    
+    if (order.status === "Cancelled" || order.status === "Abandoned" || order.type === "abandoned") return;
+
+    const amt = order.amount || 0;
+    const wt = order.weight || 0;
+    const isHotel = isHotelOrder(order);
+    const hasHotelData = hasMeaningfulHotelData(order);
+    const s = String(order.status || "").toLowerCase();
+
+    // Breakdowns
+    if (order.type === "student" || order.type === "linen") hostelRevenue += amt;
+    if (order.type === "regular") retailRevenue += amt;
+    if (isHotel && hasHotelData) hotelRevenue += amt;
+
+    // Focus Filtering (Active Tab)
+    let inFocus = true;
+    if (activeTab === "regular") inFocus = order.type === "regular";
+    else if (activeTab === "hostels") inFocus = (order.type === "student" || order.type === "linen");
+    else if (activeTab === "hotels") inFocus = (isHotel && hasHotelData);
+
+    if (inFocus) {
+      totalRevenue += amt;
+      totalOrders++;
+      totalKg += wt;
+      
+      if (activeTab === "regular" && order.customerName && !order.id.includes("adj")) {
+        clientSet.add(order.customerName);
+      } else if ((activeTab === "hostels" || activeTab === "hotels") && order.property) {
+        clientSet.add(order.property);
       }
-      b2cServicesKg[name].weight += wt;
-      b2cServicesKg[name].quantity += qty;
+      
+      if (trendsByDate[order.date]) trendsByDate[order.date].sparkVal += (amt || wt || 1);
+    }
+
+    // B2C vs B2B Metrics
+    const isB2C = (order.type === "regular" || order.source === "cartdetails" || order.source === "website") && order.type !== "rider_tracking";
+    const isB2B = (order.type === "student" || order.type === "linen" || order.type === "airbnb" || order.source === "b2b" || order.source === "hostels");
+    
+    if (isB2C) {
+      b2cKg += wt;
+      if (["processing", "delivered", "completed", "picked up", "pickup done", "confirmed", "pending"].includes(s)) b2cPickups++;
+      if (["delivered", "completed"].includes(s)) b2cDeliveries++;
+      
+      const bd = order.serviceBreakdown;
+      if (bd && Array.isArray(bd) && bd.length > 0) {
+        bd.forEach(item => {
+          const name = item.name || "Other";
+          if (!b2cServicesKg[name]) b2cServicesKg[name] = { weight: 0, quantity: 0 };
+          b2cServicesKg[name].weight += (Number(item.weight) || 0);
+          b2cServicesKg[name].quantity += (Number(item.quantity) || 0);
+        });
+      } else {
+        const name = order.service || "Other";
+        if (!b2cServicesKg[name]) b2cServicesKg[name] = { weight: 0, quantity: 0 };
+        b2cServicesKg[name].weight += wt;
+        b2cServicesKg[name].quantity += (Number(order.items) || 0);
+      }
+    }
+    
+    if (isB2B) {
+      b2bKg += wt;
+      b2bPickups++;
+      if (["delivered", "completed"].includes(s)) b2bDeliveries++;
     }
   });
 
+  const totalClients = ["regular", "hostels", "hotels"].includes(activeTab) ? clientSet.size : allManagers.length;
+  const sparklines = {
+    revenue: daysInRange.map(d => ({ v: trendsByDate[d].sparkVal })),
+    orders: daysInRange.map(d => ({ v: trendsByDate[d].sparkVal })),
+    kg: daysInRange.map(d => ({ v: trendsByDate[d].sparkVal })),
+    clients: daysInRange.map((_, index) => ({ v: 10 + Math.sin(index) * 2 })),
+    issues: daysInRange.map(d => ({ v: trendsByDate[d].issues }))
+  };
+
   return {
-    totalRevenue,
-    totalOrders,
-    totalKg,
-    totalClients,
-    openIssuesCount: issues.filter((issue) => issue.resolveStatus !== "Resolved").length,
+    totalRevenue, totalOrders, totalKg, totalClients, openIssuesCount,
     breakdown: { hostelRevenue, retailRevenue, hotelRevenue },
-    b2cPickups,
-    b2cDeliveries,
-    b2bPickups,
-    b2bDeliveries,
-    b2cKg,
-    b2bKg,
-    b2cServicesKg,
-    sparklines: {
-      revenue: getTrend((order) => {
-        if (activeTab === "regular") return order.type === "regular";
-        if (activeTab === "hostels") return order.type === "student" || order.type === "linen";
-        if (activeTab === "hotels") return isHotelOrder(order) && hasMeaningfulHotelData(order);
-        return order.category !== "ISSUES";
-      }),
-      orders: getTrend((order) => {
-        if (activeTab === "regular") return order.type === "regular";
-        if (activeTab === "hostels") return order.type === "student" || order.type === "linen";
-        if (activeTab === "hotels") return isHotelOrder(order) && hasMeaningfulHotelData(order);
-        return order.category !== "ISSUES";
-      }),
-      kg: getTrend((order) => {
-        if (activeTab === "regular") return order.type === "regular";
-        if (activeTab === "hostels") return order.type === "student" || order.type === "linen";
-        if (activeTab === "hotels") return isHotelOrder(order) && hasMeaningfulHotelData(order);
-        return order.category !== "ISSUES";
-      }),
-      clients: daysInRange.map((_, index) => ({ v: 10 + Math.sin(index) * 2 })),
-      issues: getTrend((order) => order.category === "ISSUES"),
-    },
+    b2cPickups, b2cDeliveries, b2bPickups, b2bDeliveries,
+    b2cKg, b2bKg, b2cServicesKg, sparklines
   };
 }
 
@@ -340,31 +303,35 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
     }
   }, []);
 
+  const SOURCE_COLLECTION_MAP = {
+    hostels: "hostels_orders",
+    cartdetails: "cartdetails",
+    website: "orders",
+    b2b: "b2b_orders",
+    admin: "b2b_admin_edits",
+    complaint: "complaint",
+    normal_complaint: "normal_complaint"
+  };
+
+  const getTargetCollection = (item) => {
+    if (item.source && SOURCE_COLLECTION_MAP[item.source]) {
+      return SOURCE_COLLECTION_MAP[item.source];
+    }
+    const isB2B =
+      item.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
+      item.category === ORDER_CATEGORIES.LINEN ||
+      item.category === ORDER_CATEGORIES.AIRBNB ||
+      item.category === "STUDENT_LAUNDRY" ||
+      item.category === "LINEN" ||
+      item.category === "AIRBNB";
+    return isB2B ? "b2b_orders" : "b2b_admin_edits";
+  };
+
   const handleEditOrder = useCallback(async (updatedOrder) => {
     try {
       if (!updatedOrder.id) throw new Error("Order ID missing");
       const id = String(updatedOrder.id);
-
-      // Route writes back to the original source collection so the customer app
-      // and all other dashboard views see the updated status immediately.
-      let targetCollection;
-      if (updatedOrder.source === "hostels") {
-        targetCollection = "hostels_orders";
-      } else if (updatedOrder.source === "cartdetails") {
-        targetCollection = "cartdetails";
-      } else if (updatedOrder.source === "website") {
-        targetCollection = "orders";
-      } else if (updatedOrder.source === "b2b") {
-        targetCollection = "b2b_orders";
-      } else if (updatedOrder.source === "admin") {
-        targetCollection = "b2b_admin_edits";
-      } else {
-        const isB2B =
-          updatedOrder.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
-          updatedOrder.category === ORDER_CATEGORIES.LINEN ||
-          updatedOrder.category === ORDER_CATEGORIES.AIRBNB;
-        targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
-      }
+      const targetCollection = getTargetCollection(updatedOrder);
 
       await setDoc(doc(db, targetCollection, id), cleanObject(updatedOrder), { merge: true });
     } catch (error) {
@@ -384,25 +351,28 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
     try {
       if (!updatedIssue.id) throw new Error("Issue ID missing");
 
-      // 1. Always save the full edit to b2b_admin_edits (admin override layer)
-      await setDoc(doc(db, "b2b_admin_edits", String(updatedIssue.id)), cleanObject(updatedIssue));
+      const batch = writeBatch(db);
 
-      // 2. If this issue came from the 'complaint' collection (or exists in it),
-      //    write the status back to 'closed', 'checking', or 'open'.
-      try {
-        const complaintRef = doc(db, "complaint", String(updatedIssue.id));
+      // 1. Always save the full edit to b2b_admin_edits (admin override layer)
+      const editRef = doc(db, "b2b_admin_edits", String(updatedIssue.id));
+      batch.set(editRef, cleanObject(updatedIssue));
+
+      // 2. Write status back to original source collection if applicable
+      const source = updatedIssue.source;
+      if (source === "complaint" || source === "normal_complaint") {
+        const complaintRef = doc(db, source, String(updatedIssue.id));
         const firestoreStatus =
           updatedIssue.resolveStatus === "Resolved" ? "closed" :
           updatedIssue.resolveStatus === "Checking" ? "checking" : "open";
 
-        await updateDoc(complaintRef, {
+        batch.set(complaintRef, {
           status: firestoreStatus,
           flagged: updatedIssue.severity === "critical",
           updatedAt: serverTimestamp(),
-        });
-      } catch (complaintErr) {
-        // Ignore if document is not in 'complaint' collection
+        }, { merge: true });
       }
+
+      await batch.commit();
     } catch (error) {
       console.error("Failed to edit issue", error);
     }
@@ -414,30 +384,8 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
     try {
       if (!item.id) throw new Error("ID missing for delete action");
       const id = String(item.id);
-      
-      let targetCollection;
-      
-      // 1. Identify Target Collection
-      if (item.source === "hostels") {
-        targetCollection = "hostels_orders";
-      } else if (item.source === "website") {
-        targetCollection = "orders";
-      } else if (item.source === "cartdetails") {
-        targetCollection = "cartdetails";
-      } else if (item.source === "b2b") {
-        targetCollection = "b2b_orders";
-      } else if (item.source === "admin") {
-        targetCollection = "b2b_admin_edits";
-      } else {
-        const isB2B =
-          item.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
-          item.category === ORDER_CATEGORIES.LINEN ||
-          item.category === ORDER_CATEGORIES.AIRBNB;
-        
-        targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
-      }
+      const targetCollection = getTargetCollection(item);
 
-      // 2. Execute Hard Delete
       await deleteDoc(doc(db, targetCollection, id));
       
       alert("Record physically deleted from Firebase.");
