@@ -266,7 +266,7 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
     // B2B ORDERS  (hostel orders — source === 'hostels')
     // ──────────────────────────────────────────────────────────────────────────
     const hostelOrders = allOrders.filter(o =>
-      o.source === 'hostels' && o.type === 'student'
+      (o.source === 'hostels' || o.source === 'b2b' || o.source === 'admin') && o.type === 'student'
     );
 
     // Hostel deliveries on selectedDate

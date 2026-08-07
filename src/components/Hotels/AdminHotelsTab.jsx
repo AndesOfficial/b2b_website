@@ -7,6 +7,7 @@ import TabSectionCard from "../Shared/TabSectionCard";
 import { useHotelMetrics } from "../../hooks/useHotelMetrics";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "../../firebase";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 function HotelSummaryCard({ name, color, orders, revenue }) {
   const totals = {};
@@ -45,6 +46,7 @@ function HotelSummaryCard({ name, color, orders, revenue }) {
 }
 
 export default function AdminHotelsTab({ orders }) {
+  const { isViewer } = useHostelAuth();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { hotelSummaries, sortedHotelOrders } = useHotelMetrics(orders);
@@ -80,7 +82,7 @@ export default function AdminHotelsTab({ orders }) {
                   <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Duvet Cover</th>
                   <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Towels</th>
                   <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Amount</th>
-                  <th className="text-center text-xs font-semibold text-gray-500 px-4 py-3 rounded-tr-xl">Action</th>
+                  {!isViewer && <th className="text-center text-xs font-semibold text-gray-500 px-4 py-3 rounded-tr-xl">Action</th>}
                 </tr>
               </thead>
               <tbody>
@@ -114,31 +116,31 @@ export default function AdminHotelsTab({ orders }) {
                         <FiChevronRight size={16} className="text-slate-400 group-hover:text-orange-500 transition-colors" />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrder(order);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors inline-flex"
-                          title="Edit Order"
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteOrder(order.id);
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
-                          title="Delete Order"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    {!isViewer && (
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrder(order);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          >
+                            <FiEdit2 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOrder(order.id);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <FiTrash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -11,6 +11,7 @@ import { normalizePropertyName } from "../../utils/orderNormalization";
 import { useWindowWidth } from "../../hooks/windowHooks";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../firebase";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 
 const DEFAULT_HOSTEL_COLORS = {
@@ -207,30 +208,20 @@ function UnifiedSummaryCard({ name, color, studentOrderCount, linenOrderCount, k
   );
 }
 
-// daysInRange is now an array of full "YYYY-MM-DD" strings
 export default function AdminHostelsTab({ orders, daysInRange }) {
+  const windowWidth = useWindowWidth();
+  const { isViewer } = useHostelAuth();
   const [view, setView] = useState("student");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState("All");
   const [chartDateFilter, setChartDateFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const windowWidth = useWindowWidth();
-
-  // Helper to remove undefined fields which Firestore doesn't support
-  const cleanObject = (obj) => {
-    const newObj = { ...obj };
-    Object.keys(newObj).forEach((key) => {
-      if (newObj[key] === undefined) delete newObj[key];
-    });
-    return newObj;
-  };
 
   const handleDeleteOrder = async (order) => {
     if (!order?.id) return;
     if (window.confirm("Are you sure you want to permanently remove this record from Firebase? This action cannot be undone.")) {
       try {
-        // 1. Identify Target Collection
         let targetCollection;
         if (order.source === "hostels") {
           targetCollection = "hostels_orders";
@@ -251,9 +242,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
           targetCollection = isB2B ? "b2b_orders" : "b2b_admin_edits";
         }
 
-        // 2. Execute Hard Delete
         await deleteDoc(doc(db, targetCollection, String(order.id)));
-
         alert("Record physically deleted from Firebase.");
       } catch (error) {
         console.error("Error hard-deleting order:", error);
@@ -341,7 +330,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     [studentOrders, linenOrders]
   );
 
-  // --- NEW COMBINED DATA LOGIC FOR 'ALL SECTORS' ---
   const allProperties = useMemo(() =>
     [...new Set([...studentProperties, ...linenProperties])].sort((a, b) => a.localeCompare(b)),
     [studentProperties, linenProperties]
@@ -379,7 +367,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     }).filter(h => h.studentOrderCount > 0 || h.linenOrderCount > 0),
     [allProperties, studentOrders, linenOrders]
   );
-  // -----------------------------------------------
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -397,7 +384,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
           </button>
         </div>
       )}
-      {/* Toggle */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-xl border border-gray-100 shadow-sm w-fit gap-1 text-[12px] font-bold">
           {[
@@ -413,7 +399,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="space-y-4">
         {view === "all" ? (
           <div>
@@ -422,7 +407,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Combining {unifiedSummaries.length} {unifiedSummaries.length === 1 ? "Property" : "Properties"}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
-              {/* NOW MAPPING OVER OUR NEW UNIFIED LIST */}
               {unifiedSummaries.map(s => <UnifiedSummaryCard key={s.name} {...s} />)}
             </div>
           </div>
@@ -437,7 +421,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
         )}
       </div>
 
-      {/* KG Bar Chart */}
       {(view === "student" || view === "all") && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 overflow-hidden min-w-0">
           <div className="mb-6">
@@ -481,7 +464,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
         </div>
       )}
 
-      {/* Transaction Log */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -494,7 +476,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Search Box */}
             <div className="relative">
               <input
                 type="text"
@@ -514,12 +495,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                 {`${chartDateFilter.slice(5, 7)}/${chartDateFilter.slice(8, 10)}`} <FiXCircle size={14} />
               </button>
             )}
-            {view === "all" && (
-              <div className="hidden sm:flex gap-2">
-                <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded uppercase">Students</span>
-                <span className="px-2 py-1 bg-purple-50 text-purple-600 text-[10px] font-black rounded uppercase">Linen</span>
-              </div>
-            )}
             <select
               value={propertyFilter}
               onChange={(e) => setPropertyFilter(e.target.value)}
@@ -536,7 +511,6 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
           </div>
         </div>
 
-        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200">
           <table className="w-full min-w-[800px]">
             <thead className="bg-[#F8FAFC] sticky top-0 z-10">
@@ -546,7 +520,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Metric / Qty</th>
                 <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Details</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Billed Amount</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Action</th>
+                {!isViewer && <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Action</th>}
               </tr>
             </thead>
             <tbody>
@@ -626,31 +600,33 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                         <FiChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors ml-1" />
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrder(o);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex"
-                          title="Edit Order"
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteOrder(o);
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
-                          title="Delete Order"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    {!isViewer && (
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrder(o);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex"
+                            title="Edit Order"
+                          >
+                            <FiEdit2 size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOrder(o);
+                            }}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
+                            title="Delete Order"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
             </tbody>

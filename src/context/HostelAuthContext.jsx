@@ -147,10 +147,10 @@ export function HostelAuthProvider({ children }) {
         if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
           let q;
           // Tactical Fix: Limit eager-loaded collections to prevent loading the entire DB history
-          if (collectionName === "orders" || collectionName === "b2b_orders" || collectionName === "hostels_orders") {
-            q = query(collection(db, collectionName), orderBy("date", "desc"), limit(2000));
-          } else if (collectionName === "complaint" || collectionName === "normal_complaint") {
-            q = query(collection(db, collectionName), orderBy("createdAt", "desc"), limit(1000));
+          if (collectionName === "orders" || collectionName === "b2b_orders") {
+            q = query(collection(db, collectionName), orderBy("date", "desc"), limit(5000));
+          } else if (collectionName === "complaint" || collectionName === "normal_complaint" || collectionName === "hostels_orders") {
+            q = query(collection(db, collectionName), orderBy("createdAt", "desc"), limit(5000));
           } else {
             q = query(collection(db, collectionName), limit(500));
           }
@@ -158,7 +158,18 @@ export function HostelAuthProvider({ children }) {
           const unsub = onSnapshot(
             q,
             (snapshot) => {
-              setOrdersFn(snapshot.docs.map((docSnapshot) => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, normalizeType)));
+              setOrdersFn(prev => {
+                // For the very first load, prev might be empty, but we can still use Map
+                const nextMap = new Map(prev.map(o => [o.id, o]));
+                snapshot.docChanges().forEach(change => {
+                  if (change.type === "removed") {
+                    nextMap.delete(change.doc.id);
+                  } else {
+                    nextMap.set(change.doc.id, normalizeOrder({ id: change.doc.id, ...change.doc.data() }, normalizeType));
+                  }
+                });
+                return Array.from(nextMap.values());
+              });
               checkAllLoaded();
             },
             (error) => {
@@ -199,8 +210,21 @@ export function HostelAuthProvider({ children }) {
             const unsub = onSnapshot(
               q,
               (snapshot) => {
-                chunksData.set(index, snapshot.docs.map(docSnapshot => normalizeOrder({ id: docSnapshot.id, ...docSnapshot.data() }, normalizeType)));
+                // Update chunk data
+                const currentChunkArr = chunksData.get(index) || [];
+                const chunkMap = new Map(currentChunkArr.map(o => [o.id, o]));
                 
+                snapshot.docChanges().forEach(change => {
+                  if (change.type === "removed") {
+                    chunkMap.delete(change.doc.id);
+                  } else {
+                    chunkMap.set(change.doc.id, normalizeOrder({ id: change.doc.id, ...change.doc.data() }, normalizeType));
+                  }
+                });
+                
+                chunksData.set(index, Array.from(chunkMap.values()));
+
+                // Merge all chunks back into the main state
                 const merged = [];
                 chunksData.forEach(list => merged.push(...list));
                 setOrdersFn(merged);
@@ -264,22 +288,23 @@ export function HostelAuthProvider({ children }) {
     const primaryRecordsMap = new Map();
 
     const smartMergeOrders = (existing, order) => {
-      const merged = { ...existing, ...order };
-      if (!order.amount && existing.amount) merged.amount = existing.amount;
-      if ((!order.service || order.service === "Web Store Order" || order.service === "Regular Service" || order.service === "Order") && existing.service) merged.service = existing.service;
-      if (!order.customerNumber && existing.customerNumber) merged.customerNumber = existing.customerNumber;
-      if ((!order.customerName || order.customerName === "Website Customer" || order.customerName === "Regular Customer") && existing.customerName) merged.customerName = existing.customerName;
-      if (!order.address && existing.address) merged.address = existing.address;
-      if (!order.items && existing.items) merged.items = existing.items;
-      if (!order.weight && existing.weight) merged.weight = existing.weight;
-      if (!order.serviceBreakdown || order.serviceBreakdown.length === 0) {
-        if (existing.serviceBreakdown && existing.serviceBreakdown.length > 0) {
-          merged.serviceBreakdown = existing.serviceBreakdown;
-          merged.serviceBreakdownSummary = existing.serviceBreakdownSummary;
-        }
+      const merged = { ...existing };
+      
+      for (const [key, val] of Object.entries(order)) {
+        // Skip explicitly empty values
+        if (val === undefined || val === null || val === "" || Number.isNaN(val)) continue;
+        if (Array.isArray(val) && val.length === 0) continue;
+        
+        // Skip generic placeholders if we already have a real value
+        if (key === "service" && ["Web Store Order", "Regular Service", "Order"].includes(val) && existing.service) continue;
+        if (key === "customerName" && ["Website Customer", "Regular Customer"].includes(val) && existing.customerName) continue;
+        
+        // Prevent overwriting a valid numeric amount/weight/items with 0
+        if ((key === "amount" || key === "weight" || key === "items") && val === 0 && (existing[key] > 0)) continue;
+
+        merged[key] = val;
       }
-      if (!order.deliveryDate && existing.deliveryDate) merged.deliveryDate = existing.deliveryDate;
-      if (!order.channel && existing.channel) merged.channel = existing.channel;
+      
       return merged;
     };
 

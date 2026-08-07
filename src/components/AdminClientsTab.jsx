@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import EmptyState from "./Shared/EmptyState";
 import { normalizePropertyName } from "../utils/orderNormalization";
+import { useHostelAuth } from "../context/HostelAuthContext";
 
 function normalizeList(value) {
   if (Array.isArray(value)) return value.filter(Boolean).map((v) => String(v).trim()).filter(Boolean);
@@ -29,6 +30,7 @@ function buildEditableManager(source) {
 }
 
 export default function AdminClientsTab({ managers, onSaveManager, onDeleteManager }) {
+  const { isViewer } = useHostelAuth();
   const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -177,14 +179,15 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
             className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-[13px] font-semibold text-slate-800 shadow-sm outline-none focus:border-blue-500"
           />
         </div>
-
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[13px] font-black text-white shadow-sm hover:bg-blue-700 active:scale-[0.99]"
-        >
-          <FiPlus size={16} />
-          New Client Profile
-        </button>
+        {!isViewer && (
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[13px] font-black text-white shadow-sm hover:bg-blue-700 active:scale-[0.99]"
+          >
+            <FiPlus size={16} />
+            New Client Profile
+          </button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -203,7 +206,7 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
                   <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500">Role</th>
                   <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500">Properties</th>
                   <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500">UID</th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                  {!isViewer && <th className="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -229,24 +232,26 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
                         </p>
                       </td>
                       <td className="px-4 py-3 text-[12px] font-mono text-slate-600">{manager.uid}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEdit(manager)}
-                            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-700"
-                            title="Edit profile"
-                          >
-                            <FiEdit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => onDeleteManager(manager.uid)}
-                            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                            title="Delete profile"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
+                      {!isViewer && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEdit(manager)}
+                              className="inline-flex items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-700"
+                              title="Edit profile"
+                            >
+                              <FiEdit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => onDeleteManager(manager.uid)}
+                              className="inline-flex items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              title="Delete profile"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
