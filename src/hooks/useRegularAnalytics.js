@@ -172,7 +172,8 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
             lastOrderDate: (!isNaN(lastOrderDate) ? lastOrderDate : new Date(0)).toISOString().split('T')[0],
             totalOrders: userMeta.orders.length,
             totalRevenue: userMeta.totalRevenue,
-            daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0
+            daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0,
+            orders: userMeta.orders, // Raw orders for the Customer History Modal
         };
 
         if (inCurrent && userMeta.firstOrderDate >= from && userMeta.firstOrderDate <= to) {
@@ -191,6 +192,29 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
             dormantUsers.push(userObj);
         }
     }
+
+    // Build "All Database" list — every unique user regardless of date filter
+    // This reuses the allTimeUserMap that was ALREADY computed above, so zero extra cost.
+    const allTimeUsersList = Array.from(allTimeUserMap.entries()).map(([uid, userMeta]) => {
+      const lastOrderDate = new Date(
+        userMeta.orders.reduce((max, o) => {
+          const t = getOrderDate(o).getTime();
+          return t > max ? t : max;
+        }, 0)
+      );
+      return {
+        id: uid,
+        name: userMeta.orders[0]?.customerName || 'Unknown',
+        phone: userMeta.orders[0]?.customerNumber || 'No Contact',
+        address: userMeta.orders[0]?.address || '',
+        firstOrderDate: (!isNaN(userMeta.firstOrderDate) ? userMeta.firstOrderDate : new Date(0)).toISOString().split('T')[0],
+        lastOrderDate: (!isNaN(lastOrderDate) ? lastOrderDate : new Date(0)).toISOString().split('T')[0],
+        totalOrders: userMeta.orders.length,
+        totalRevenue: userMeta.totalRevenue,
+        daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0,
+        orders: userMeta.orders,
+      };
+    });
 
     // 5. Calculate Revenue & Order Metrics
     const currentRevenue = currentOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
@@ -303,8 +327,10 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
             phone: o.customerNumber,
             totalOrders: allTimeUserMap.get(getUserId(o))?.orders.length || 1,
             totalRevenue: allTimeUserMap.get(getUserId(o))?.totalRevenue || (o.amount || 0),
-            lastOrderDate: getOrderDate(o).toISOString().split('T')[0]
+            lastOrderDate: getOrderDate(o).toISOString().split('T')[0],
+            orders: allTimeUserMap.get(getUserId(o))?.orders || [], // Raw orders for history modal
         })).filter((v, i, a) => a.findIndex(t => t.id === v.id) === i), // Distinct
+        allTimeUsersList, // "All Database" tab — every unique user, unfiltered by date
 
         // Metrics
         currentRevenue,
