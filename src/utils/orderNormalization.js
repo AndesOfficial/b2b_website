@@ -2,6 +2,7 @@ import { ORDER_CATEGORIES, ORDER_CHANNELS, ORDER_STATUSES, ORDER_TYPES, normaliz
 import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
 import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG } from "../config/orderRateCard";
+import { normalizePhone } from "./phoneUtils";
 
 // --- ADDED ALIASES HERE TO FIX CASE SENSITIVITY AND DUPLICATES ---
 export const CANONICAL_PROPERTY_NAMES = {
@@ -446,7 +447,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     status: normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus),
     details: normalizeDetails(rawOrder),
     customerName: String(rawOrder.customerName || rawOrder.userName || "").trim(),
-    customerNumber: String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim(),
+    customerNumber: normalizePhone(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || ""),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
     deliveryDate: normalizeSlot(rawOrder.deliveryDate || rawOrder.dropTime || ""),
     pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.scheduledPickupDate || rawOrder.pickup || rawOrder.date || ""),
@@ -460,7 +461,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.property = "Regular Customers";
     normalized.channel = ORDER_CHANNELS.WEBSITE;
     normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Website Customer").trim();
-    normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact").trim();
+    normalized.customerNumber = normalizePhone(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "no contact");
     normalized.service = (typeof rawOrder.service === 'string' && rawOrder.service) ? rawOrder.service : ((Array.isArray(rawOrder.items) ? rawOrder.items.map((item) => item.name || item.title).filter(Boolean).join(", ") : "") || "Web Store Order");
     normalized.items = firstPositiveNumber(rawOrder.totalItems, rawOrder.items, rawOrder.clothesCount, rawOrder.pieces, rawOrder.clothes, normalized.items);
     if (!normalized.items || normalized.items === 0) {
@@ -569,7 +570,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     }
     
     normalized.customerName = String(rawOrder.userName || rawOrder.customerName || "Regular Customer").trim();
-    normalized.customerNumber = String(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "").trim();
+    normalized.customerNumber = normalizePhone(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || "");
     
     // ── Rider Tracking Record Detection ──────────────────────────────────────
     // The `cartdetails` collection contains two types of documents:
@@ -697,7 +698,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     
     normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, normalized.weight);
     normalized.customerName = String(rawOrder.userName || normalized.customerName).trim();
-    normalized.customerNumber = String(rawOrder.userMobile || normalized.customerNumber).trim();
+    normalized.customerNumber = normalizePhone(rawOrder.userMobile || normalized.customerNumber);
     normalized.studentCount = 1; // Each individual hostel order represents 1 student
     if (rawOrder.room) {
       normalized.service = `Room: ${rawOrder.room}`;
@@ -741,7 +742,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.property = rawOrder.hostel || rawOrder.location?.address || "";
     normalized.resolveStatus = (rawOrder.status === "resolved" || rawOrder.status === "closed") ? "Resolved" : "Unresolved";
     normalized.severity = rawOrder.flagged ? "critical" : "pending";
-    normalized.customerNumber = rawOrder.userMobile || "";
+    normalized.customerNumber = normalizePhone(rawOrder.userMobile || "");
     normalized.customerName = rawOrder.userName || "Customer";
     normalized.room = rawOrder.room || "";
     normalized.photoUrls = rawOrder.photoUrls || [];
