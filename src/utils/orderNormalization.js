@@ -90,6 +90,10 @@ export const CANONICAL_PROPERTY_NAMES = {
   "tulsi hostel bhavdan": "Tulsi",
   "tulsi hostel bavdhan": "Tulsi",
 
+  // Orchid
+  orchid: "Orchid",
+  "orchid hostel": "Orchid",
+
   // Other properties
   hostel99: "Hostel 99",
   "hostel 99": "Hostel 99",
