@@ -13,7 +13,7 @@ const KNOWN_PROPERTIES = {
   hostel: [
     "Aakansha", "Aaradhana", "Adarsha", "Curie", "Gurukul", 
     "Keerti", "Meera", "Plato", "Samriddhi", "Samshrushti", 
-    "Tara", "Tulsi"
+    "Tara", "Tulsi", "Orchid"
   ],
   hotel: [
     "Airbnb Viman Nagar", "Airbnb Koregaon Park" // Add your common hotels here
