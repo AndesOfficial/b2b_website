@@ -173,15 +173,13 @@ export default function OpsRevenueDashboard({ orders }) {
 
       {/* 01 Overall */}
       <Section index={1} title="Overall" subtitle={period === "month" ? new Date(`${range.from}T00:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : undefined}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           <Kpi big label="Total weight" value={kg(overall.totalWeight)} />
           <Kpi big label="Total revenue" value={rs(overall.totalRevenue)} />
           <Kpi big label="B2B weight" value={kg(overall.b2bWeight)} accent={B2B_COLOR} />
           <Kpi big label="B2B revenue" value={rs(overall.b2bRevenue)} accent={B2B_COLOR} />
           <Kpi big label="B2C weight" value={kg(overall.b2cWeight)} accent={B2C_COLOR} />
           <Kpi big label="B2C revenue" value={rs(overall.b2cRevenue)} accent={B2C_COLOR} />
-          <Kpi big label="Orders / bags" value={overall.orders} />
-          <Kpi big label="Avg revenue / kg" value={rsKg(overall.perKg)} />
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <MixBar title="Weight" label="Weight mix" b2bPct={overall.mix.b2bWeightPct} />
@@ -191,12 +189,11 @@ export default function OpsRevenueDashboard({ orders }) {
 
       {/* 02 B2B */}
       <Section index={2} title="B2B">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Kpi label="B2B total weight" value={kg(b2b.weight)} accent={B2B_COLOR} />
           <Kpi label="B2B revenue" value={rs(b2b.revenue)} accent={B2B_COLOR} />
           <Kpi label="Pickup weight" value={kg(b2b.pickupKg)} />
           <Kpi label="Delivery weight" value={b2b.deliveryTracked ? kg(b2b.deliveryKg) : "Not tracked"} hint={b2b.deliveryTracked ? undefined : "No B2B order marked delivered"} />
-          <Kpi label="Avg ₹ / kg" value={rsKg(b2b.perKg)} />
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Kpi label="Top client by weight" value={b2b.topByKg ? b2b.topByKg.name : "—"} hint={b2b.topByKg ? kg(b2b.topByKg.pickupKg) : undefined} />
@@ -222,12 +219,10 @@ export default function OpsRevenueDashboard({ orders }) {
 
       {/* 03 B2C */}
       <Section index={3} title="B2C">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Kpi label="B2C total weight" value={kg(b2c.weight)} accent={B2C_COLOR} />
           <Kpi label="B2C revenue" value={rs(b2c.revenue)} accent={B2C_COLOR} />
           <Kpi label="B2C orders" value={b2c.orders} />
-          <Kpi label="Avg order value" value={rs(b2c.aov)} />
-          <Kpi label="Avg kg / order" value={b2c.kgPerOrder === null ? "—" : kg(b2c.kgPerOrder)} />
           <Kpi label="Revenue / kg" value={rsKg(b2c.perKg)} />
         </div>
         <h3 className="mb-2 mt-5 text-sm font-bold text-slate-700">Service-wise breakdown</h3>
@@ -246,24 +241,19 @@ export default function OpsRevenueDashboard({ orders }) {
       </Section>
 
       {/* 04 Operations */}
-      <Section index={4} title="Operations" subtitle={`${periodName} B2C pickups, deliveries and processing`}>
+      <Section index={4} title="Operations" subtitle={`${periodName} B2C pickups and deliveries`}>
         <div className="mb-4 flex flex-col gap-1 rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-700">
-          <p><b>{ops.pickups.scheduled} Pickups</b> → {ops.pickups.completed} Completed → {ops.pickups.rescheduled} Rescheduled → {ops.pickups.cancelled} Cancelled → {ops.pickups.pending} Pending</p>
-          <p><b>{ops.deliveries.scheduled} Deliveries</b> → {ops.deliveries.completed} Completed → {ops.deliveries.pending} Pending</p>
+          <p><b>{ops.pickups.scheduled} Pickups</b> → {ops.pickups.completed} Completed → {ops.pickups.rescheduled} Rescheduled → {ops.pickups.cancelled} Cancelled</p>
+          <p><b>{ops.deliveries.scheduled} Deliveries</b> → {ops.deliveries.completed} Completed</p>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <CountList title="Pickups" items={[
             ["Scheduled", ops.pickups.scheduled], ["Completed", ops.pickups.completed], ["Cancelled", ops.pickups.cancelled],
-            ["Rescheduled", ops.pickups.rescheduled], ["Pending", ops.pickups.pending],
+            ["Rescheduled", ops.pickups.rescheduled],
           ]} />
           <CountList title="Deliveries" items={[
             ["Scheduled", ops.deliveries.scheduled], ["Completed", ops.deliveries.completed], ["Failed", ops.deliveries.failed],
-            ["Rescheduled", ops.deliveries.rescheduled], ["Pending", ops.deliveries.pending],
-          ]} />
-          <CountList title="Processing (orders now at)" items={[
-            ["Received", ops.processing.received], ["Washing", ops.processing.washing], ["Drying", ops.processing.drying],
-            ["Ironing", ops.processing.ironing], ["Ready", ops.processing.ready], ["Out for delivery", ops.processing.outForDelivery],
-            ["Delivered", ops.processing.delivered],
+            ["Rescheduled", ops.deliveries.rescheduled],
           ]} />
         </div>
       </Section>
@@ -288,18 +278,12 @@ export default function OpsRevenueDashboard({ orders }) {
 
       {/* 06 Money */}
       <Section index={6} title="Money flow">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
             <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Revenue</p>
             <p className="flex justify-between"><span>B2B revenue</span><b style={{ color: B2B_COLOR }}>{rs(money.b2bRevenue)}</b></p>
             <p className="flex justify-between"><span>B2C revenue</span><b style={{ color: B2C_COLOR }}>{rs(money.b2cRevenue)}</b></p>
             <p className="flex justify-between border-t border-slate-200 pt-2 text-base"><span className="font-bold">Total revenue</span><b>{rs(money.totalRevenue)}</b></p>
-          </div>
-          <div className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Revenue / kg</p>
-            <p className="flex justify-between"><span>B2B</span><b>{rsKg(money.b2bPerKg)}</b></p>
-            <p className="flex justify-between"><span>B2C</span><b>{rsKg(money.b2cPerKg)}</b></p>
-            <p className="flex justify-between border-t border-slate-200 pt-2 text-base"><span className="font-bold">Blended</span><b>{rsKg(money.blendedPerKg)}</b></p>
           </div>
           <div className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
             <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Payments (B2C)</p>
