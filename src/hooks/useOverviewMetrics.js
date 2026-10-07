@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getCategoryForProperty } from "../data/hostelOrders";
+import { getCategoryForProperty, CATEGORIES } from "../data/hostelOrders";
 import { getOrderTypeLabel, ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
 
 // Map category key → the admin tab to navigate to when clicked
@@ -11,6 +11,12 @@ export const CATEGORY_TAB_MAP = {
   hotel: "hotels",
   regular: "regular",
   website: "regular",
+  LINEN: "hostels",
+  STUDENT_LAUNDRY: "hostels",
+  INDIVIDUAL_STUDENT: "hostels",
+  B2C_RETAIL: "regular",
+  AIRBNB: "hotels",
+  BULK_LAUNDRY: "hostels",
 };
 
 // ── Date Helpers ──────────────────────────────────────────────────
@@ -52,9 +58,52 @@ function getPrevPeriodRange(period) {
 
 // ── Category helper ───────────────────────────────────────────────
 function getCatForOrder(order) {
-  return order.channel === "Website"
-    ? { key: "website", label: "Website Store", color: "#6366F1" }
-    : getCategoryForProperty(order.property || order.tenant);
+  if (order.channel === "Website") {
+    return { key: "website", label: "Website Store", color: "#6366F1" };
+  }
+  // B2C Retail check
+  if (
+    order.type === ORDER_TYPES.REGULAR ||
+    order.type === "regular" ||
+    order.category === ORDER_CATEGORIES.B2C_RETAIL ||
+    order.category === "B2C_RETAIL" ||
+    order.source === "cartdetails"
+  ) {
+    return CATEGORIES.B2C_RETAIL;
+  }
+  // Student Laundry check
+  if (
+    order.type === ORDER_TYPES.STUDENT ||
+    order.type === "student" ||
+    order.type === "hostel" ||
+    order.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
+    order.category === "STUDENT_LAUNDRY" ||
+    order.category === ORDER_CATEGORIES.INDIVIDUAL_STUDENT ||
+    order.category === "INDIVIDUAL_STUDENT" ||
+    order.source === "hostels"
+  ) {
+    return CATEGORIES.STUDENT_LAUNDRY;
+  }
+  // Linen check
+  if (
+    order.type === ORDER_TYPES.LINEN ||
+    order.type === "linen" ||
+    order.category === ORDER_CATEGORIES.LINEN ||
+    order.category === "LINEN"
+  ) {
+    return CATEGORIES.LINEN;
+  }
+  // Hotel / Airbnb check
+  if (
+    order.type === ORDER_TYPES.AIRBNB ||
+    order.type === "airbnb" ||
+    order.category === ORDER_CATEGORIES.AIRBNB ||
+    order.category === "AIRBNB" ||
+    (order.property && (order.property.toLowerCase().includes("hotel") || order.property.toLowerCase().includes("airbnb")))
+  ) {
+    return CATEGORIES.AIRBNB;
+  }
+  return getCategoryForProperty(order.property || order.tenant);
 }
 
 // ── Build category breakdown from a filtered order set ───────────

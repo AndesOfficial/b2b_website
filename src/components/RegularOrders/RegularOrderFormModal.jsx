@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { FiX, FiUser, FiPhone, FiCalendar, FiCheckCircle, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiX, FiUser, FiPhone, FiCalendar, FiCheckCircle, FiPlus, FiTrash2, FiMapPin } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 
 import {
@@ -42,6 +42,7 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
           id: initialOrder.id,
           customerName: initialOrder.customerName || "",
           phone: initialOrder.customerNumber || "",
+          address: initialOrder.address || initialOrder.deliveryAddress || initialOrder.userEnteredAddress || "",
           channel: initialOrder.channel || "App",
           amount: initialOrder.amount ? String(initialOrder.amount) : "",
           pickupDate: initialOrder.date || "",
@@ -149,6 +150,9 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
       weight: totalWeight,
       customerName: form.customerName,
       customerNumber: form.phone,
+      address: form.address || "",
+      deliveryAddress: form.address || "",
+      userEnteredAddress: form.address || "",
       service: serviceLabel,
       notes: form.notes,
       serviceBreakdown: parsedBreakdown,
@@ -215,6 +219,20 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
                   <option key={channel} value={channel}>{channel}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Delivery Address</label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-300"><FiMapPin size={16} /></div>
+                <input
+                  type="text"
+                  value={form.address || ""}
+                  onChange={(event) => updateForm("address", event.target.value)}
+                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+                  placeholder="Flat/House No., Street, Landmark, Area, City, Pincode"
+                />
+              </div>
             </div>
           </div>
 

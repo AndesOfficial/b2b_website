@@ -1,37 +1,17 @@
-import { FiActivity, FiAlertCircle, FiDollarSign, FiFileText, FiHome, FiInbox, FiLayout, FiPieChart, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
 export const ADMIN_TAB_CONFIG = {
   overview: {
     key: "overview",
-    title: "Dashboard Overview",
+    title: "Operations & Revenue",
     navLabel: "Overview",
     navIcon: FiLayout,
     showSidebar: true,
     showHeaderActions: true,
-    showKpis: true,
+    showKpis: false,
     kpiColumnsClass: "lg:grid-cols-4",
-  },
-  hostels: {
-    key: "hostels",
-    title: "Hostel Management",
-    navLabel: "Hostels",
-    navIcon: FiHome,
-    showSidebar: true,
-    showHeaderActions: true,
-    showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-2",
-  },
-  hotels: {
-    key: "hotels",
-    title: "Hotel & Airbnb Analytics",
-    navLabel: "Hotels & Airbnbs",
-    navIcon: FiActivity,
-    showSidebar: true,
-    showHeaderActions: true,
-    showKpis: true,
-    kpiColumnsClass: "lg:grid-cols-2",
   },
   regular: {
     key: "regular",
@@ -74,6 +54,16 @@ export const ADMIN_TAB_CONFIG = {
     showKpis: false,
     kpiColumnsClass: "",
   },
+  salaries: {
+    key: "salaries",
+    title: "Salary Management",
+    navLabel: "Salaries",
+    navIcon: FiCreditCard,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
   calculator: {
     key: "calculator",
     title: "Revenue Calculator",
@@ -89,6 +79,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "Daily Operations Report",
     navLabel: "Daily Report",
     navIcon: FiFileText,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  services: {
+    key: "services",
+    title: "Service Catalog",
+    navLabel: "Services",
+    navIcon: FiTag,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

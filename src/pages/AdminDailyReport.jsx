@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMenu, FiFileText, FiChevronLeft, FiChevronRight, FiCalendar } from 'react-icons/fi';
 import AdminSidebar from '../components/Layout/AdminSidebar';
-import { useHostelAuth } from '../context/HostelAuthContext';
+import { useHostelOrders } from '../context/HostelAuthContext';
 import LoadingSpinner from '../components/Shared/LoadingSpinner';
 import DashboardSkeleton from '../components/Shared/DashboardSkeleton';
 import DailyOpsReportView from '../components/DailyReport/DailyOpsReportView';
@@ -11,7 +11,7 @@ import { getTodayString } from '../utils/dateUtils';
 
 export default function AdminDailyReport() {
   const navigate = useNavigate();
-  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelAuth();
+  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelOrders();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => getTodayString());
@@ -37,8 +37,10 @@ export default function AdminDailyReport() {
     if (tab === 'regular') { navigate('/admin/regular-orders'); return; }
     if (tab === 'investors') { navigate('/admin/investors'); return; }
     if (tab === 'expenses') { navigate('/admin/expenses'); return; }
+    if (tab === 'salaries') { navigate('/admin/salaries'); return; }
     if (tab === 'calculator') { navigate('/admin/calculator'); return; }
     if (tab === 'metaleads') { navigate('/admin/meta-leads'); return; }
+    if (tab === 'services') { navigate('/admin/services'); return; }
     navigate('/admin', { state: { initialTab: tab } });
   }, [navigate]);
 

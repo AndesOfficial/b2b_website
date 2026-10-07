@@ -16,7 +16,7 @@ import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { FaRupeeSign } from "react-icons/fa";
 import { normalizeDate } from "../../utils/orderNormalization";
-import { useHostelAuth } from "../../context/HostelAuthContext";
+import { useHostelOrders } from "../../context/HostelAuthContext";
 import AndesAccountTab from "./AndesAccountTab";
 
 /* ─── constants ─── */
@@ -54,7 +54,7 @@ const emptyForm = {
 
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
-  const { orders, isViewer } = useHostelAuth();
+  const { orders, isViewer } = useHostelOrders();
   const [activeSubTab, setActiveSubTab] = useState("personal");
   const [expenses, setExpenses] = useState([]);
   const [isAndesUnlocked, setIsAndesUnlocked] = useState(() => sessionStorage.getItem("andes_unlocked") === "true");
@@ -166,9 +166,9 @@ export default function AdminExpensesTab() {
   const personalExpenses = useMemo(() => expenses.filter(e => e.accountType !== "andes"), [expenses]);
   const andesExpenses = useMemo(() => expenses.filter(e => e.accountType === "andes"), [expenses]);
 
-  /* ─── Filtering (Andes account data for analytics) ─── */
+  /* ─── Filtering (Personal/Andes account data for analytics) ─── */
   const filtered = useMemo(() => {
-    let list = andesExpenses;
+    let list = activeSubTab === "personal" ? personalExpenses : andesExpenses;
     if (dateFrom && dateTo) {
       list = list.filter((e) => {
         if (!e.date) return false;
@@ -183,7 +183,7 @@ export default function AdminExpensesTab() {
       list = list.filter((e) => e.category === catFilter);
     }
     return list;
-  }, [andesExpenses, dateFrom, dateTo, catFilter]);
+  }, [activeSubTab, personalExpenses, andesExpenses, dateFrom, dateTo, catFilter]);
 
   /* ─── KPIs ─── */
   const kpis = useMemo(() => {
@@ -678,6 +678,157 @@ export default function AdminExpensesTab() {
         </div>
       </div>
 
+      {/* Transaction Log Table */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-50 flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="text-[16px] font-black text-[#0F172A] tracking-tight">Expense Transactions</h3>
+            <p className="text-[12px] font-medium text-slate-400">
+              Showing {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-[#F8FAFC] border-b border-gray-100">
+              <tr>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Date</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Payee / Payer</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Category</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Description</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Type</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Amount</th>
+                <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Receipt</th>
+                {!isViewer && <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={!isViewer ? 8 : 7} className="text-center py-12 text-slate-400">
+                    <FileText size={28} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-[14px] font-bold text-slate-600">No expense transactions found</p>
+                    <p className="text-[12px] text-slate-400 mt-0.5">Click "Record Expense" to add a transaction.</p>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((e) => {
+                  const hasBreakdown = e.breakdown && e.breakdown.length > 0;
+                  const isExpanded = expandedRows.has(e.id);
+                  return (
+                    <React.Fragment key={e.id}>
+                      <tr className="hover:bg-slate-50/70 transition-colors group">
+                        <td className="px-5 py-4 text-[13px] font-bold text-slate-600 whitespace-nowrap">
+                          {e.date || "—"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="text-[13.5px] font-black text-[#0F172A]">{e.payee || "—"}</p>
+                          {e.payer && (
+                            <p className="text-[11px] font-bold text-slate-400">Paid by: {e.payer}</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-block"
+                            style={{
+                              backgroundColor: (CAT_COLORS[e.category] || "#64748B") + "18",
+                              color: CAT_COLORS[e.category] || "#64748B",
+                            }}
+                          >
+                            {e.category || "Other"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[13px] font-medium text-slate-600 max-w-xs truncate" title={e.description}>
+                          {e.description || "—"}
+                          {hasBreakdown && (
+                            <button
+                              onClick={() => toggleRow(e.id)}
+                              className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800"
+                            >
+                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                              {e.breakdown.length} splits
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                              e.type === "Payable"
+                                ? "bg-amber-50 text-amber-600 border border-amber-200"
+                                : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                            }`}
+                          >
+                            {e.type || "Paid"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <span className="text-[14px] font-black text-slate-900">
+                            ₹{Number(e.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          {e.receiptUrl ? (
+                            <button
+                              onClick={() => setLightboxUrl(e.receiptUrl)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center"
+                              title="View Receipt"
+                            >
+                              <Eye size={16} />
+                            </button>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                        {!isViewer && (
+                          <td className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => openEdit(e)}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit Expense"
+                              >
+                                <FileText size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(e)}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete Expense"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+
+                      {/* Expandable Breakdown Row */}
+                      {hasBreakdown && isExpanded && (
+                        <tr className="bg-slate-50/70">
+                          <td colSpan={!isViewer ? 8 : 7} className="px-6 py-3">
+                            <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-2">
+                              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Expense Breakdown</p>
+                              <div className="divide-y divide-slate-100">
+                                {e.breakdown.map((item, idx) => (
+                                  <div key={idx} className="flex items-center justify-between py-1.5 text-[12px]">
+                                    <span className="font-bold text-slate-700">{item.to || "Recipient"}</span>
+                                    {item.purpose && <span className="text-slate-400">{item.purpose}</span>}
+                                    <span className="font-black text-slate-800">₹{Number(item.amount || 0).toLocaleString("en-IN")}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Receipt Lightbox */}
       {lightboxUrl && (

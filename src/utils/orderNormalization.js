@@ -121,6 +121,20 @@ export const CANONICAL_PROPERTY_NAMES = {
   "hostel 99 n03": "Hostel 99 no-3",
   "hostel99 n0 3": "Hostel 99 no-3",
   "hostel99 n03": "Hostel 99 no-3",
+  "hostel 99 - 3": "Hostel 99 - 3",
+  "hostel 99 - 88": "Hostel 99 - 88",
+  "hostel 99 - 4": "Hostel 99 - 4",
+  "hostel 99 no-4": "Hostel 99 - 4",
+  "hostel 99 no 4": "Hostel 99 - 4",
+  "hostel99 no-4": "Hostel 99 - 4",
+  "hostel99 no 4": "Hostel 99 - 4",
+  "hostel99 no. 4": "Hostel 99 - 4",
+  "one 8": "One 8",
+  "one8": "One 8",
+  "one 8 hostel": "One 8",
+  "zolo stays": "Zolo stays",
+  "zolostays": "Zolo stays",
+  "zolo stay": "Zolo stays",
   "regular customers": "Regular Customers",
   issues: "Issues",
   "airbnb viman nagar": "Airbnb Viman Nagar",
@@ -449,6 +463,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     category: typeof rawOrder.category === 'string' ? rawOrder.category : (typeof inferredCategory === 'string' ? inferredCategory : ""),
     type: typeof rawOrder.type === 'string' ? rawOrder.type : (typeof inferredType === 'string' ? inferredType : ""),
     status: normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus),
+    // The app's own status ("reached laundry facility", ...) before collapsing.
+    rawStatus: String(rawOrder.status || rawOrder.orderStatus || ""),
     details: normalizeDetails(rawOrder),
     customerName: String(rawOrder.customerName || rawOrder.userName || "").trim(),
     customerNumber: normalizePhone(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || ""),
@@ -620,9 +636,20 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalized.status = "Abandoned";
     }
     
-    normalized.details = normalized.details || rawOrder.breakdown || {};
-    
-    const addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || "";
+    let addressCandidate = "";
+    if (typeof rawOrder.deliveryAddress === "object" && rawOrder.deliveryAddress !== null) {
+      const { scAddress, scCity, scZip } = rawOrder.deliveryAddress;
+      addressCandidate = [scAddress, scCity, scZip].filter(Boolean).join(", ");
+    } else if (typeof rawOrder.deliveryAddress === "string" && rawOrder.deliveryAddress.trim()) {
+      addressCandidate = rawOrder.deliveryAddress.trim();
+    } else if (rawOrder.location?.scAddress) {
+      const { scAddress, scCity, scZip } = rawOrder.location;
+      addressCandidate = [scAddress, scCity, scZip].filter(Boolean).join(", ");
+    } else if (rawOrder.userEnteredAddress && rawOrder.location?.address && rawOrder.userEnteredAddress !== rawOrder.location.address) {
+      addressCandidate = `${rawOrder.userEnteredAddress}, ${rawOrder.location.address}`;
+    } else {
+      addressCandidate = rawOrder.userEnteredAddress || rawOrder.location?.address || rawOrder.address || rawOrder.userAddress || rawOrder.customerAddress || "";
+    }
     normalized.address = addressCandidate ? addressCandidate.trim() : "";
     const dDate = rawOrder.deliveryDate || rawOrder.dropTime;
     normalized.deliveryDate = normalizeSlot(dDate);
@@ -630,15 +657,36 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     // Some cart/website records can be created for B2B hotel/hostel partners; if so, respect the provided property name.
     const propertyCandidate = getWebsitePropertyCandidate(rawOrder);
     if (propertyCandidate && String(propertyCandidate).trim()) {
-      normalized.property = normalizePropertyName(propertyCandidate);
-      normalized.category = inferCategoryFromProperty(normalized.property);
-      normalized.type = getTypeForCategory(normalized.category);
+      const canonical = normalizePropertyName(propertyCandidate);
+      if (canonical !== "Unknown Property" && canonical !== "Regular Customers") {
+        const infCat = inferCategoryFromProperty(canonical);
+        if (infCat === ORDER_CATEGORIES.STUDENT_LAUNDRY || infCat === ORDER_CATEGORIES.LINEN || infCat === ORDER_CATEGORIES.AIRBNB) {
+          normalized.property = canonical;
+          normalized.category = infCat;
+          normalized.type = getTypeForCategory(infCat);
+        }
+      }
     }
   }
 
   if (source === "b2b") {
     normalized.category = rawOrder.category || inferredCategory;
-    normalized.type = rawOrder.type || inferredType;
+    if (
+      normalized.category === ORDER_CATEGORIES.STUDENT_LAUNDRY ||
+      rawOrder.category === "STUDENT_LAUNDRY" ||
+      rawOrder.type === "student" ||
+      rawOrder.type === "hostel"
+    ) {
+      normalized.type = ORDER_TYPES.STUDENT;
+    } else if (
+      normalized.category === ORDER_CATEGORIES.LINEN ||
+      rawOrder.category === "LINEN" ||
+      rawOrder.type === "linen"
+    ) {
+      normalized.type = ORDER_TYPES.LINEN;
+    } else {
+      normalized.type = rawOrder.type || inferredType;
+    }
 
     // Parse B2B specific fields (Student Laundry)
     if (rawOrder.details && Array.isArray(rawOrder.details.studentServices)) {

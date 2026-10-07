@@ -50,20 +50,8 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
     setShowModal(true);
   };
 
-  const issues = useMemo(() => {
-    let list = orders.filter(o => o.category === "ISSUES");
-
-    // Apply Status Filter
-    if (statusFilter === "Critical") {
-      list = list.filter(i => i.severity === "critical");
-    } else if (statusFilter !== "All") {
-      list = list.filter(i => i.resolveStatus === statusFilter);
-    }
-
-    return list.sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99) || new Date(b.date) - new Date(a.date));
-  }, [orders, statusFilter]);
-
-  const allIssues = useMemo(() => orders.filter(o => o.category === "ISSUES"), [orders]);
+  const issues = useMemo(() => [], []);
+  const allIssues = useMemo(() => [], []);
   const criticalCount = allIssues.filter(i => i.severity === "critical").length;
   const unresolvedCount = allIssues.filter(i => i.resolveStatus === "Unresolved").length;
   const checkingCount = allIssues.filter(i => i.resolveStatus === "Checking").length;

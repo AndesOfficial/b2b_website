@@ -26,15 +26,15 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
     // Group Definitions
     const HOSTEL_GROUPS = {
         "GROUP_STUDENT": {
-            label: "Student Hostels Group (Tulsi, Meera, etc.)",
-            properties: ["Aakansha", "Aaradhana", "Adarsha", "Curie", "Orchid", "Gurukul", "Keerti", "Meera", "Plato", "Samriddhi", "Samshrushti", "Tara", "Tulsi"],
+            label: "Student Hostels Group (Meera, Keerti, etc.)",
+            properties: ["Aakansha", "Adarsha", "Orchid", "Keerti", "Meera", "Plato", "Samshrushti", "Tara", "One 8", "Zolo stays"],
             unit: "Kg"
         },
         "GROUP_99": {
-            label: "Hostel 99 Group (Base, No-3, No-88, Yerwada, KP)",
+            label: "Hostel 99 Group (Base, No-3, No-88, No-4, Yerwada, KP)",
             properties: [
-                "Hostel 99", "Hostel 99 no-3", "Hostel 99 no-88", 
-                "Hostel 99 no 88", "Hostel 99 no 3",
+                "Hostel 99", "Hostel 99 - 3", "Hostel 99 no-3", "Hostel 99 - 88", "Hostel 99 no-88", 
+                "Hostel 99 - 4", "Hostel 99 no 88", "Hostel 99 no 3",
                 "Hostel99 Yerwada 1", "Hostel99 Yerwada 2", "Hostel99 koregaon park"
             ],
             unit: "Pcs"

@@ -1,7 +1,7 @@
 // src/pages/ClientDashboard.jsx
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelOrders } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
 import {
@@ -59,7 +59,7 @@ const CAT_ICONS = {
 };
 
 export default function ClientDashboard() {
-  const { client, orders, logout, addIssue, profileNeedsSetup, verifyAllOrders } = useHostelAuth();
+  const { client, orders, logout, addIssue, profileNeedsSetup, verifyAllOrders } = useHostelOrders();
   const navigate = useNavigate();
   // Helper to handle schema migration (properties -> partnernames)
   const clientProperties = useMemo(() => client?.properties || client?.partnernames || [], [client]);

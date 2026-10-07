@@ -1,7 +1,7 @@
 // src/pages/ClientOrderDetail.jsx
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelOrders } from "../context/HostelAuthContext";
 import { CATEGORIES, getCategoryLabel } from "../data/hostelOrders";
 import {
   FiArrowLeft, FiCalendar, FiHash, FiMapPin, FiTag, FiPackage,
@@ -38,7 +38,7 @@ function exportSingleCSV(order) {
 
 export default function ClientOrderDetail() {
   const { orderId } = useParams();
-  const { orders, verifyOrder } = useHostelAuth();
+  const { orders, verifyOrder } = useHostelOrders();
   const navigate = useNavigate();
   const [verifying, setVerifying] = useState(false);
 

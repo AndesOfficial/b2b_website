@@ -61,8 +61,6 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
 
   orders.forEach(order => {
     if (order.category === "ISSUES") {
-      if (order.resolveStatus !== "Resolved") openIssuesCount++;
-      if (trendsByDate[order.date]) trendsByDate[order.date].issues += (order.amount || order.weight || 1);
       return;
     }
     
@@ -75,14 +73,17 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     const s = String(order.status || "").toLowerCase();
 
     // Breakdowns
-    if (order.type === "student" || order.type === "linen") hostelRevenue += amt;
-    if (order.type === "regular") retailRevenue += amt;
+    const isB2COrder = (order.type === "regular" || order.source === "cartdetails" || order.source === "website" || order.category === "B2C_RETAIL") && order.type !== "rider_tracking";
+    const isHostelOrder = (order.type === "student" || order.type === "linen" || order.type === "hostel" || order.category === "STUDENT_LAUNDRY" || order.category === "LINEN" || order.source === "hostels" || order.source === "b2b");
+
+    if (isHostelOrder) hostelRevenue += amt;
+    if (isB2COrder) retailRevenue += amt;
     if (isHotel && hasHotelData) hotelRevenue += amt;
 
     // Focus Filtering (Active Tab)
     let inFocus = true;
-    if (activeTab === "regular") inFocus = order.type === "regular";
-    else if (activeTab === "hostels") inFocus = (order.type === "student" || order.type === "linen");
+    if (activeTab === "regular") inFocus = isB2COrder;
+    else if (activeTab === "hostels") inFocus = isHostelOrder;
     else if (activeTab === "hotels") inFocus = (isHotel && hasHotelData);
 
     if (inFocus) {
@@ -100,12 +101,12 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
     }
 
     // B2C vs B2B Metrics
-    const isB2C = (order.type === "regular" || order.source === "cartdetails" || order.source === "website") && order.type !== "rider_tracking";
-    const isB2B = (order.type === "student" || order.type === "linen" || order.type === "airbnb" || order.source === "b2b" || order.source === "hostels");
+    const isB2C = isB2COrder;
+    const isB2B = isHostelOrder || order.type === "airbnb";
     
     if (isB2C) {
       b2cKg += wt;
-      if (["processing", "delivered", "completed", "picked up", "pickup done", "confirmed", "pending"].includes(s)) b2cPickups++;
+      if (["processing", "delivered", "completed", "picked up", "pickup done"].includes(s)) b2cPickups++;
       if (["delivered", "completed"].includes(s)) b2cDeliveries++;
       
       const bd = order.serviceBreakdown;

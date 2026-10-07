@@ -159,9 +159,11 @@ export default function AdminMetaAdsLeads() {
     if (tab === "metaleads") return;
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "expenses")  { navigate("/admin/expenses");  return; }
+    if (tab === "salaries")  { navigate("/admin/salaries");  return; }
     if (tab === "regular")   { navigate("/admin/regular-orders"); return; }
     if (tab === "calculator"){ navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
+    if (tab === "services") { navigate("/admin/services"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 

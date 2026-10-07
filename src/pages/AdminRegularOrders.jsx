@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { FiMenu, FiInbox } from "react-icons/fi";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminRegularTab from "../components/AdminRegularTab";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelOrders } from "../context/HostelAuthContext";
 import { useAdminDashboardData } from "../hooks/useAdminDashboardData";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 
 export default function AdminRegularOrders() {
   const navigate = useNavigate();
-  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelAuth();
+  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelOrders();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -42,8 +42,10 @@ export default function AdminRegularOrders() {
     if (tab === "regular") return;
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "expenses") { navigate("/admin/expenses"); return; }
+    if (tab === "salaries") { navigate("/admin/salaries"); return; }
     if (tab === "calculator") { navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
+    if (tab === "services") { navigate("/admin/services"); return; }
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);

@@ -1,7 +1,7 @@
 // src/pages/ClientCategoryOrders.jsx
 import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelOrders } from "../context/HostelAuthContext";
 import { CATEGORIES } from "../data/hostelOrders";
 import ExpandableOrderRow from "../components/Shared/ExpandableOrderRow";
 import { FiArrowLeft, FiCalendar, FiFilter, FiX, FiDownload, FiPackage, FiShoppingBag, FiTruck, FiUsers, FiUser, FiCheckCircle } from "react-icons/fi";
@@ -29,7 +29,7 @@ const CAT_ICONS = {
 
 export default function ClientCategoryOrders() {
   const { categoryKey } = useParams();
-  const { client, orders, verifyAllOrders } = useHostelAuth();
+  const { client, orders, verifyAllOrders } = useHostelOrders();
   const navigate = useNavigate();
 
   const isTreeboClient =

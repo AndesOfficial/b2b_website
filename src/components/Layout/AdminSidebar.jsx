@@ -61,7 +61,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
 
         <nav className="flex-1 mt-4 space-y-1 px-3 overflow-y-auto scrollbar-hide">
           {ADMIN_SIDEBAR_TABS.map((item) => {
-            const badge = item.badgeKey === "issuesCount" ? issuesCount : 0;
+            const badge = 0;
 
             return (
               <button

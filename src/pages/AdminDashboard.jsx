@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useHostelAuth } from "../context/HostelAuthContext";
+import { useHostelOrders } from "../context/HostelAuthContext";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminTopBar from "../components/Layout/AdminTopBar";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
-import AdminOverviewTab from "../components/Overview/AdminOverviewTab";
-import AdminHostelsTab from "../components/Hostels/AdminHostelsTab";
-import AdminHotelsTab from "../components/Hotels/AdminHotelsTab";
+import OpsRevenueDashboard from "../components/Overview/OpsRevenueDashboard";
 import AdminIssuesTab from "../components/Issues/AdminIssuesTab";
 import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
 import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
@@ -21,12 +19,12 @@ import { getMonthStartString, getTodayString, useAdminDashboardData } from "../h
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelAuth();
+  const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelOrders();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddOrder, setShowAddOrder] = useState(false);
   const [activeTab, setActiveTab] = useState(() => location.state?.initialTab || "overview");
-  const [dateFrom, setDateFrom] = useState(() => getTodayString());
+  const [dateFrom, setDateFrom] = useState(() => getMonthStartString());
   const [dateTo, setDateTo] = useState(() => getTodayString());
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
@@ -50,7 +48,6 @@ export default function AdminDashboard() {
   }, []);
 
   const {
-    daysInRange,
     handleAddIssue,
     handleAddOrder,
     handleDeleteData,
@@ -94,6 +91,11 @@ export default function AdminDashboard() {
       navigate("/admin/expenses");
       return;
     }
+    if (tab === "salaries") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/salaries");
+      return;
+    }
     if (tab === "calculator") {
       setIsMobileMenuOpen(false);
       navigate("/admin/calculator");
@@ -107,6 +109,11 @@ export default function AdminDashboard() {
     if (tab === "dailyReport") {
       setIsMobileMenuOpen(false);
       navigate("/admin/daily-report");
+      return;
+    }
+    if (tab === "services") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/services");
       return;
     }
 
@@ -123,19 +130,7 @@ export default function AdminDashboard() {
   // A single registry keeps tab rendering in one place instead of scattering conditionals.
   const activeTabPanel = useMemo(() => {
     const panels = {
-      overview: (
-        <AdminOverviewTab
-          orders={orders}
-          daysInRange={daysInRange}
-          onDeleteData={!isViewer ? handleDeleteData : undefined}
-          dateFrom={dateFrom}
-          setDateFrom={setDateFrom}
-          dateTo={dateTo}
-          setDateTo={setDateTo}
-        />
-      ),
-      hostels: <AdminHostelsTab orders={orders} daysInRange={daysInRange} />,
-      hotels: <AdminHotelsTab orders={orders} />,
+      overview: <OpsRevenueDashboard orders={baseOrders} />,
       regular: null, // Handled by dedicated /admin/regular-orders route
       issues: (
         <AdminIssuesTab
@@ -159,7 +154,7 @@ export default function AdminDashboard() {
     return panels[activeTab] || null;
   }, [
     activeTab,
-    daysInRange,
+    baseOrders,
     handleAddIssue,
     handleDeleteData,
     handleEditIssue,
@@ -198,6 +193,7 @@ export default function AdminDashboard() {
           onCalculatorClick={() => navigate("/admin/calculator")}
           orders={orders}
           onMenuClick={() => setIsMobileMenuOpen(true)}
+          hideDateFilter={activeTab === "overview"}
         />
 
         <div className="p-4 lg:p-8">
@@ -244,19 +240,13 @@ export default function AdminDashboard() {
       <AdminAddOrderModal
         isOpen={showAddOrder}
         onClose={() => setShowAddOrder(false)}
-        onSuccess={({ loggedType, orderDate, propertyName }) => {
+        onSuccess={({ orderDate, propertyName }) => {
           const isVisibleInCurrentFilter = isCurrentFilterShowingDate(orderDate);
           setSaveMessage(
             isVisibleInCurrentFilter
               ? `Order saved for ${propertyName} on ${orderDate}.`
               : `Order saved for ${propertyName} on ${orderDate}. It may be hidden by the current date filter.`
           );
-
-          if (loggedType === "hostel") {
-            handleTabChange("hostels");
-          } else if (loggedType === "hotel") {
-            handleTabChange("hotels");
-          }
         }}
       />
 

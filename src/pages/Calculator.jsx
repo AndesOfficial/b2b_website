@@ -1597,8 +1597,10 @@ export default function Calculator() {
     if (t === "calculator") return;
     if (t === "investors") { navigate("/admin/investors"); return; }
     if (t === "expenses") { navigate("/admin/expenses"); return; }
+    if (t === "salaries") { navigate("/admin/salaries"); return; }
     if (t === "regular") { navigate("/admin/regular-orders"); return; }
     if (t === "dailyReport") { navigate("/admin/daily-report"); return; }
+    if (t === "services") { navigate("/admin/services"); return; }
     if (t === "metaleads") { navigate("/admin/meta-leads"); return; }
     navigate("/admin", { state: { initialTab: t } });
   }, [navigate]);

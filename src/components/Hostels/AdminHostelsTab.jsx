@@ -16,20 +16,20 @@ import { useHostelAuth } from "../../context/HostelAuthContext";
 
 const DEFAULT_HOSTEL_COLORS = {
   "Aakansha": "#0891B2", 
-  "Aaradhana": "#D97706", 
   "Adarsha": "#7C3AED", 
-  "Curie": "#4F46E5", 
-  "Gurukul": "#06B6D4", 
   "Keerti": "#BE185D", 
   "Meera": "#059669", 
   "Plato": "#F59E0B", 
-  "Samriddhi": "#10B981", 
   "Samshrushti": "#4338CA", 
   "Tara": "#DC2626", 
-  "Tulsi": "#1976D2",
   "Hostel 99": "#7C3AED", 
+  "Hostel 99 - 3": "#D97706",
+  "Hostel 99 no-3": "#D97706", 
+  "Hostel 99 - 88": "#059669",
   "Hostel 99 no-88": "#059669", 
-  "Hostel 99 no-3": "#D97706"
+  "Hostel 99 - 4": "#E11D48",
+  "One 8": "#2563EB",
+  "Zolo stays": "#10B981"
 };
 const FALLBACK_COLORS = ["#1976D2", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D", "#DC2626", "#4338CA"];
 const HIDDEN_HOSTEL_PROPERTIES = new Set(["Unknown Property"]);
@@ -268,8 +268,13 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     [orders]
   );
 
-  const studentOrders = useMemo(() => visibleOrders.filter(o => o.type === "student"), [visibleOrders]);
-  const linenOrders = useMemo(() => visibleOrders.filter(o => o.type === "linen"), [visibleOrders]);
+  const studentOrders = useMemo(() => visibleOrders.filter(o =>
+    o.type === "student" || o.type === "hostel" || o.category === "STUDENT_LAUNDRY" ||
+    (o.source === "hostels" && o.type !== "linen" && o.category !== "LINEN")
+  ), [visibleOrders]);
+  const linenOrders = useMemo(() => visibleOrders.filter(o =>
+    o.type === "linen" || o.category === "LINEN"
+  ), [visibleOrders]);
 
   const studentProperties = useMemo(() =>
     [...new Set(studentOrders.map(o => o.property).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -367,6 +372,26 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
     }).filter(h => h.studentOrderCount > 0 || h.linenOrderCount > 0),
     [allProperties, studentOrders, linenOrders]
   );
+
+  const tableOrders = useMemo(() => {
+    return (propertyFilter === "Unknown Property"
+      ? orders.map(o => ({ ...o, property: normalizePropertyName(o.property) })).filter(o => o.property === "Unknown Property")
+      : (view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders).filter(o => propertyFilter === "All" || o.property === propertyFilter)
+    )
+      .filter(o => !chartDateFilter || o.date === chartDateFilter)
+      .filter(o => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          (o.customerName && o.customerName.toLowerCase().includes(q)) ||
+          (o.customerNumber && o.customerNumber.toLowerCase().includes(q)) ||
+          (o.property && o.property.toLowerCase().includes(q)) ||
+          (o.service && o.service.toLowerCase().includes(q)) ||
+          (o.id && String(o.id).toLowerCase().includes(q))
+        );
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [propertyFilter, orders, view, unifiedOrders, studentOrders, linenOrders, chartDateFilter, searchQuery]);
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -524,24 +549,18 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
               </tr>
             </thead>
             <tbody>
-              {(propertyFilter === "Unknown Property"
-                ? orders.map(o => ({ ...o, property: normalizePropertyName(o.property) })).filter(o => o.property === "Unknown Property")
-                : (view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders).filter(o => propertyFilter === "All" || o.property === propertyFilter)
-              )
-                .filter(o => !chartDateFilter || o.date === chartDateFilter)
-                .filter(o => {
-                  if (!searchQuery.trim()) return true;
-                  const q = searchQuery.toLowerCase().trim();
-                  return (
-                    (o.customerName && o.customerName.toLowerCase().includes(q)) ||
-                    (o.customerNumber && o.customerNumber.toLowerCase().includes(q)) ||
-                    (o.property && o.property.toLowerCase().includes(q)) ||
-                    (o.service && o.service.toLowerCase().includes(q)) ||
-                    (o.id && String(o.id).toLowerCase().includes(q))
-                  );
-                })
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .map(o => (
+              {tableOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={!isViewer ? 6 : 5} className="text-center py-12">
+                    <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                      <FiXCircle size={28} className="text-slate-300" />
+                      <p className="text-[14px] font-bold text-slate-600">No hostel orders found</p>
+                      <p className="text-[12px] text-slate-400">Try selecting a different date range or property filter.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                tableOrders.map(o => (
                   <tr
                     key={o.id}
                     onClick={() => { setSelectedOrder(o); setIsModalOpen(true); }}
@@ -628,31 +647,21 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                       </td>
                     )}
                   </tr>
-                ))}
+                )))}
             </tbody>
           </table>
         </div>
 
         {/* Mobile Card View */}
         <div className="md:hidden divide-y divide-gray-50 bg-white border border-gray-100 rounded-xl overflow-hidden mt-4">
-          {(propertyFilter === "Unknown Property"
-            ? orders.map(o => ({ ...o, property: normalizePropertyName(o.property) })).filter(o => o.property === "Unknown Property")
-            : (view === "all" ? unifiedOrders : view === "student" ? studentOrders : linenOrders).filter(o => propertyFilter === "All" || o.property === propertyFilter)
-          )
-            .filter(o => !chartDateFilter || o.date === chartDateFilter)
-            .filter(o => {
-              if (!searchQuery.trim()) return true;
-              const q = searchQuery.toLowerCase().trim();
-              return (
-                (o.customerName && o.customerName.toLowerCase().includes(q)) ||
-                (o.customerNumber && o.customerNumber.toLowerCase().includes(q)) ||
-                (o.property && o.property.toLowerCase().includes(q)) ||
-                (o.service && o.service.toLowerCase().includes(q)) ||
-                (o.id && String(o.id).toLowerCase().includes(q))
-              );
-            })
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map(o => (
+          {tableOrders.length === 0 ? (
+            <div className="text-center py-8 p-6 text-slate-400">
+              <FiXCircle size={24} className="text-slate-300 mx-auto mb-2" />
+              <p className="text-[13px] font-bold text-slate-600">No hostel orders found</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Try selecting a different date range or filter.</p>
+            </div>
+          ) : (
+            tableOrders.map(o => (
               <div
                 key={o.id}
                 onClick={() => { setSelectedOrder(o); setIsModalOpen(true); }}
@@ -712,7 +721,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
         </div>
       </div>
 

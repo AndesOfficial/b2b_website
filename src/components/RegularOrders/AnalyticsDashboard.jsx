@@ -80,7 +80,7 @@ export default function AnalyticsDashboard({ analytics }) {
       {/* Retention Dashboard */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-4">Customer Retention Dashboard</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <span className="text-3xl font-black text-indigo-600 mb-1">{analytics.retentionRate.toFixed(1)}%</span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Retention Rate</span>
@@ -88,14 +88,6 @@ export default function AnalyticsDashboard({ analytics }) {
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <span className="text-3xl font-black text-sky-600 mb-1">{analytics.repeatPurchaseRate.toFixed(1)}%</span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Repeat Purchase %</span>
-            </div>
-            <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                <span className="text-3xl font-black text-rose-600 mb-1">{analytics.churnRate.toFixed(1)}%</span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Churn Rate</span>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <FiInfo size={10} className="text-slate-300" />
-                  <span className="text-[9px] text-slate-400">vs lookback window</span>
-                </div>
             </div>
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <div className="flex items-center text-3xl font-black text-emerald-600 mb-1">

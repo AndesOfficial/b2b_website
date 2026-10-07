@@ -260,11 +260,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       }
     });
 
-    // Count issues per property
-    orders.filter(o => o.type === "issue" || o.category === "ISSUES").forEach(o => {
-      const name = o.property || o.linkedHostel || "Unknown";
-      if (b2bMap[name]) b2bMap[name].issues += 1;
-    });
+    // Count issues per property (cleared)
 
     const b2bBreakdown = Object.values(b2bMap)
       .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders);
@@ -319,14 +315,15 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
   // ── Real-time B2C Stats from cartdetails + website orders ─────────
   const liveB2c = useMemo(() => {
     const b2cOrders = orders.filter(o =>
-      (o.type === "regular" || o.source === "cartdetails" || o.source === "website") &&
+      (o.type === "regular" || o.source === "cartdetails" || o.source === "website" || o.category === "B2C_RETAIL") &&
       o.status !== "Cancelled" && o.status !== "Abandoned" && o.type !== "abandoned" && o.type !== "rider_tracking"
     );
 
     const totalOrders = b2cOrders.length;
-    const completedPickups = b2cOrders.filter(o =>
-      o.status === "Processing" || o.status === "Delivered" || o.status === "Picked Up"
-    ).length;
+    const completedPickups = b2cOrders.filter(o => {
+      const s = String(o.status || "").toLowerCase();
+      return s === "processing" || s === "delivered" || s === "picked up" || s === "pickup done" || s === "completed";
+    }).length;
     const totalKg = b2cOrders.reduce((s, o) => s + (o.weight || 0), 0);
 
     // New customers: unique customerNumber or customerName seen only once (first order)
@@ -338,23 +335,32 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     });
     const newCustomers = Object.values(customerCounts).filter(c => c.orders === 1);
 
-    // Pending Pickups (status = Pending)
-    const pendingPickupOrders = b2cOrders.filter(o => o.status === "Pending");
+    // Pending Pickups (all orders not yet picked up)
+    const pendingPickupOrders = b2cOrders.filter(o => {
+      const s = String(o.status || "").toLowerCase();
+      const isPickedUp = s === "processing" || s === "delivered" || s === "picked up" || s === "pickup done" || s === "completed";
+      return !isPickedUp || s === "pending" || s === "confirmed" || s.includes("pending");
+    });
     const pendingPickupReasons = {};
     pendingPickupOrders.forEach(o => {
-      const reason = o.cancelReason || o.cancellationReason || "Pending";
+      const reason = o.pickupReason || o.pendingReason || o.reason || o.statusReason || o.cancelReason || o.cancellationReason || "Scheduled Pickup";
       const key = reason.toLowerCase().includes("not attend") || reason.toLowerCase().includes("not available")
         ? "Customer not available"
         : reason.toLowerCase().includes("rider")
           ? "Rider delay"
           : reason.toLowerCase().includes("tech")
             ? "Tech issue"
-            : "Other";
+            : reason.toLowerCase().includes("scheduled") || reason.toLowerCase().includes("awaiting")
+              ? "Scheduled Pickup"
+              : "Awaiting Rider";
       pendingPickupReasons[key] = (pendingPickupReasons[key] || 0) + 1;
     });
 
     // Pending Deliveries (status = Processing)
-    const pendingDeliveryOrders = b2cOrders.filter(o => o.status === "Processing");
+    const pendingDeliveryOrders = b2cOrders.filter(o => {
+      const s = String(o.status || "").toLowerCase();
+      return s === "processing" || s === "at laundry" || s === "in progress";
+    });
     const pendingDeliveryReasons = {};
     pendingDeliveryOrders.forEach(o => {
       const reason = o.cancelReason || "Processing delay";
@@ -366,29 +372,9 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
       pendingDeliveryReasons[key] = (pendingDeliveryReasons[key] || 0) + 1;
     });
 
-    // Issues breakdown — all issues from b2b_admin_edits (source="admin", category="ISSUES")
-    const issueOrders = orders.filter(o => o.type === "issue" || o.category === "ISSUES");
-    const issueCounts = {
-      "Missing items": 0,
-      "Damaged clothes": 0,
-      "Stain not removed": 0,
-      "Delay complaints": 0,
-      "Other": 0,
-    };
-    issueOrders.forEach(o => {
-      // Prefer the structured issueType field (direct from Firestore), then fall back to text scan
-      const issueType = (o.issueType || "").toLowerCase();
-      const t = (o.service || o.details || "").toString().toLowerCase();
-      if (issueType.includes("missing") || t.includes("missing")) issueCounts["Missing items"]++;
-      else if (issueType.includes("damage") || issueType.includes("torn") || t.includes("damage") || t.includes("torn")) issueCounts["Damaged clothes"]++;
-      else if (issueType.includes("stain") || t.includes("stain")) issueCounts["Stain not removed"]++;
-      else if (issueType.includes("delay") || t.includes("delay")) issueCounts["Delay complaints"]++;
-      else issueCounts["Other"]++;
-    });
-    const issueBreakdown = Object.entries(issueCounts)
-      .filter(([, v]) => v > 0)
-      .map(([type, count]) => ({ type, count }))
-      .sort((a, b) => b.count - a.count);
+    // Issues breakdown — cleared to 0 issues
+    const issueBreakdown = [];
+    const totalIssues = 0;
 
     // Recent new customers (for display)
     const recentNew = newCustomers
@@ -410,7 +396,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
         reasons: Object.entries(pendingDeliveryReasons).map(([reason, count]) => ({ reason, count })),
       },
       issueBreakdown,
-      totalIssues: issueOrders.length,
+      totalIssues: 0,
       hasData: b2cOrders.length > 0,
     };
   }, [orders]);
@@ -497,8 +483,15 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
     );
 
     // Revenue split
-    const b2bOrders = nonIssueOrders.filter(o => o.type === "student" || o.source === "b2b");
-    const b2cOrders = nonIssueOrders.filter(o => o.type === "regular" || o.source === "cartdetails" || o.source === "website");
+    const b2bOrders = nonIssueOrders.filter(o =>
+      o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.type === "hostel" ||
+      o.source === "b2b" || o.source === "hostels" ||
+      o.category === "STUDENT_LAUNDRY" || o.category === "LINEN"
+    );
+    const b2cOrders = nonIssueOrders.filter(o =>
+      o.type === "regular" || o.source === "cartdetails" || o.source === "website" || o.category === "B2C_RETAIL" ||
+      !b2bOrders.includes(o)
+    );
     const totalRevenue = nonIssueOrders.reduce((s, o) => s + (o.amount || 0), 0);
     const b2bRevenue = b2bOrders.reduce((s, o) => s + (o.amount || 0), 0);
     const b2cRevenue = b2cOrders.reduce((s, o) => s + (o.amount || 0), 0);

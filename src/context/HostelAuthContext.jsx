@@ -42,16 +42,16 @@ export function HostelAuthProvider({ children }) {
   const [hostelComplaints, setHostelComplaints] = useState([]); // hostel form complaints
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
+  // Who is signed in, once resolved: { uid, role, allowedProperties }.
+  const [session, setSession] = useState(null);
+  const [authResolved, setAuthResolved] = useState(false);
+  // Order listeners are heavy (every order ever), so they only start once a
+  // page that shows orders asks for them via useHostelOrders().
+  const [ordersRequested, setOrdersRequested] = useState(false);
+  const requestOrders = useCallback(() => setOrdersRequested(true), []);
 
   useEffect(() => {
-    let activeSubscriptions = [];
-    const unsubscribeAll = () => {
-      activeSubscriptions.forEach((unsub) => unsub());
-      activeSubscriptions = [];
-    };
-
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      unsubscribeAll();
 
       if (!firebaseUser) {
         setClient(null);
@@ -66,6 +66,8 @@ export function HostelAuthProvider({ children }) {
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         setIsDataLoaded(true);
+        setSession(null);
+        setAuthResolved(true);
         return;
       }
 
@@ -111,6 +113,19 @@ export function HostelAuthProvider({ children }) {
         setProfileNeedsSetup(true);
       }
 
+      setIsDataLoaded(false);
+      setSession({ uid: firebaseUser.uid, role: resolvedRole, allowedProperties });
+      setAuthResolved(true);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!session || !ordersRequested) return undefined;
+    const { role: resolvedRole, allowedProperties } = session;
+    const activeSubscriptions = [];
+
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
@@ -145,15 +160,7 @@ export function HostelAuthProvider({ children }) {
 
       const setupCollectionListener = (collectionName, normalizeType, setOrdersFn) => {
         if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
-          let q;
-          // Tactical Fix: Limit eager-loaded collections to prevent loading the entire DB history
-          if (collectionName === "orders" || collectionName === "b2b_orders") {
-            q = query(collection(db, collectionName), orderBy("date", "desc"), limit(5000));
-          } else if (collectionName === "complaint" || collectionName === "normal_complaint" || collectionName === "hostels_orders") {
-            q = query(collection(db, collectionName), orderBy("createdAt", "desc"), limit(5000));
-          } else {
-            q = query(collection(db, collectionName), limit(500));
-          }
+          let q = query(collection(db, collectionName), limit(5000));
 
           const unsub = onSnapshot(
             q,
@@ -275,13 +282,9 @@ export function HostelAuthProvider({ children }) {
       } else {
         checkAllLoaded();
       }
-    });
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeAll();
-    };
-  }, []);
+    return () => activeSubscriptions.forEach((unsub) => unsub());
+  }, [session, ordersRequested]);
 
 
   const allOrdersMerged = useMemo(() => {
@@ -518,10 +521,21 @@ export function HostelAuthProvider({ children }) {
   }, [verifyOrder]);
 
   return (
-    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, verifyOrder, verifyAllOrders, isDataLoaded, isViewer: client?.role === "admin_viewer" }}>
+    <HostelAuthContext.Provider value={{ client, orders, isAdmin, profileNeedsSetup, login, logout, setAuthenticatedUser, addIssue, verifyOrder, verifyAllOrders, isDataLoaded, authResolved, requestOrders, isViewer: client?.role === "admin_viewer" }}>
       {children}
     </HostelAuthContext.Provider>
   );
+}
+
+/**
+ * Like useHostelAuth(), for pages that show orders: starts the order
+ * listeners (once per session) so `orders` and `isDataLoaded` fill in.
+ */
+export function useHostelOrders() {
+  const ctx = useHostelAuth();
+  const { requestOrders } = ctx;
+  useEffect(() => { requestOrders?.(); }, [requestOrders]);
+  return ctx;
 }
 
 export function useHostelAuth() {
@@ -541,6 +555,8 @@ export function useHostelAuth() {
       isViewer: false,
       profileNeedsSetup: false,
       isDataLoaded: false,
+      authResolved: false,
+      requestOrders: () => {},
       login: async () => ({ success: false, error: "Context not ready" }),
       logout: async () => {},
       setAuthenticatedUser: () => {},

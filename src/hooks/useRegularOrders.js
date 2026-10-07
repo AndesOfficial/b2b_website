@@ -29,6 +29,7 @@ export function createEmptyRegularOrderForm() {
   return {
     customerName: "",
     phone: "",
+    address: "",
     channel: "App",
     amount: "",
     pickupDate: "",

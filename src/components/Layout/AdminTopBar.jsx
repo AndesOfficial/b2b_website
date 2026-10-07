@@ -6,7 +6,7 @@ function getDateStr(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, onCalculatorClick, orders, onMenuClick }) {
+export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setDateTo, onExpensesClick, onCalculatorClick, orders, onMenuClick, hideDateFilter }) {
     const [activePreset, setActivePreset] = useState(null);
 
     // Detect which preset matches the current date range
@@ -68,6 +68,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
+                {!hideDateFilter && (<>
                 {/* Quick Presets */}
                 <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
                     {presets.map(({ key, label }) => (
@@ -104,6 +105,8 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                         className="bg-transparent text-[11px] sm:text-[13px] font-medium text-gray-700 outline-none border-none w-[90px] sm:w-[115px]"
                     />
                 </div>
+
+                </>)}
 
                 {/* Export Orders CSV */}
                 <div className="hidden sm:block">

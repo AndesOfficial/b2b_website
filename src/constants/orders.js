@@ -52,7 +52,18 @@ export function normalizeOrderStatus(status) {
   if (["paid", "shipped", "confirmed"].includes(normalized)) return ORDER_STATUSES.CONFIRMED;
   if (normalized === "resolved") return ORDER_STATUSES.RESOLVED;
   if (["cancelled", "canceled"].includes(normalized)) return ORDER_STATUSES.CANCELLED;
-  if (normalized === "pending") return ORDER_STATUSES.PENDING;
+  if ([
+    "pending",
+    "pickup pending",
+    "pickup_pending",
+    "pending pickup",
+    "pending_pickup",
+    "pickup scheduled",
+    "scheduled",
+    "order placed",
+    "placed",
+    "booked",
+  ].includes(normalized)) return ORDER_STATUSES.PENDING;
 
   // Passthrough for values like "Pickup Done", "In Progress" set by admin
   return (typeof status === 'string' && status) ? status : ORDER_STATUSES.PENDING;
