@@ -20,7 +20,7 @@ const _fmt = (d) => d.toISOString().split("T")[0];
 const DEFAULT_DATE_FROM = _fmt(_today);
 const DEFAULT_DATE_TO = _fmt(_today);
 
-export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDeleteOrder }) {
+export default function AdminRegularTab({ orders, registeredUserIds, onAddOrder, onEditOrder, onDeleteOrder }) {
   const [activeSubTab, setActiveSubTab] = useState("Overview");
   const [localDateFrom, setLocalDateFrom] = useState(DEFAULT_DATE_FROM);
   const [localDateTo, setLocalDateTo] = useState(DEFAULT_DATE_TO);
@@ -95,7 +95,7 @@ export default function AdminRegularTab({ orders, onAddOrder, onEditOrder, onDel
       </div>
 
       {/* Tab Contents */}
-      {activeSubTab === "Overview" && <OverviewDashboard analytics={analytics} />}
+      {activeSubTab === "Overview" && <OverviewDashboard analytics={analytics} registeredUserIds={registeredUserIds} />}
       {activeSubTab === "Customers" && <CustomersDashboard analytics={analytics} lookbackLabel={analytics.lookbackLabel} />}
       {activeSubTab === "Analytics" && <AnalyticsDashboard analytics={analytics} />}
       

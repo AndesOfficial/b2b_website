@@ -106,8 +106,9 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     });
 
 
-    // Helper to get unique user identifier (prefer phone, fallback to name)
-    const getUserId = (order) => order.customerNumber || order.customerName || 'unknown';
+    // Unique customer: phone first, then app user id, then name — so one person
+    // with two app accounts but the same phone counts once.
+    const getUserId = (order) => order.customerNumber || order.userId || order.customerName || 'unknown';
 
     // 4. Calculate User Metrics
     const allTimeUserMap = new Map();
@@ -241,6 +242,18 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     const cancelledOrdersCount = currentOrders.filter(o => o.status === 'Cancelled').length;
     const failedOrdersCount = currentOrders.filter(o => o.status === 'Failed').length; // Assuming these status might exist
     
+    // Overview order counts — all orders placed in the period, cancelled included,
+    // so Total = Active + Delivered + Cancelled.
+    const placedOrders = allCurrentOrders.filter((o) => o.status !== 'Abandoned' && o.type !== 'abandoned');
+    const isCancelledOrder = (o) => EXCLUDED_STATUSES.has(o.status);
+    const overviewCancelledCount = placedOrders.filter(isCancelledOrder).length;
+    const overviewActiveCount = placedOrders.filter((o) => !isCancelledOrder(o) && o.status !== 'Delivered').length;
+    const overviewRescheduledCount = placedOrders.filter(
+      (o) => o.isRescheduled || Number(o.rescheduleCount) > 0 || o.originalPickupSlot || o.originalDropSlot
+    ).length;
+    // App user ids that ordered in the period — used to split registered users into active / dormant.
+    const activeAppUserIds = new Set(currentOrders.map((o) => o.userId).filter(Boolean));
+
     // Average processing time (TAT) -> approximate
     const ordersWithTat = currentOrders.filter(o => o.createdAtRaw && o.updatedAtRaw);
     let totalTatMs = 0;
@@ -352,6 +365,13 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
         cancelledOrdersCount,
         failedOrdersCount,
         avgTatHours,
+
+        // Overview
+        placedOrdersCount: placedOrders.length,
+        overviewActiveCount,
+        overviewRescheduledCount,
+        overviewCancelledCount,
+        activeAppUserIds,
 
         // Channel
         channelData,

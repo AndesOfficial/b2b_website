@@ -134,7 +134,7 @@ export default function AdminDashboard() {
       regular: null, // Handled by dedicated /admin/regular-orders route
       issues: (
         <AdminIssuesTab
-          orders={orders}
+          orders={baseOrders}
           onAddIssue={!isViewer ? handleAddIssue : undefined}
           onEditIssue={!isViewer ? handleEditIssue : undefined}
           onDeleteIssue={!isViewer ? handleDeleteData : undefined}

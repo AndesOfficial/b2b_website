@@ -30,6 +30,7 @@ export default function AdminRegularOrders() {
     handleDeleteData,
     handleEditOrder,
     loading,
+    registeredUserIds,
   } = useAdminDashboardData({
     activeTab: "regular",
     baseOrders,
@@ -100,6 +101,7 @@ export default function AdminRegularOrders() {
             <AdminRegularTab
               orders={baseOrders}
               baseOrders={baseOrders}
+              registeredUserIds={registeredUserIds}
               onAddOrder={!isViewer ? handleAddOrder : undefined}
               onEditOrder={!isViewer ? handleEditOrder : undefined}
               onDeleteOrder={!isViewer ? handleDeleteData : undefined}

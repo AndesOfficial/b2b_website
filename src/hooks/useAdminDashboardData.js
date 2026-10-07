@@ -155,6 +155,7 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
   const [screenStats, setScreenStats] = useState([]);
   const [searchStats, setSearchStats] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [registeredUserIds, setRegisteredUserIds] = useState(null);
 
   useEffect(() => {
     let activeSubscriptions = [];
@@ -223,7 +224,10 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
         ),
         onSnapshot(
           collection(db, "users"),
-          (snapshot) => setTotalUsers(snapshot.size),
+          (snapshot) => {
+            setTotalUsers(snapshot.size);
+            setRegisteredUserIds(new Set(snapshot.docs.map((d) => d.id)));
+          },
           (error) => console.error("Error fetching users:", error),
         ),
       ];
@@ -413,6 +417,7 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
     searchStats,
     stats,
     totalUsers,
+    registeredUserIds,
   };
 }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FiCheckCircle, FiClock, FiAlertTriangle, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2, FiInbox, FiTrendingUp, FiTrendingDown, FiAward, FiPackage } from "react-icons/fi";
+import { FiCheckCircle, FiClock, FiAlertTriangle, FiPlus, FiX, FiCheck, FiEdit2, FiTrash2 } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "../Shared/EmptyState";
 import { formatTimeSlot } from "../../utils/formatUtils";
@@ -31,7 +31,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
     linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "",
     originalService: "", source: ""
   });
-  const [statusFilter, setStatusFilter] = useState("All"); // All, Unresolved, Checking, Resolved, Critical
+  const [statusFilter, setStatusFilter] = useState("All"); // All, Pending, Critical, Resolved
 
   const openEditModal = (issue) => {
     setForm({
@@ -50,78 +50,24 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
     setShowModal(true);
   };
 
-  const issues = useMemo(() => [], []);
-  const allIssues = useMemo(() => [], []);
-  const criticalCount = allIssues.filter(i => i.severity === "critical").length;
-  const unresolvedCount = allIssues.filter(i => i.resolveStatus === "Unresolved").length;
-  const checkingCount = allIssues.filter(i => i.resolveStatus === "Checking").length;
+  const isResolved = (i) => i.resolveStatus === "Resolved";
+  const allIssues = useMemo(() => orders.filter(o => o.category === "ISSUES"), [orders]);
 
-  /* ─── KPI Computations ─── */
-  const kpis = useMemo(() => {
-    const total = allIssues.length;
-    const resolved = allIssues.filter(i => i.resolveStatus === "Resolved").length;
-    const pending = total - resolved;
-    const critical = allIssues.filter(i => i.severity === "critical").length;
+  const issues = useMemo(() => {
+    let list = allIssues;
+    // Pending = not resolved; Critical = critical and still open (what needs action now).
+    if (statusFilter === "Pending") list = list.filter(i => !isResolved(i));
+    else if (statusFilter === "Critical") list = list.filter(i => i.severity === "critical" && !isResolved(i));
+    else if (statusFilter === "Resolved") list = list.filter(isResolved);
 
-    // Resolution Rate
-    const resolutionRate = total > 0 ? ((resolved / total) * 100).toFixed(1) : "100.0";
+    return [...list].sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99) || new Date(b.date) - new Date(a.date));
+  }, [allIssues, statusFilter]);
 
-    // Most Common Issue Type
-    const typeCounts = {};
-    allIssues.forEach(i => { typeCounts[i.issueType] = (typeCounts[i.issueType] || 0) + 1; });
-    let topType = "—";
-    let topTypeCount = 0;
-    let topTypePct = "0";
-    Object.entries(typeCounts).forEach(([type, count]) => {
-      if (count > topTypeCount) { topType = type; topTypeCount = count; }
-    });
-    if (total > 0) topTypePct = ((topTypeCount / total) * 100).toFixed(1);
-
-    // Best Performing Month (highest resolution rate among months with >= 1 issue)
-    const monthBuckets = {};
-    allIssues.forEach(i => {
-      if (!i.date) return;
-      const monthKey = i.date.substring(0, 7); // "YYYY-MM"
-      if (!monthBuckets[monthKey]) monthBuckets[monthKey] = { total: 0, resolved: 0 };
-      monthBuckets[monthKey].total++;
-      if (i.resolveStatus === "Resolved") monthBuckets[monthKey].resolved++;
-    });
-    let bestMonth = "—";
-    let bestMonthRate = -1;
-    Object.entries(monthBuckets).forEach(([key, data]) => {
-      const rate = data.total > 0 ? data.resolved / data.total : 0;
-      if (rate > bestMonthRate || (rate === bestMonthRate && key > bestMonth)) {
-        bestMonthRate = rate;
-        bestMonth = key;
-      }
-    });
-    let bestMonthLabel = "—";
-    if (bestMonth !== "—") {
-      const [y, m] = bestMonth.split("-");
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      bestMonthLabel = `${monthNames[parseInt(m, 10) - 1]} ${y}`;
-    }
-
-    // This Month vs Last Month
-    const now = new Date();
-    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, "0")}`;
-    const thisMonthCount = allIssues.filter(i => i.date && i.date.startsWith(thisMonthKey)).length;
-    const lastMonthCount = allIssues.filter(i => i.date && i.date.startsWith(lastMonthKey)).length;
-    let trendDirection = "flat";
-    let trendPct = "0";
-    if (lastMonthCount > 0) {
-      const diff = ((thisMonthCount - lastMonthCount) / lastMonthCount * 100).toFixed(0);
-      trendPct = Math.abs(diff);
-      trendDirection = thisMonthCount > lastMonthCount ? "up" : thisMonthCount < lastMonthCount ? "down" : "flat";
-    } else if (thisMonthCount > 0) {
-      trendDirection = "up";
-      trendPct = "100";
-    }
-
-    return { total, resolutionRate, pending, critical, topType, topTypePct, bestMonthLabel, bestMonthRate: bestMonthRate >= 0 ? (bestMonthRate * 100).toFixed(0) : "—", thisMonthCount, lastMonthCount, trendDirection, trendPct };
-  }, [allIssues]);
+  const kpis = useMemo(() => ({
+    pending: allIssues.filter(i => !isResolved(i)).length,
+    critical: allIssues.filter(i => i.severity === "critical" && !isResolved(i)).length,
+    resolved: allIssues.filter(isResolved).length,
+  }), [allIssues]);
 
   const handleSubmit = () => {
     const descriptionValue = (form.description || form.originalService || "").trim();
@@ -157,106 +103,35 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
 
   return (
     <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-      {/* KPI Dashboard */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Resolution Rate */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center"><FiCheckCircle size={16} className="text-emerald-500" /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolution Rate</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <p className="text-[28px] font-black text-[#0F172A] tracking-tight leading-none">{kpis.resolutionRate}<span className="text-[16px] text-slate-400">%</span></p>
-            {kpis.total === 0 && <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">No Issues</span>}
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${kpis.resolutionRate}%`, backgroundColor: parseFloat(kpis.resolutionRate) >= 80 ? '#10B981' : parseFloat(kpis.resolutionRate) >= 50 ? '#F59E0B' : '#EF4444' }} />
-          </div>
-        </div>
-
-        {/* Pending Issues */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center"><FiClock size={16} className="text-amber-500" /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Issues</span>
-          </div>
-          <p className="text-[28px] font-black text-amber-600 tracking-tight leading-none">{kpis.pending}</p>
-          <p className="text-[11px] font-bold text-slate-400">Awaiting resolution</p>
-        </div>
-
-        {/* Critical Issues */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center"><FiAlertTriangle size={16} className="text-red-500" /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Critical Issues</span>
-          </div>
-          <p className="text-[28px] font-black text-red-600 tracking-tight leading-none">{kpis.critical}</p>
-          <p className="text-[11px] font-bold text-slate-400">Require immediate attention</p>
-        </div>
-
-        {/* Most Common Issue */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center"><FiPackage size={16} className="text-violet-500" /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Most Common Issue</span>
-          </div>
-          <p className="text-[16px] font-black text-[#0F172A] tracking-tight leading-snug">{kpis.topType}</p>
-          <p className="text-[11px] font-bold text-violet-500">{kpis.topTypePct}% of all issues</p>
-        </div>
-
-        {/* Best Performing Month */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center"><FiAward size={16} className="text-blue-500" /></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Best Performing Month</span>
-          </div>
-          <p className="text-[20px] font-black text-[#0F172A] tracking-tight leading-none">{kpis.bestMonthLabel}</p>
-          <p className="text-[11px] font-bold text-blue-500">{kpis.bestMonthRate}% resolution rate</p>
-        </div>
-
-        {/* This Month vs Last Month */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${kpis.trendDirection === 'down' ? 'bg-emerald-50' : kpis.trendDirection === 'up' ? 'bg-red-50' : 'bg-slate-50'}`}>
-              {kpis.trendDirection === 'down' ? <FiTrendingDown size={16} className="text-emerald-500" /> : kpis.trendDirection === 'up' ? <FiTrendingUp size={16} className="text-red-500" /> : <FiTrendingUp size={16} className="text-slate-400" />}
-            </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Trend</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <p className="text-[28px] font-black text-[#0F172A] tracking-tight leading-none">{kpis.thisMonthCount}</p>
-            <span className="text-[11px] font-bold text-slate-400">vs {kpis.lastMonthCount} last month</span>
-          </div>
-          <p className={`text-[11px] font-bold ${kpis.trendDirection === 'down' ? 'text-emerald-500' : kpis.trendDirection === 'up' ? 'text-red-500' : 'text-slate-400'}`}>
-            {kpis.trendDirection === 'down' ? `↓ ${kpis.trendPct}% fewer issues` : kpis.trendDirection === 'up' ? `↑ ${kpis.trendPct}% more issues` : 'No change'}
-          </p>
-        </div>
-      </div>
-
-      {/* Summary Bar */}
-      <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-3 sm:gap-4">
+      {/* KPI cards — click to filter the list */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Critical', count: criticalCount, bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', icon: FiAlertTriangle, iconColor: 'text-red-500', value: 'Critical' },
-          { label: 'Checking', count: checkingCount, bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', icon: FiClock, iconColor: 'text-amber-600', value: 'Checking' },
-          { label: 'Unresolved', count: unresolvedCount, bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-700', icon: FiAlertTriangle, iconColor: 'text-orange-500', value: 'Unresolved' },
-          { label: 'Total', count: allIssues.length, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', icon: FiInbox, iconColor: 'text-slate-400', value: 'All' },
-        ].map((stat, idx) => (
+          { value: "Pending", label: "Pending Issues", count: kpis.pending, hint: "Not yet resolved", icon: FiClock, iconBg: "bg-amber-50", iconColor: "text-amber-500", text: "text-amber-600" },
+          { value: "Critical", label: "Critical Issues", count: kpis.critical, hint: "Critical and still open", icon: FiAlertTriangle, iconBg: "bg-red-50", iconColor: "text-red-500", text: "text-red-600" },
+          { value: "Resolved", label: "Resolved Issues", count: kpis.resolved, hint: "Closed", icon: FiCheckCircle, iconBg: "bg-emerald-50", iconColor: "text-emerald-500", text: "text-emerald-600" },
+        ].map((card) => (
           <button
-            key={idx}
-            onClick={() => setStatusFilter(statusFilter === stat.value ? 'All' : stat.value)}
-            className={`flex items-center gap-2 sm:gap-3 ${stat.bg} border ${stat.border} rounded-xl px-3 sm:px-4 py-3 shadow-sm transition-all hover:scale-[1.02] active:scale-95 ${statusFilter === stat.value ? 'ring-2 ring-offset-1 ring-slate-400' : ''}`}>
-            <stat.icon className={stat.iconColor} size={14} />
-            <div className="text-left">
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none mb-1">{stat.label}</p>
-              <p className={`text-[13px] sm:text-sm font-black ${stat.text} leading-none`}>{stat.count}</p>
+            key={card.value}
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === card.value ? "All" : card.value)}
+            className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2 text-left transition-all hover:shadow-md ${statusFilter === card.value ? "ring-2 ring-offset-1 ring-slate-400" : ""}`}>
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${card.iconBg} flex items-center justify-center`}><card.icon size={16} className={card.iconColor} /></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{card.label}</span>
             </div>
+            <p className={`text-[28px] font-black ${card.text} tracking-tight leading-none`}>{card.count}</p>
+            <p className="text-[11px] font-bold text-slate-400">{card.hint}</p>
           </button>
         ))}
-        {onAddIssue && !isViewer && (
-          <button onClick={() => { setForm({ id: null, date: "", issueType: "Missing Items", description: "", linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "", originalService: "" }); setShowModal(true); }} className="col-span-2 lg:ml-auto flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-red-600 text-white text-[12px] font-black rounded-xl hover:bg-red-700 transition-all shadow-md active:scale-95 uppercase tracking-widest">
+      </div>
+
+      {onAddIssue && !isViewer && (
+        <div className="flex justify-end">
+          <button onClick={() => { setForm({ id: null, date: "", issueType: "Missing Items", description: "", linkedHostel: "", assignedTo: "", severity: "pending", resolveStatus: "Unresolved", solution: "", originalService: "" }); setShowModal(true); }} className="flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white text-[12px] font-black rounded-xl hover:bg-red-700 transition-all shadow-md active:scale-95 uppercase tracking-widest">
             <FiPlus size={18} /> Report New Issue
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all">
@@ -266,11 +141,10 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="flex-1 sm:flex-none bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[12px] font-bold text-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500 appearance-none min-w-[140px]">
-            <option value="All">All Statuses</option>
-            <option value="Unresolved">Unresolved</option>
-            <option value="Checking">Under Investigation</option>
+            <option value="All">All Issues</option>
+            <option value="Pending">Pending</option>
+            <option value="Critical">Critical (open)</option>
             <option value="Resolved">Resolved</option>
-            <option value="Critical">Critical Severity</option>
           </select>
         </div>
 
