@@ -5,19 +5,14 @@ import { db, storage, auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
-  FileText, Loader2, ImageIcon, PieChart as PieChartIcon, BarChart3, Download,
-  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight, Wallet, User, Lock
+  FileText, Loader2, ImageIcon, PieChart as PieChartIcon, Download,
+  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
-} from "recharts";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { FaRupeeSign } from "react-icons/fa";
 import { normalizeDate } from "../../utils/orderNormalization";
 import { useHostelOrders } from "../../context/HostelAuthContext";
-import AndesAccountTab from "./AndesAccountTab";
 
 /* ─── constants ─── */
 const CATEGORIES = [
@@ -55,11 +50,7 @@ const emptyForm = {
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
   const { orders, isViewer } = useHostelOrders();
-  const [activeSubTab, setActiveSubTab] = useState("personal");
   const [expenses, setExpenses] = useState([]);
-  const [isAndesUnlocked, setIsAndesUnlocked] = useState(() => sessionStorage.getItem("andes_unlocked") === "true");
-  const [andesPassword, setAndesPassword] = useState("");
-  const [andesAuthError, setAndesAuthError] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -166,9 +157,9 @@ export default function AdminExpensesTab() {
   const personalExpenses = useMemo(() => expenses.filter(e => e.accountType !== "andes"), [expenses]);
   const andesExpenses = useMemo(() => expenses.filter(e => e.accountType === "andes"), [expenses]);
 
-  /* ─── Filtering (Personal/Andes account data for analytics) ─── */
+  /* ─── Filtering (Personal expense data for analytics) ─── */
   const filtered = useMemo(() => {
-    let list = activeSubTab === "personal" ? personalExpenses : andesExpenses;
+    let list = personalExpenses;
     if (dateFrom && dateTo) {
       list = list.filter((e) => {
         if (!e.date) return false;
@@ -183,7 +174,7 @@ export default function AdminExpensesTab() {
       list = list.filter((e) => e.category === catFilter);
     }
     return list;
-  }, [activeSubTab, personalExpenses, andesExpenses, dateFrom, dateTo, catFilter]);
+  }, [personalExpenses, dateFrom, dateTo, catFilter]);
 
   /* ─── KPIs ─── */
   const kpis = useMemo(() => {
@@ -240,18 +231,7 @@ export default function AdminExpensesTab() {
     return { total: totalPaid, totalPaid, totalPayable, totalReceived, receivables, monthTotal, topCat, count: filtered.length, andesBalance };
   }, [filtered, expenses, orders, dateFrom, dateTo, andesExpenses]);
 
-  /* ─── Chart data ─── */
-  const areaData = useMemo(() => {
-    const map = {};
-    filtered.forEach((e) => {
-      if (!e.date) return;
-      if (e.transactionType === "credit") return;
-      map[e.date] = (map[e.date] || 0) + (e.amount || 0);
-    });
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, amount]) => ({ date, amount }));
-  }, [filtered]);
+  /* ─── Category Breakdown Data ─── */
 
   const pieData = useMemo(() => {
     const map = {};
@@ -419,84 +399,6 @@ export default function AdminExpensesTab() {
   /* ─── Render ─── */
   return (
     <div className="space-y-8 pb-12" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-      {/* Sub-Tab Navigation */}
-      <div className="flex items-center gap-2 p-1.5 bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm w-fit">
-        <button
-          onClick={() => setActiveSubTab("personal")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
-            activeSubTab === "personal"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
-              : "text-slate-500 hover:bg-slate-100"
-          }`}
-        >
-          <User size={16} /> Expense Analytics
-        </button>
-        <button
-          onClick={() => setActiveSubTab("andes")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
-            activeSubTab === "andes"
-              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200"
-              : "text-slate-500 hover:bg-slate-100"
-          }`}
-        >
-          <Wallet size={16} /> Andes Account
-        </button>
-      </div>
-
-      {/* ─── Andes Account Tab ─── */}
-      {activeSubTab === "andes" && (
-        !isAndesUnlocked ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm mt-4">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
-              <Lock size={32} />
-            </div>
-            <h2 className="text-[18px] font-black text-slate-800 mb-2">Restricted Access</h2>
-            <p className="text-[13px] text-slate-500 mb-6 text-center max-w-sm">
-              Please enter the master password to access the Andes Account Ledger.
-            </p>
-            <div className="w-full max-w-sm relative">
-              <input 
-                type="password" 
-                value={andesPassword}
-                onChange={(e) => { setAndesPassword(e.target.value); setAndesAuthError(""); }}
-                placeholder="Enter password"
-                className="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-sm pr-24"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const expectedPwd = import.meta.env.VITE_ANDES_PASSWORD || "Financeandes@2505";
-                    if (andesPassword === expectedPwd) {
-                      setIsAndesUnlocked(true);
-                      sessionStorage.setItem("andes_unlocked", "true");
-                    } else {
-                      setAndesAuthError("Incorrect password");
-                    }
-                  }
-                }}
-              />
-              <button 
-                onClick={() => {
-                  const expectedPwd = import.meta.env.VITE_ANDES_PASSWORD || "Financeandes@2505";
-                  if (andesPassword === expectedPwd) {
-                    setIsAndesUnlocked(true);
-                    sessionStorage.setItem("andes_unlocked", "true");
-                  } else {
-                    setAndesAuthError("Incorrect password");
-                  }
-                }}
-                className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-emerald-600 text-white text-[12px] font-black rounded-lg hover:bg-emerald-700 transition-all uppercase tracking-widest"
-              >
-                Unlock
-              </button>
-            </div>
-            {andesAuthError && <p className="text-[12px] font-bold text-red-500 mt-3">{andesAuthError}</p>}
-          </div>
-        ) : (
-          <AndesAccountTab entries={andesExpenses} loading={loading} />
-        )
-      )}
-
-      {/* ─── Personal Account Tab ─── */}
-      {activeSubTab === "personal" && (<>
       {/* Toast */}
       {toast && (
         <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
@@ -599,83 +501,45 @@ export default function AdminExpensesTab() {
         <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value={`₹${kpis.andesBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Net Account Balance" color="emerald" />
       </div>
 
-      {/* Visual Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight flex items-center gap-2">
-              <BarChart3 size={18} className="text-blue-500" /> Expense Velocity
-            </h3>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Day-by-Day Analysis</div>
-          </div>
-          {areaData.length === 0 ? (
-            <div className="h-[280px] flex flex-col items-center justify-center text-slate-300">
-              <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3"><BarChart3 size={24} /></div>
-              <p className="text-[13px] font-bold">No historical data found</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280} debounce={100}>
-              <AreaChart data={areaData}>
-                <defs>
-                  <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                  labelStyle={{ fontWeight: 800, color: '#0F172A', marginBottom: '4px', fontSize: '12px' }}
-                  itemStyle={{ fontWeight: 700, fontSize: '12px' }}
-                  formatter={(v) => [`₹${v.toLocaleString()}`, "Payment Amount"]}
-                />
-                <Area type="monotone" dataKey="amount" stroke="#3B82F6" fill="url(#expGrad)" strokeWidth={3} animationDuration={1500} />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
+      {/* Sector Allocation */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0 flex flex-col">
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+          <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight flex items-center gap-2">
+            <PieChartIcon size={18} className="text-amber-500" /> Sector Allocation
+          </h3>
         </div>
-
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0 flex flex-col">
-          <div className="flex items-center justify-between mb-6 flex-shrink-0">
-            <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight flex items-center gap-2">
-              <PieChartIcon size={18} className="text-amber-500" /> Sector Allocation
-            </h3>
-          </div>
-          {pieData.length === 0 ? (
-            <div className="h-[280px] flex items-center justify-center text-slate-300 font-bold">Waiting for input...</div>
-          ) : (
-            <div className="flex flex-col gap-5 h-[280px] overflow-y-auto pr-1 scrollbar-hide">
-              {pieData.map((item) => (
-                <div key={item.name} className="flex flex-col gap-1.5 group">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[13px] font-bold text-slate-700 truncate pr-4 group-hover:text-slate-900 transition-colors" title={item.name}>
-                      {item.name}
-                    </span>
-                    <span className="text-[13px] font-black text-[#0F172A] shrink-0">
-                      ₹{item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{
-                          width: `${item.percentage}%`,
-                          backgroundColor: CAT_COLORS[item.name] || "#94a3b8"
-                        }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-400 w-8 text-right shrink-0">
-                      {item.percentage.toFixed(1)}%
-                    </span>
-                  </div>
+        {pieData.length === 0 ? (
+          <div className="py-10 flex items-center justify-center text-slate-300 font-bold">Waiting for input...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {pieData.map((item) => (
+              <div key={item.name} className="flex flex-col gap-1.5 group bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                <div className="flex justify-between items-end">
+                  <span className="text-[13px] font-bold text-slate-700 truncate pr-4 group-hover:text-slate-900 transition-colors" title={item.name}>
+                    {item.name}
+                  </span>
+                  <span className="text-[13px] font-black text-[#0F172A] shrink-0">
+                    ₹{item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-slate-200/80 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{
+                        width: `${item.percentage}%`,
+                        backgroundColor: CAT_COLORS[item.name] || "#94a3b8"
+                      }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 w-8 text-right shrink-0">
+                    {item.percentage.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Transaction Log Table */}
@@ -1033,7 +897,6 @@ export default function AdminExpensesTab() {
           </div>
         </div>
       )}
-      </>)}
     </div>
   );
 }
