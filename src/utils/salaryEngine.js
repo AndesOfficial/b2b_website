@@ -138,23 +138,62 @@ export function calculateDailyCost(worker, dateStr, attendanceRecord) {
   };
 }
 
-/**
- * Helper to get all dates in a month up to limitDate (inclusive).
- * yearMonth is "YYYY-MM".
- */
-export function getDatesInMonth(yearMonth, limitDate = null) {
-  const [yearStr, monthStr] = yearMonth.split("-");
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10); // 1-indexed
+export const PERIOD_START_DAY = 15; // Salary cycle runs 15th to 14th of next month
 
-  const totalDays = new Date(year, month, 0).getDate();
+/**
+ * Returns the salary period key ("YYYY-MM" of the month the period starts in) for a date.
+ * e.g. "2026-10-12" -> "2026-09" (15 Sep - 14 Oct), "2026-10-15" -> "2026-10".
+ */
+export function getPeriodKey(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const start = d >= PERIOD_START_DAY ? new Date(y, m - 1, 1) : new Date(y, m - 2, 1);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Human label for a period key, e.g. "2026-09" -> "15 Sep – 14 Oct 2026".
+ */
+export function getPeriodLabel(periodKey) {
+  const [y, m] = periodKey.split("-").map(Number);
+  const start = new Date(y, m - 1, PERIOD_START_DAY);
+  const end = new Date(y, m, PERIOD_START_DAY - 1);
+  const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+}
+
+/**
+ * Dropdown options for the current salary period and `count - 1` previous ones.
+ */
+export function getPeriodOptions(count = 8) {
+  const [y, m] = getPeriodKey(toDateStr(new Date())).split("-").map(Number);
+  const opts = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(y, m - 1 - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    opts.push({ val, label: getPeriodLabel(val) });
+  }
+  return opts;
+}
+
+/**
+ * Helper to get all dates in a salary period (15th of the month to 14th of next)
+ * up to limitDate (inclusive). periodKey is "YYYY-MM".
+ */
+export function getDatesInMonth(periodKey, limitDate = null) {
+  const [year, month] = periodKey.split("-").map(Number);
+  const cursor = new Date(year, month - 1, PERIOD_START_DAY);
+  const end = new Date(year, month, PERIOD_START_DAY - 1);
   const dates = [];
 
-  for (let d = 1; d <= totalDays; d++) {
-    const dayStr = String(d).padStart(2, "0");
-    const dateStr = `${yearStr}-${monthStr.padStart(2, "0")}-${dayStr}`;
+  while (cursor <= end) {
+    const dateStr = toDateStr(cursor);
     if (limitDate && dateStr > limitDate) break;
     dates.push(dateStr);
+    cursor.setDate(cursor.getDate() + 1);
   }
 
   return dates;
@@ -178,8 +217,8 @@ export function calculateMonthSummary(
   payments = [],
   asOfDate = null
 ) {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = toDateStr(new Date());
+  const currentMonth = getPeriodKey(todayStr);
 
   // If calculating for current month, calculate up to today by default (or end of month if specified)
   const isCurrentMonth = yearMonth === currentMonth;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHostelOrders } from "../context/HostelAuthContext";
 import AdminSidebar from "../components/Layout/AdminSidebar";
@@ -15,6 +15,38 @@ import AdminDashboardKpis from "../components/Overview/AdminDashboardKpis";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { getAdminTabConfig } from "../config/adminTabs";
 import { getMonthStartString, getTodayString, useAdminDashboardData } from "../hooks/useAdminDashboardData";
+
+// Keeps one broken tab from taking down the whole dashboard, and shows the error.
+class TabErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error(`Admin tab "${this.props.tab}" failed to render:`, error, errorInfo);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.tab !== this.props.tab && this.state.error) this.setState({ error: null });
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="font-bold">This section failed to load.</p>
+          <pre className="mt-2 whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -225,7 +257,7 @@ export default function AdminDashboard() {
                 />
               )}
 
-              <div className="animate-fade-in">{activeTabPanel}</div>
+              <div className="animate-fade-in"><TabErrorBoundary tab={activeTab}>{activeTabPanel}</TabErrorBoundary></div>
             </>
           )}
         </div>

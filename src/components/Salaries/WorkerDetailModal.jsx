@@ -18,6 +18,7 @@ import {
   calculateMonthSummary,
   formatCurrency,
   isThursday,
+  getPeriodOptions,
 } from "../../utils/salaryEngine";
 
 export default function WorkerDetailModal({
@@ -61,14 +62,7 @@ export default function WorkerDetailModal({
   if (!isOpen || !worker || !monthSummary) return null;
 
   // Month options for history comparison (current + 5 previous months)
-  const monthOptions = [];
-  const currentD = new Date();
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(currentD.getFullYear(), currentD.getMonth() - i, 1);
-    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    monthOptions.push({ val, label });
-  }
+  const monthOptions = getPeriodOptions(6);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">

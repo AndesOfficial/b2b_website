@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FiX, FiUser, FiDollarSign, FiCalendar, FiFileText, FiPlus, FiCreditCard } from "react-icons/fi";
 import { FaIndianRupeeSign } from "react-icons/fa6";
-import { getDailyWage } from "../../utils/salaryEngine";
+import { getDailyWage, getPeriodKey } from "../../utils/salaryEngine";
 
 const ROLES = [
   "Manager",
@@ -617,7 +617,7 @@ export function AddAdjustmentModal({ isOpen, onClose, onSave, workers, defaultWo
 /* ─── 4. Record Payment Modal ─── */
 export function RecordPaymentModal({ isOpen, onClose, onSave, workers, defaultWorkerId = "", selectedMonth = "" }) {
   const [workerId, setWorkerId] = useState(defaultWorkerId);
-  const [month, setMonth] = useState(selectedMonth || new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(selectedMonth || getPeriodKey(new Date().toISOString().slice(0, 10)));
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paymentMode, setPaymentMode] = useState("UPI");
@@ -628,7 +628,7 @@ export function RecordPaymentModal({ isOpen, onClose, onSave, workers, defaultWo
 
   useEffect(() => {
     setWorkerId(defaultWorkerId || (workers[0]?.id || ""));
-    setMonth(selectedMonth || new Date().toISOString().slice(0, 7));
+    setMonth(selectedMonth || getPeriodKey(new Date().toISOString().slice(0, 10)));
     setAmount("");
     setDate(new Date().toISOString().slice(0, 10));
     setPaymentMode("UPI");

@@ -9,6 +9,7 @@ import {
   query,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { getPeriodKey } from "../utils/salaryEngine";
 
 export const INITIAL_WORKERS = [
   {
@@ -68,8 +69,18 @@ export const INITIAL_WORKERS = [
     joiningDate: "2026-09-15",
     currentMonthlySalary: 18000,
     phone: "",
-    status: "active",
+    status: "inactive",
     salaryHistory: [{ rate: 18000, effectiveDate: "2026-09-15", note: "Joining salary" }],
+  },
+  {
+    id: "shakti",
+    name: "Shakti",
+    role: "Tagging",
+    joiningDate: "2026-09-15",
+    currentMonthlySalary: 25000,
+    phone: "",
+    status: "active",
+    salaryHistory: [{ rate: 25000, effectiveDate: "2026-09-15", note: "Joining salary (replaces Sandeep)" }],
   },
   {
     id: "sunny",
@@ -461,7 +472,7 @@ export function useSalaryData() {
 
   // Add Overtime, Extra Work, or Deduction
   const addAdjustment = useCallback(async (data) => {
-    const month = (data.date || new Date().toISOString().slice(0, 10)).slice(0, 7);
+    const month = getPeriodKey(data.date || new Date().toISOString().slice(0, 10));
     const id = "adj_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
     const payload = {
@@ -496,7 +507,7 @@ export function useSalaryData() {
 
   // Record Salary Payout
   const recordPayment = useCallback(async (data) => {
-    const month = data.month || (data.date || new Date().toISOString().slice(0, 10)).slice(0, 7);
+    const month = data.month || getPeriodKey(data.date || new Date().toISOString().slice(0, 10));
     const id = "pay_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
     const payload = {

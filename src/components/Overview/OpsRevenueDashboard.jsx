@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { FiAlertTriangle, FiArrowDown, FiCheckCircle, FiInfo } from "react-icons/fi";
+import { FiArrowDown } from "react-icons/fi";
 import { rangeFor, toDateStr, useOpsDashboard } from "../../hooks/useOpsDashboard";
 
 const B2B_COLOR = "#2563EB";
@@ -133,7 +133,7 @@ export default function OpsRevenueDashboard({ orders }) {
 
   const range = useMemo(() => rangeFor(period, anchor, custom), [period, anchor, custom]);
   const m = useOpsDashboard(orders, range, period === "month" ? 31 : trendDays);
-  const { overall, b2b, b2c, ops, flow, flowIncludesB2B, money, alerts, trend } = m;
+  const { overall, b2b, b2c, ops, flow, flowIncludesB2B, money, trend } = m;
   const periodName = period === "day" ? "Today's" : "Period";
 
   return (
@@ -311,24 +311,6 @@ export default function OpsRevenueDashboard({ orders }) {
           <TrendChart data={trend} title="Weight trend (KG / day)" b2bKey="b2bKg" b2cKey="b2cKg" format={(v) => kg(v)} />
           <TrendChart data={trend} title="Revenue trend (₹ / day)" b2bKey="b2bRevenue" b2cKey="b2cRevenue" format={(v) => rs(v)} />
         </div>
-      </Section>
-
-      {/* 08 Alerts */}
-      <Section index={8} title="What needs attention?">
-        {alerts.length === 0 ? (
-          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><FiCheckCircle /> Nothing needs attention for this period.</p>
-        ) : (
-          <ul className="space-y-2">
-            {alerts.map((a) => (
-              <li key={a.text} className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
-                a.level === "bad" ? "border-red-200 bg-red-50 text-red-800" : a.level === "warn" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"
-              }`}>
-                {a.level === "info" ? <FiInfo className="mt-0.5 shrink-0" /> : <FiAlertTriangle className="mt-0.5 shrink-0" />}
-                {a.text}
-              </li>
-            ))}
-          </ul>
-        )}
       </Section>
     </div>
   );

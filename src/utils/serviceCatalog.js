@@ -80,7 +80,9 @@ export function validateService(form, allServices) {
     (s) => s.id !== form.id &&
       serviceStatusOf(s) !== "archived" &&
       String(s.serviceName || "").trim().toLowerCase() === name.toLowerCase() &&
-      String(s.category || "") === String(form.category || ""),
+      // Case-insensitive: "General" and "general" were treated as different
+      // categories, which let duplicate Wash & Fold / Wash & Iron docs in.
+      String(s.category || "").trim().toLowerCase() === String(form.category || "").trim().toLowerCase(),
   );
   if (clash) errors.push(`Another service in this category is already called "${name}".`);
   for (const key of NUMBER_FIELDS) {

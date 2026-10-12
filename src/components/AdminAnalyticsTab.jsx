@@ -61,13 +61,13 @@ const ServiceCard = ({ label, count }) => (
     </div>
 );
 
-export default function AdminAnalyticsTab({ orders, screens = [], searches = [], totalUsers = 0 }) {
+export default function AdminAnalyticsTab({ orders = [], screens = [], searches = [], totalUsers = 0 }) {
     const [subTab, setSubTab] = useState("stats");
 
     // Filter to exclude issues and cancelled orders (consistent with Overview dashboard)
-    const activeOrders = orders.filter(o => 
-        o.category !== "ISSUES" && o.type !== "issue" && o.status !== "Cancelled"
-    );
+    const activeOrders = useMemo(() => (Array.isArray(orders) ? orders : []).filter(o =>
+        o && o.category !== "ISSUES" && o.type !== "issue" && o.status !== "Cancelled"
+    ), [orders]);
 
     // Calculate real data from orders for "Services Ordered"
     const serviceStats = useMemo(() => {
@@ -87,7 +87,8 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
         };
 
         activeOrders.forEach(o => {
-            const service = (o.service || "").toLowerCase();
+            // `service` is not always a string on older or app-created orders.
+            const service = (typeof o.service === "string" ? o.service : "").toLowerCase();
             if (service.includes("wash") && service.includes("fold")) stats["Wash & Fold"]++;
             else if (service.includes("wash") && service.includes("iron")) stats["Wash & Iron"]++;
             else if (service.includes("iron")) stats["Iron Only"]++;
@@ -108,7 +109,7 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
     }, [activeOrders]);
 
     const totalRevenue = useMemo(() => {
-        return activeOrders.filter(o => o.type === "regular").reduce((acc, o) => acc + (parseFloat(o.amount) || 0), 0);
+        return activeOrders.filter(o => o.type === "regular").reduce((acc, o) => acc + (Number.isFinite(parseFloat(o.amount)) ? parseFloat(o.amount) : 0), 0);
     }, [activeOrders]);
 
     return (
@@ -200,7 +201,7 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
                             <p className="text-[12px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md uppercase">Live Stats</p>
                         </div>
                         {screens.length > 0 ? (
-                            screens.map(s => <ScreenItem key={s.id} name={s.screenName} visits={s.visitCount} />)
+                            screens.map(s => <ScreenItem key={s.id} name={String(s.screenName ?? s.id)} visits={Number(s.visitCount) || 0} />)
                         ) : (
                             <EmptyState 
                                 icon={FiMonitor} 
@@ -218,7 +219,7 @@ export default function AdminAnalyticsTab({ orders, screens = [], searches = [],
                             <p className="text-[12px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-md uppercase">Search Activity</p>
                         </div>
                         {searches.length > 0 ? (
-                            searches.map(s => <SearchItem key={s.id} query={s.query} count={s.count} />)
+                            searches.map(s => <SearchItem key={s.id} query={String(s.query ?? "")} count={Number(s.count) || 0} />)
                         ) : (
                             <EmptyState 
                                 icon={FiSearch} 

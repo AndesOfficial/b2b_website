@@ -26,6 +26,8 @@ import {
   calculateDashboardMetrics,
   formatCurrency,
   isThursday,
+  getPeriodKey,
+  getPeriodOptions,
 } from "../utils/salaryEngine";
 import {
   AddEditWorkerModal,
@@ -86,7 +88,7 @@ export default function AdminSalaries() {
 
   // Period / Month Selector: Defaults to current month ("YYYY-MM")
   const [selectedMonth, setSelectedMonth] = useState(() => {
-    return new Date().toISOString().slice(0, 7);
+    return getPeriodKey(new Date().toISOString().slice(0, 10));
   });
 
   // Ensure background sync/seed runs once without blocking the UI
@@ -113,17 +115,7 @@ export default function AdminSalaries() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Month options for dropdown
-  const monthOptions = useMemo(() => {
-    const opts = [];
-    const now = new Date();
-    for (let i = 0; i < 8; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-      opts.push({ val, label });
-    }
-    return opts;
-  }, []);
+  const monthOptions = useMemo(() => getPeriodOptions(8), []);
 
   // Compute metrics across all active workers
   const metrics = useMemo(() => {
