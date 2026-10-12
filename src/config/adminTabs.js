@@ -1,4 +1,4 @@
-import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPackage, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
@@ -109,6 +109,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "Meta Ads Leads",
     navLabel: "Meta Leads",
     navIcon: FiUsers,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  inventory: {
+    key: "inventory",
+    title: "Daily Inventory Log",
+    navLabel: "Inventory",
+    navIcon: FiPackage,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

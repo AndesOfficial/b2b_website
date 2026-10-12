@@ -441,6 +441,9 @@ export function HostelAuthProvider({ children }) {
     try {
       await setPersistence(auth, browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Firestore rules read the dashboard role from a token claim (copied
+      // from b2b_managers by the backend); refresh so a new role applies now.
+      await userCredential.user.getIdToken(true);
       const userDoc = await getDoc(doc(db, "b2b_managers", userCredential.user.uid));
 
       if (!userDoc.exists()) {

@@ -11,11 +11,21 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          'vendor-ui': ['react-icons', 'recharts', 'lucide-react'],
-          'vendor-utils': ['jspdf', 'jspdf-autotable', 'jszip']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('firebase/') || id.includes('@firebase/')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('react-icons/') || id.includes('recharts/') || id.includes('lucide-react/')) {
+              return 'vendor-ui';
+            }
+            if (id.includes('jspdf') || id.includes('jszip')) {
+              return 'vendor-utils';
+            }
+          }
         }
       }
     },
