@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   serverTimestamp,
   writeBatch,
@@ -36,6 +37,16 @@ const NUMBER_FIELDS = [
 const slug = (s) =>
   String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
+/**
+ * "% off" from the struck-through original vs the selling rate, rounded down
+ * so the badge never overstates the saving. "" when there is no saving.
+ */
+export function discountLabel(rate, original) {
+  const r = Number(rate), o = Number(original);
+  if (!(r > 0) || !(o > r)) return "";
+  return String(Math.floor(((o - r) / o) * 100));
+}
+
 /** Turns the editor's form state into the Firestore document shape. */
 function toFirestore(form, serviceId) {
   const out = { ...form };
@@ -47,6 +58,15 @@ function toFirestore(form, serviceId) {
       out[key] = Number(out[key]);
     }
   }
+  // The app shows and bills `rateByPiece`; a pair-only price showed as ₹0
+  // (and older Android builds hid the service). Pair services carry both.
+  if (out.rateByPair > 0) out.rateByPiece = out.rateByPair;
+  // Discount badges follow the prices instead of being typed by hand.
+  out.discountPercentage = discountLabel(out.rateByPiece || out.rateByKg, out.rateByPiece ? out.originalRateByPiece : out.originalRateByKg);
+  out.instantDiscountPercentage = discountLabel(
+    out.instantRateByPiece || out.instantRateByKg,
+    out.instantRateByPiece ? out.originalInstantRateByPiece : out.originalInstantRateByKg,
+  );
   out.serviceName = String(out.serviceName || "").trim();
   out.status = serviceStatusOf(out);
   // Old app versions only understand isActive.
@@ -60,7 +80,7 @@ function toFirestore(form, serviceId) {
       let id = sub.serviceId || `${serviceId}_${slug(sub.name || "sub")}`;
       while (used.has(id)) id += "_x";
       used.add(id);
-      const clean = { ...sub, name: String(sub.name || "").trim(), status, isActive: status === "active", serviceId: id };
+      const clean = { ...sub, name: String(sub.name || "").trim(), status, isActive: status === "active", serviceId: id, unit: "piece" };
       for (const key of ["rateByPiece", "instantRateByPiece", "originalRateByPiece", "originalInstantRateByPiece", "displayOrder"]) {
         if (clean[key] === "" || clean[key] === null || clean[key] === undefined) delete clean[key];
         else clean[key] = Number(clean[key]);
@@ -95,6 +115,20 @@ export function validateService(form, allServices) {
     .some((k) => Number(form[k]) > 0);
   const subs = Array.isArray(form.subServices) ? form.subServices : [];
   if (!hasRate && subs.length === 0) errors.push("Set at least one rate, or add sub-services.");
+  // Every app reads the unit instead of guessing from the name, so it must
+  // be set and match the price that is filled in.
+  if (!["kg", "piece", "pair"].includes(form.unit)) {
+    errors.push("Choose a unit (per kg, per piece or per pair).");
+  } else if (subs.length === 0) {
+    const unitRate = {
+      kg: ["rateByKg", "instantRateByKg"],
+      piece: ["rateByPiece", "instantRateByPiece"],
+      pair: ["rateByPair"],
+    }[form.unit];
+    if (!unitRate.some((k) => Number(form[k]) > 0)) {
+      errors.push(`The unit is per ${form.unit}, but no per-${form.unit} price is set.`);
+    }
+  }
   subs.forEach((sub, i) => {
     if (!String(sub.name || "").trim()) errors.push(`Sub-service ${i + 1} needs a name.`);
     if (!(Number(sub.rateByPiece) > 0) && !(Number(sub.instantRateByPiece) > 0)) {
@@ -197,6 +231,11 @@ export async function reorderServices(orderedServices) {
   if (changes.length === 0) return;
   auditDoc(batch, { serviceDocId: "(reorder)", action: "reorder", before: null, after: { changes }, by });
   await batch.commit();
+}
+
+/** Marks a rider's "unit set by rider" report as handled. */
+export async function resolveCatalogFlag(flagId) {
+  await deleteDoc(doc(db, "catalog_flags", flagId));
 }
 
 /** Uploads a service image and returns its public download URL. */

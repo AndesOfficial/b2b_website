@@ -5,9 +5,12 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_STATUSES,
   SERVICE_UNITS,
+  canonicalCategory,
+  instantUnitOf,
 } from "../../constants/serviceCatalog";
 import {
   describeCatalogError,
+  discountLabel,
   saveService,
   serviceStatusOf,
   uploadServiceImage,
@@ -18,7 +21,7 @@ const EMPTY_SERVICE = {
   serviceName: "",
   category: "general",
   status: "active",
-  unit: "piece",
+  unit: "",
   rateByPiece: "",
   rateByKg: "",
   rateByPair: "",
@@ -64,7 +67,7 @@ function Section({ title, children }) {
 /**
  * Side panel to create or edit one service. `service` is null for a new one.
  */
-export default function ServiceEditor({ service, allServices, groupNames, readOnly, onClose, onSaved }) {
+export default function ServiceEditor({ service, allServices, readOnly, onClose, onSaved }) {
   const [form, setForm] = useState(() => {
     if (!service) {
       const maxOrder = Math.max(0, ...allServices.map((s) => Number(s.displayOrder) || 0));
@@ -73,6 +76,7 @@ export default function ServiceEditor({ service, allServices, groupNames, readOn
     return {
       ...EMPTY_SERVICE,
       ...service,
+      category: canonicalCategory(service.category),
       status: serviceStatusOf(service),
       subServices: Array.isArray(service.subServices)
         ? service.subServices.map((s) => ({ ...s, status: serviceStatusOf(s) }))
@@ -160,6 +164,15 @@ export default function ServiceEditor({ service, allServices, groupNames, readOn
     }
   };
 
+  const sellRate = Number(form.rateByPair) > 0 ? form.rateByPair : form.rateByPiece;
+  const autoDiscount = Number(sellRate) > 0
+    ? discountLabel(sellRate, form.originalRateByPiece)
+    : discountLabel(form.rateByKg, form.originalRateByKg);
+  const instantUnit = instantUnitOf(form.serviceName);
+  const autoInstantDiscount = Number(form.instantRateByPiece) > 0
+    ? discountLabel(form.instantRateByPiece, form.originalInstantRateByPiece)
+    : discountLabel(form.instantRateByKg, form.originalInstantRateByKg);
+
   const num = (key, label, hint) => (
     <Field label={label} hint={hint}>
       <input type="number" min="0" step="any" className={inputClass} value={form[key] ?? ""} onChange={set(key)} disabled={readOnly} />
@@ -195,14 +208,15 @@ export default function ServiceEditor({ service, allServices, groupNames, readOn
                 <input className={inputClass} value={form.serviceName} onChange={set("serviceName")} disabled={readOnly} />
               </Field>
             </div>
-            <Field label="Category">
+            <Field label="Group (app tab)" hint="The tab this service appears under in the customer app.">
               <select className={inputClass} value={form.category} onChange={set("category")} disabled={readOnly}>
                 {categoryOptions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </Field>
-            <Field label="Unit">
-              <select className={inputClass} value={form.unit || "piece"} onChange={set("unit")} disabled={readOnly}>
-                {SERVICE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+            <Field label="Unit" hint="How every app shows and bills this service. Household sub-services are always per piece.">
+              <select className={inputClass} value={form.unit || ""} onChange={set("unit")} disabled={readOnly}>
+                <option value="" disabled>Choose…</option>
+                {SERVICE_UNITS.map((u) => <option key={u} value={u}>per {u}</option>)}
               </select>
             </Field>
           </div>
@@ -227,26 +241,36 @@ export default function ServiceEditor({ service, allServices, groupNames, readOn
               {num("rateByPiece", "Per piece")}
               {num("rateByKg", "Per kg")}
               {num("rateByPair", "Per pair")}
-              {num("originalRateByPiece", "Original per piece", "Shown struck through")}
+              {num("originalRateByPiece", "Original per piece / pair", "Shown struck through")}
               {num("originalRateByKg", "Original per kg")}
-              <Field label="Discount label">
-                <input className={inputClass} placeholder="25% OFF" value={form.discountPercentage ?? ""} onChange={set("discountPercentage")} disabled={readOnly} />
+              <Field label="Discount (auto)" hint="From the original price">
+                <input className={inputClass} value={autoDiscount ? `${autoDiscount}% OFF` : "—"} disabled />
               </Field>
             </div>
           </Section>
 
-          <Section title="Instant prices (₹)">
-            <p className="text-[11px] text-slate-400">Leave empty if the service is not offered as instant.</p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {num("instantRateByPiece", "Per piece")}
-              {num("instantRateByKg", "Per kg")}
-              <Field label="Discount label">
-                <input className={inputClass} value={form.instantDiscountPercentage ?? ""} onChange={set("instantDiscountPercentage")} disabled={readOnly} />
-              </Field>
-              {num("originalInstantRateByPiece", "Original per piece")}
-              {num("originalInstantRateByKg", "Original per kg")}
-            </div>
-          </Section>
+          {instantUnit ? (
+            <Section title="Andes Instant price (₹)">
+              <p className="text-[11px] text-slate-400">
+                This service is in the app's Instant section. Empty = 2× the regular price.
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {instantUnit === "kg"
+                  ? num("instantRateByKg", "Instant per kg")
+                  : num("instantRateByPiece", "Instant per piece")}
+                {instantUnit === "kg"
+                  ? num("originalInstantRateByKg", "Original per kg", "Shown struck through")
+                  : num("originalInstantRateByPiece", "Original per piece", "Shown struck through")}
+                <Field label="Discount (auto)" hint="From the original price">
+                  <input className={inputClass} value={autoInstantDiscount ? `${autoInstantDiscount}% OFF` : "—"} disabled />
+                </Field>
+              </div>
+            </Section>
+          ) : (
+            <p className="border-t border-slate-100 pt-4 text-[11px] text-slate-400">
+              Andes Instant is offered only for Iron, Wash &amp; Iron and Wash &amp; Fold.
+            </p>
+          )}
 
           {form.category === "household" && (
             <Section title="Price range (household)">
@@ -283,17 +307,11 @@ export default function ServiceEditor({ service, allServices, groupNames, readOn
             </div>
           </Section>
 
-          <Section title="Grouping & behaviour">
+          <Section title="Behaviour">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Group">
-                <select className={inputClass} value={form.groupName ?? ""} onChange={(e) => setForm((f) => ({ ...f, groupName: e.target.value, isGrouped: e.target.value !== "" }))} disabled={readOnly}>
-                  <option value="">No group</option>
-                  {groupNames.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </Field>
               <div className="space-y-2 pt-5 text-sm text-slate-700">
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={!!form.isGroupedService} onChange={set("isGroupedService")} disabled={readOnly} /> Grouped service card
+                  <input type="checkbox" checked={!!form.isGroupedService} onChange={set("isGroupedService")} disabled={readOnly} /> Show price range (from–to) on card
                 </label>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={!!form.isSpecialKgService} onChange={set("isSpecialKgService")} disabled={readOnly} /> Weighed by rider (special kg)

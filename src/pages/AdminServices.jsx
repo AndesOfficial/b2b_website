@@ -7,18 +7,24 @@ import AdminSidebar from "../components/Layout/AdminSidebar";
 import ServiceEditor from "../components/Services/ServiceEditor";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { useHostelAuth } from "../context/HostelAuthContext";
-import { SERVICE_CATEGORIES, SERVICE_STATUSES } from "../constants/serviceCatalog";
-import { describeCatalogError, reorderServices, serviceStatusOf, setServiceStatus } from "../utils/serviceCatalog";
+import { SERVICE_CATEGORIES, SERVICE_STATUSES, canonicalCategory, instantUnitOf } from "../constants/serviceCatalog";
+import { describeCatalogError, reorderServices, resolveCatalogFlag, serviceStatusOf, setServiceStatus } from "../utils/serviceCatalog";
+
+const VALID_UNITS = ["kg", "piece", "pair"];
 
 const STATUS_BY_VALUE = Object.fromEntries(SERVICE_STATUSES.map((s) => [s.value, s]));
 const CATEGORY_LABEL = Object.fromEntries(SERVICE_CATEGORIES.map((c) => [c.value, c.label]));
 
 const priceSummary = (s) => {
   const parts = [];
+  if (!VALID_UNITS.includes(s.unit)) parts.push("⚠ no unit");
   if (Number(s.rateByKg) > 0) parts.push(`₹${s.rateByKg}/kg`);
   if (Number(s.rateByPair) > 0) parts.push(`₹${s.rateByPair}/pair`);
   else if (Number(s.rateByPiece) > 0) parts.push(`₹${s.rateByPiece}/pc`);
-  if (Number(s.instantRateByPiece) > 0 || Number(s.instantRateByKg) > 0) parts.push("instant");
+  const iu = instantUnitOf(s.serviceName);
+  if (iu === "kg" && Number(s.instantRateByKg) > 0) parts.push(`Instant ₹${s.instantRateByKg}/kg`);
+  else if (iu === "piece" && Number(s.instantRateByPiece) > 0) parts.push(`Instant ₹${s.instantRateByPiece}/pc`);
+  else if (iu) parts.push("Instant 2× regular");
   if (Array.isArray(s.subServices) && s.subServices.length) parts.push(`${s.subServices.length} sub`);
   return parts.join(" · ") || "—";
 };
@@ -36,6 +42,7 @@ export default function AdminServices() {
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
   const [dragId, setDragId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [flags, setFlags] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -64,6 +71,22 @@ export default function AdminServices() {
     [],
   );
 
+  // Services a rider added with a unit they chose, because none was set here.
+  useEffect(
+    () =>
+      onSnapshot(
+        collection(db, "catalog_flags"),
+        (snap) => setFlags(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        () => setFlags([]), // viewers can't read flags
+      ),
+    [],
+  );
+
+  const missingUnit = useMemo(
+    () => (services || []).filter((s) => serviceStatusOf(s) !== "archived" && !VALID_UNITS.includes(s.unit)),
+    [services],
+  );
+
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
     if (tab === "services") return;
@@ -76,11 +99,6 @@ export default function AdminServices() {
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
-
-  const groupNames = useMemo(
-    () => [...new Set((services || []).map((s) => s.groupName).filter(Boolean))].sort(),
-    [services],
-  );
 
   const counts = useMemo(() => {
     const c = { active: 0, hidden: 0, archived: 0 };
@@ -95,7 +113,7 @@ export default function AdminServices() {
     for (const s of services || []) {
       if (serviceStatusOf(s) !== statusFilter) continue;
       if (q && !String(s.serviceName || "").toLowerCase().includes(q)) continue;
-      const cat = s.category || "general";
+      const cat = canonicalCategory(s.category);
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat).push(s);
     }
@@ -108,6 +126,26 @@ export default function AdminServices() {
       const ia = order.indexOf(a), ib = order.indexOf(b);
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
     });
+  }, [services, statusFilter, query]);
+
+  // Mirrors the app's Instant section (instant_catalog.dart): the first active
+  // service per Instant name that has a regular rate in its unit.
+  const instantServices = useMemo(() => {
+    if (statusFilter !== "active") return [];
+    const q = query.trim().toLowerCase();
+    const seen = new Set();
+    const out = [];
+    for (const s of services || []) {
+      const unit = instantUnitOf(s.serviceName);
+      if (!unit || serviceStatusOf(s) !== "active") continue;
+      if (!(Number(unit === "kg" ? s.rateByKg : s.rateByPiece) > 0)) continue;
+      const key = String(s.serviceName).trim().toLowerCase();
+      if (seen.has(key)) continue;
+      if (q && !key.includes(q)) continue;
+      seen.add(key);
+      out.push(s);
+    }
+    return out;
   }, [services, statusFilter, query]);
 
   const run = async (fn) => {
@@ -210,6 +248,41 @@ export default function AdminServices() {
             </div>
           )}
 
+          {(missingUnit.length > 0 || flags.length > 0) && (
+            <section className="overflow-hidden rounded-xl border border-amber-300 bg-white shadow-sm">
+              <h2 className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-amber-700">
+                Needs attention <span className="text-amber-500">· {missingUnit.length + flags.length}</span>
+                <span className="ml-2 normal-case tracking-normal font-medium text-amber-600">Set a unit so riders and customers see the right price</span>
+              </h2>
+              <ul className="divide-y divide-slate-100">
+                {missingUnit.map((s) => (
+                  <li key={s.id}>
+                    <button type="button" onClick={() => setEditing(s)} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50">
+                      <span className="text-sm font-bold text-slate-800">{s.serviceName}</span>
+                      <span className="text-xs text-amber-700">No unit set</span>
+                    </button>
+                  </li>
+                ))}
+                {flags.map((f) => {
+                  const svc = (services || []).find((s) => String(s.serviceName || "").trim().toLowerCase() === String(f.serviceName || "").trim().toLowerCase());
+                  return (
+                    <li key={f.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <button type="button" disabled={!svc} onClick={() => svc && setEditing(svc)} className="min-w-0 flex-1 text-left">
+                        <p className="truncate text-sm font-bold text-slate-800">{f.serviceName}</p>
+                        <p className="truncate text-xs text-slate-500">Rider billed it per {f.unit} on order {f.orderId}</p>
+                      </button>
+                      {!isViewer && (
+                        <button type="button" onClick={() => run(() => resolveCatalogFlag(f.id))} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                          Done
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
           {services === null ? (
             <DashboardSkeleton />
           ) : grouped.length === 0 ? (
@@ -220,7 +293,7 @@ export default function AdminServices() {
             grouped.map(([category, list]) => (
               <section key={category} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <h2 className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-slate-500">
-                  {CATEGORY_LABEL[category] || category} <span className="text-slate-400">· {list.length}</span>
+                  {CATEGORY_LABEL[category] || `${category} · not shown in the app`} <span className="text-slate-400">· {list.length}</span>
                 </h2>
                 <ul className="divide-y divide-slate-100">
                   {list.map((s) => (
@@ -239,7 +312,7 @@ export default function AdminServices() {
                       <button type="button" onClick={() => setEditing(s)} className="min-w-0 flex-1 text-left">
                         <p className="truncate text-sm font-bold text-slate-800">{s.serviceName || "(no name)"}</p>
                         <p className="truncate text-xs text-slate-500">
-                          {priceSummary(s)}{s.groupName ? ` · group: ${s.groupName}` : ""}
+                          {priceSummary(s)}
                         </p>
                       </button>
                       {!isViewer && (
@@ -258,6 +331,32 @@ export default function AdminServices() {
               </section>
             ))
           )}
+
+          {instantServices.length > 0 && (
+            <section className="overflow-hidden rounded-xl border border-violet-200 bg-white shadow-sm">
+              <h2 className="border-b border-violet-100 bg-violet-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-violet-600">
+                Andes Instant <span className="text-violet-400">· {instantServices.length}</span>
+                <span className="ml-2 normal-case tracking-normal font-medium text-violet-500">Instant price set on the service, or 2× regular when empty</span>
+              </h2>
+              <ul className="divide-y divide-slate-100">
+                {instantServices.map((s) => {
+                  const kg = instantUnitOf(s.serviceName) === "kg";
+                  const rate = Number(kg ? s.instantRateByKg : s.instantRateByPiece);
+                  const base = Number(kg ? s.rateByKg : s.rateByPiece);
+                  return (
+                    <li key={s.id}>
+                      <button type="button" onClick={() => setEditing(s)} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50">
+                        <span className="text-sm font-bold text-slate-800">{s.serviceName}</span>
+                        <span className="text-xs text-slate-500">
+                          ₹{rate > 0 ? rate : base * 2}/{kg ? "kg" : "pc"}{rate > 0 ? "" : " (2× regular)"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
         </div>
       </main>
 
@@ -266,7 +365,6 @@ export default function AdminServices() {
           key={editing?.id || "new"}
           service={editing}
           allServices={services || []}
-          groupNames={groupNames}
           readOnly={isViewer}
           onClose={() => setEditing(undefined)}
         />
