@@ -8,7 +8,6 @@ import OpsRevenueDashboard from "../components/Overview/OpsRevenueDashboard";
 import AdminIssuesTab from "../components/Issues/AdminIssuesTab";
 import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
 import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
-import InventoryTab from "../components/Inventory/InventoryTab";
 import InvoiceGeneratorModal from "../components/Shared/InvoiceGeneratorModal";
 import AdminAddOrderModal from "../components/Shared/AdminAddOrderModal";
 import AdminPageActions from "../components/Shared/AdminPageActions";
@@ -182,7 +181,6 @@ export default function AdminDashboard() {
           totalUsers={totalUsers}
         />
       ),
-      inventory: <InventoryTab />,
     };
 
     return panels[activeTab] || null;

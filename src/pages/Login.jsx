@@ -26,8 +26,6 @@ export default function Login() {
         if (result.success) {
             if (result.role === "admin" || result.role === "admin_viewer") {
                 navigate("/admin");
-            } else if (result.role === "manager") {
-                navigate("/manager");
             } else {
                 navigate("/client/dashboard");
             }
