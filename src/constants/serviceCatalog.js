@@ -28,7 +28,14 @@ export const SERVICE_STATUSES = [
   { value: "archived", label: "Archived", hint: "Gone from every app; kept for old orders", tone: "bg-slate-100 text-slate-500 border-slate-200" },
 ];
 
-export const SERVICE_UNITS = ["piece", "pair", "kg"];
+// Only Wash & Fold and Wash & Iron are billed per kg; everything else is per
+// piece. Same fixed name rule as the rider app and server (isKgLine/lineIsKg).
+const KG_NAMES = ["wash & fold", "wash and fold", "wash & iron", "wash and iron"];
+
+/** "kg" or "piece" — the unit every app bills this service in. */
+export function unitOf(serviceName) {
+  return KG_NAMES.includes(String(serviceName || "").trim().toLowerCase()) ? "kg" : "piece";
+}
 
 export const MAX_SERVICE_IMAGE_BYTES = 2 * 1024 * 1024;
 

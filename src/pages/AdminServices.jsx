@@ -7,20 +7,18 @@ import AdminSidebar from "../components/Layout/AdminSidebar";
 import ServiceEditor from "../components/Services/ServiceEditor";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { useHostelAuth } from "../context/HostelAuthContext";
-import { SERVICE_CATEGORIES, SERVICE_STATUSES, canonicalCategory, instantUnitOf } from "../constants/serviceCatalog";
-import { describeCatalogError, reorderServices, resolveCatalogFlag, serviceStatusOf, setServiceStatus } from "../utils/serviceCatalog";
-
-const VALID_UNITS = ["kg", "piece", "pair"];
+import { SERVICE_CATEGORIES, SERVICE_STATUSES, canonicalCategory, instantUnitOf, unitOf } from "../constants/serviceCatalog";
+import { describeCatalogError, reorderServices, serviceStatusOf, setServiceStatus } from "../utils/serviceCatalog";
 
 const STATUS_BY_VALUE = Object.fromEntries(SERVICE_STATUSES.map((s) => [s.value, s]));
 const CATEGORY_LABEL = Object.fromEntries(SERVICE_CATEGORIES.map((c) => [c.value, c.label]));
 
 const priceSummary = (s) => {
   const parts = [];
-  if (!VALID_UNITS.includes(s.unit)) parts.push("⚠ no unit");
-  if (Number(s.rateByKg) > 0) parts.push(`₹${s.rateByKg}/kg`);
-  if (Number(s.rateByPair) > 0) parts.push(`₹${s.rateByPair}/pair`);
-  else if (Number(s.rateByPiece) > 0) parts.push(`₹${s.rateByPiece}/pc`);
+  if (unitOf(s.serviceName) === "kg") {
+    parts.push(Number(s.rateByKg) > 0 ? `₹${s.rateByKg}/kg` : "⚠ no per-kg price");
+  } else if (Number(s.rateByPiece) > 0) parts.push(`₹${s.rateByPiece}/pc`);
+  else if (Number(s.rateByPair) > 0) parts.push(`₹${s.rateByPair}/pc`);
   const iu = instantUnitOf(s.serviceName);
   if (iu === "kg" && Number(s.instantRateByKg) > 0) parts.push(`Instant ₹${s.instantRateByKg}/kg`);
   else if (iu === "piece" && Number(s.instantRateByPiece) > 0) parts.push(`Instant ₹${s.instantRateByPiece}/pc`);
@@ -42,7 +40,6 @@ export default function AdminServices() {
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
   const [dragId, setDragId] = useState(null);
   const [actionError, setActionError] = useState("");
-  const [flags, setFlags] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -69,22 +66,6 @@ export default function AdminServices() {
         (err) => setLoadError(err.message),
       ),
     [],
-  );
-
-  // Services a rider added with a unit they chose, because none was set here.
-  useEffect(
-    () =>
-      onSnapshot(
-        collection(db, "catalog_flags"),
-        (snap) => setFlags(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-        () => setFlags([]), // viewers can't read flags
-      ),
-    [],
-  );
-
-  const missingUnit = useMemo(
-    () => (services || []).filter((s) => serviceStatusOf(s) !== "archived" && !VALID_UNITS.includes(s.unit)),
-    [services],
   );
 
   const handleSidebarTabChange = useCallback((tab) => {
@@ -246,41 +227,6 @@ export default function AdminServices() {
                 <button type="button" onClick={() => setActionError("")} className="font-semibold text-red-500 hover:text-red-700">Dismiss</button>
               )}
             </div>
-          )}
-
-          {(missingUnit.length > 0 || flags.length > 0) && (
-            <section className="overflow-hidden rounded-xl border border-amber-300 bg-white shadow-sm">
-              <h2 className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-amber-700">
-                Needs attention <span className="text-amber-500">· {missingUnit.length + flags.length}</span>
-                <span className="ml-2 normal-case tracking-normal font-medium text-amber-600">Set a unit so riders and customers see the right price</span>
-              </h2>
-              <ul className="divide-y divide-slate-100">
-                {missingUnit.map((s) => (
-                  <li key={s.id}>
-                    <button type="button" onClick={() => setEditing(s)} className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-slate-50">
-                      <span className="text-sm font-bold text-slate-800">{s.serviceName}</span>
-                      <span className="text-xs text-amber-700">No unit set</span>
-                    </button>
-                  </li>
-                ))}
-                {flags.map((f) => {
-                  const svc = (services || []).find((s) => String(s.serviceName || "").trim().toLowerCase() === String(f.serviceName || "").trim().toLowerCase());
-                  return (
-                    <li key={f.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <button type="button" disabled={!svc} onClick={() => svc && setEditing(svc)} className="min-w-0 flex-1 text-left">
-                        <p className="truncate text-sm font-bold text-slate-800">{f.serviceName}</p>
-                        <p className="truncate text-xs text-slate-500">Rider billed it per {f.unit} on order {f.orderId}</p>
-                      </button>
-                      {!isViewer && (
-                        <button type="button" onClick={() => run(() => resolveCatalogFlag(f.id))} className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                          Done
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
           )}
 
           {services === null ? (

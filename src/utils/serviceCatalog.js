@@ -1,12 +1,12 @@
 import {
   collection,
-  deleteDoc,
   doc,
   serverTimestamp,
   writeBatch,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
+import { unitOf } from "../constants/serviceCatalog";
 
 // Writes to the service catalog (`prices`). Every write also appends a
 // `prices_audit` record in the same batch. Services are never deleted —
@@ -115,18 +115,12 @@ export function validateService(form, allServices) {
     .some((k) => Number(form[k]) > 0);
   const subs = Array.isArray(form.subServices) ? form.subServices : [];
   if (!hasRate && subs.length === 0) errors.push("Set at least one rate, or add sub-services.");
-  // Every app reads the unit instead of guessing from the name, so it must
-  // be set and match the price that is filled in.
-  if (!["kg", "piece", "pair"].includes(form.unit)) {
-    errors.push("Choose a unit (per kg, per piece or per pair).");
-  } else if (subs.length === 0) {
-    const unitRate = {
-      kg: ["rateByKg", "instantRateByKg"],
-      piece: ["rateByPiece", "instantRateByPiece"],
-      pair: ["rateByPair"],
-    }[form.unit];
+  // The unit comes from the name (unitOf); the matching price must be set.
+  if (subs.length === 0) {
+    const kg = unitOf(name) === "kg";
+    const unitRate = kg ? ["rateByKg", "instantRateByKg"] : ["rateByPiece", "instantRateByPiece", "rateByPair"];
     if (!unitRate.some((k) => Number(form[k]) > 0)) {
-      errors.push(`The unit is per ${form.unit}, but no per-${form.unit} price is set.`);
+      errors.push(kg ? `"${name}" is billed per kg, but no per-kg price is set.` : "Set a per-piece price.");
     }
   }
   subs.forEach((sub, i) => {
@@ -166,6 +160,7 @@ export async function saveService(before, form) {
   const serviceId = before?.serviceId || ref.id;
   const data = {
     ...toFirestore(form, serviceId),
+    unit: unitOf(form.serviceName),
     updatedAt: serverTimestamp(),
     updatedBy: by.email || by.uid,
   };
@@ -231,11 +226,6 @@ export async function reorderServices(orderedServices) {
   if (changes.length === 0) return;
   auditDoc(batch, { serviceDocId: "(reorder)", action: "reorder", before: null, after: { changes }, by });
   await batch.commit();
-}
-
-/** Marks a rider's "unit set by rider" report as handled. */
-export async function resolveCatalogFlag(flagId) {
-  await deleteDoc(doc(db, "catalog_flags", flagId));
 }
 
 /** Uploads a service image and returns its public download URL. */

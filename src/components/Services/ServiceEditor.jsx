@@ -4,7 +4,7 @@ import {
   MAX_SERVICE_IMAGE_BYTES,
   SERVICE_CATEGORIES,
   SERVICE_STATUSES,
-  SERVICE_UNITS,
+  unitOf,
   canonicalCategory,
   instantUnitOf,
 } from "../../constants/serviceCatalog";
@@ -213,11 +213,8 @@ export default function ServiceEditor({ service, allServices, readOnly, onClose,
                 {categoryOptions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </Field>
-            <Field label="Unit" hint="How every app shows and bills this service. Household sub-services are always per piece.">
-              <select className={inputClass} value={form.unit || ""} onChange={set("unit")} disabled={readOnly}>
-                <option value="" disabled>Choose…</option>
-                {SERVICE_UNITS.map((u) => <option key={u} value={u}>per {u}</option>)}
-              </select>
+            <Field label="Unit" hint="Only Wash & Fold and Wash & Iron are per kg; everything else is per piece.">
+              <input className={inputClass} value={`per ${unitOf(form.serviceName)}`} disabled />
             </Field>
           </div>
 
