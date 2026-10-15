@@ -87,7 +87,7 @@ export default function AdminRegularOrders() {
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Admin Portal</p>
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-950 flex items-center gap-2">
                   <FiInbox size={20} className="text-blue-500" />
-                  Regular B2C Orders
+                  B2C Orders
                 </h1>
               </div>
             </div>

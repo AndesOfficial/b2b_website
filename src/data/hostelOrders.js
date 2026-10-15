@@ -23,7 +23,14 @@ export function getCategoryLabel(categoryKey, propertyName = "") {
 
 export function getCategoryForProperty(property) {
   const propLower = String(property).toLowerCase();
-  if (propLower.includes("hostel 99") || propLower.includes("hostel99") || propLower.includes("airbnb viman nagar")) {
+  if (
+    propLower.includes("hostel 99") ||
+    propLower.includes("hostel99") ||
+    propLower.includes("airbnb viman nagar") ||
+    propLower.includes("one 8") ||
+    propLower.includes("one8") ||
+    propLower.includes("zolo")
+  ) {
     return propLower.includes("airbnb") ? CATEGORIES.AIRBNB : CATEGORIES.LINEN;
   }
   if (["Samriddhi", "Gurukul"].includes(property)) return CATEGORIES.BULK_LAUNDRY;

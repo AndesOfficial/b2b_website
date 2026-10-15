@@ -232,6 +232,18 @@ function normalizeDetails(rawOrder) {
     return rawOrder.partnerItems;
   }
 
+  if (Array.isArray(rawOrder.items)) {
+    const details = {};
+    rawOrder.items.forEach((it) => {
+      const name = it?.name || it?.title;
+      const qty = Number(it?.qty ?? it?.quantity ?? it?.count ?? 0);
+      if (name && qty > 0) {
+        details[name] = (details[name] || 0) + qty;
+      }
+    });
+    if (Object.keys(details).length > 0) return details;
+  }
+
   return {};
 }
 
@@ -242,6 +254,13 @@ function inferCategoryFromProperty(property) {
   if (normalizedProperty === "regular customers") return ORDER_CATEGORIES.B2C_RETAIL;
   if (normalizedProperty === "issues") return ORDER_CATEGORIES.ISSUES;
   if (normalizedProperty.includes("airbnb") || normalizedProperty.includes("hotel")) return ORDER_CATEGORIES.AIRBNB;
+  if (
+    normalizedProperty.includes("one 8") ||
+    normalizedProperty.includes("one8") ||
+    normalizedProperty.includes("zolo")
+  ) {
+    return ORDER_CATEGORIES.LINEN;
+  }
 
   return getCategoryForProperty(property)?.key || ORDER_CATEGORIES.STUDENT_LAUNDRY;
 }
@@ -720,6 +739,25 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalized.details = rawOrder.partnerItems;
     } else if (rawOrder.details && typeof rawOrder.details === "string") {
       normalized.serviceBreakdownSummary = rawOrder.details;
+    } else if (rawOrder.details && typeof rawOrder.details === "object" && !Array.isArray(rawOrder.details)) {
+      normalized.details = rawOrder.details;
+    } else if (Array.isArray(rawOrder.items)) {
+      const details = {};
+      rawOrder.items.forEach((it) => {
+        const name = it?.name || it?.title;
+        const qty = Number(it?.qty ?? it?.quantity ?? it?.count ?? 0);
+        if (name && qty > 0) details[name] = (details[name] || 0) + qty;
+      });
+      if (Object.keys(details).length > 0) {
+        normalized.details = details;
+      }
+    }
+
+    if (normalized.details && typeof normalized.details === "object") {
+      const pcsSum = Object.values(normalized.details).reduce((s, v) => s + (Number(v) || 0), 0);
+      if (pcsSum > 0 && (!normalized.items || normalized.items === 0)) {
+        normalized.items = pcsSum;
+      }
     }
 
     // Dynamic Revenue Calculation (if missing)
@@ -729,7 +767,11 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       } else if ((normalized.type === "linen" || normalized.type === "airbnb") && normalized.details && typeof normalized.details === "object") {
         let linenTotal = 0;
         Object.entries(normalized.details).forEach(([item, quantity]) => {
-          const rate = ITEM_RATE_MAP[item] || 0;
+          const directRate = ITEM_RATE_MAP[item];
+          const matchedKey = directRate !== undefined
+            ? null
+            : Object.keys(ITEM_RATE_MAP).find((k) => k.toLowerCase() === String(item).toLowerCase());
+          const rate = directRate !== undefined ? directRate : (matchedKey ? ITEM_RATE_MAP[matchedKey] : 0);
           linenTotal += ((parseFloat(quantity) || 0) * rate);
         });
         normalized.amount = linenTotal;

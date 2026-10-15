@@ -15,8 +15,8 @@ export const ADMIN_TAB_CONFIG = {
   },
   regular: {
     key: "regular",
-    title: "Regular B2C Orders",
-    navLabel: "Regular Orders",
+    title: "B2C Orders",
+    navLabel: "B2C Orders",
     navIcon: FiInbox,
     showSidebar: true,
     showHeaderActions: false,

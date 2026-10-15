@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { FiX, FiLoader, FiPlus, FiTrash2 } from "react-icons/fi";
-import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG } from "../../config/orderRateCard";
+import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG, getItemsForPartner } from "../../config/orderRateCard";
 import { ORDER_CATEGORIES, ORDER_STATUSES, ORDER_TYPES } from "../../constants/orders";
 import { normalizePropertyName } from "../../utils/orderNormalization";
 import { getTodayString } from "../../utils/dateUtils";
@@ -54,6 +54,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
 
   const isStudent = orderCategory === "hostel" && hostelType === "student";
   const isItemized = orderCategory === "hotel" || (orderCategory === "hostel" && hostelType === "linen");
+  const partnerItems = useMemo(() => getItemsForPartner(propertyName), [propertyName]);
 
   const calculatedAmount = useMemo(() => {
     if (isStudent) {
@@ -491,21 +492,96 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
 
             {isItemized && (
               <div className="space-y-3 pt-2">
-                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Item Breakdown</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Item Breakdown {propertyName ? `(${propertyName} Catalogue)` : ""}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const existingNames = new Set(hotelItems.map(it => it.name.toLowerCase()));
+                      const toAdd = partnerItems
+                        .filter(name => !existingNames.has(name.toLowerCase()))
+                        .map(name => ({ name, quantity: 1, rate: ITEM_RATE_MAP[name] || "" }));
+                      setHotelItems([...hotelItems.filter(it => it.name.trim() !== ""), ...toAdd]);
+                    }}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg transition-colors"
+                  >
+                    + Pre-fill Catalogue
+                  </button>
+                </div>
+
+                {/* Quick catalogue chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                  {partnerItems.map((catName) => (
+                    <button
+                      key={catName}
+                      type="button"
+                      onClick={() => {
+                        const existingIdx = hotelItems.findIndex(it => it.name.toLowerCase() === catName.toLowerCase());
+                        if (existingIdx >= 0) {
+                          const next = [...hotelItems];
+                          next[existingIdx].quantity = Number(next[existingIdx].quantity || 0) + 1;
+                          setHotelItems(next);
+                        } else {
+                          setHotelItems([...hotelItems, { name: catName, quantity: 1, rate: ITEM_RATE_MAP[catName] || "" }]);
+                        }
+                      }}
+                      className="shrink-0 px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-lg text-[11px] font-semibold transition-colors"
+                    >
+                      + {catName}
+                    </button>
+                  ))}
+                </div>
+
                 {hotelItems.map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <input type="text" list="hotel-items-admin" placeholder="Item name" value={item.name} onChange={(event) => handleHotelItemChange(index, "name", event.target.value)} className="flex-1 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none" required />
+                    <input
+                      type="text"
+                      list="hotel-items-admin"
+                      placeholder="Item name (select or type)"
+                      value={item.name}
+                      onChange={(event) => handleHotelItemChange(index, "name", event.target.value)}
+                      className="flex-1 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none"
+                      required
+                    />
                     <datalist id="hotel-items-admin">
-                      {HOTEL_ITEMS.map((itemName) => <option key={itemName} value={itemName} />)}
+                      {partnerItems.map((itemName) => (
+                        <option key={itemName} value={itemName} />
+                      ))}
                     </datalist>
-                    <input type="number" min="1" value={item.quantity} onChange={(event) => handleHotelItemChange(index, "quantity", event.target.value)} className="w-20 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center" required />
-                    <input type="number" min="0" step="0.01" value={item.rate ?? ""} onChange={(event) => handleHotelItemChange(index, "rate", event.target.value)} className="w-24 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center" placeholder="Rate" required />
-                    <button type="button" onClick={() => setHotelItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(event) => handleHotelItemChange(index, "quantity", event.target.value)}
+                      className="w-20 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                      required
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.rate ?? ""}
+                      onChange={(event) => handleHotelItemChange(index, "rate", event.target.value)}
+                      className="w-24 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                      placeholder="Rate ₹"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setHotelItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                      className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    >
                       <FiTrash2 size={16} />
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={() => setHotelItems((current) => [...current, { name: "", quantity: 1, rate: "" }])} className="flex items-center gap-1.5 text-xs font-black text-indigo-600 hover:text-indigo-700 mt-2 uppercase tracking-wide">
+                <button
+                  type="button"
+                  onClick={() => setHotelItems((current) => [...current, { name: "", quantity: 1, rate: "" }])}
+                  className="flex items-center gap-1.5 text-xs font-black text-indigo-600 hover:text-indigo-700 mt-2 uppercase tracking-wide"
+                >
                   <FiPlus size={14} /> Add Line Item
                 </button>
                 <div className="pt-2">
