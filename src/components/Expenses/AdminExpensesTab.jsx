@@ -4,14 +4,12 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, auth } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  TrendingUp, CalendarDays, Plus, X, Upload, Trash2, Eye,
+  CalendarDays, Plus, X, Upload, Trash2, Eye,
   FileText, Loader2, ImageIcon, PieChart as PieChartIcon, Download,
-  ChevronDown, ChevronRight, Split, ChevronUp, ArrowDownLeft, ArrowUpRight
+  ChevronDown, Split, ChevronUp
 } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
-import { FaRupeeSign } from "react-icons/fa";
-import { normalizeDate } from "../../utils/orderNormalization";
 import { useHostelOrders } from "../../context/HostelAuthContext";
 
 /* ─── constants ─── */
@@ -41,15 +39,13 @@ const CAT_COLORS = {
   "Marketing Expense": "#EC4899",
 };
 
-
-
 const emptyForm = {
   amount: "", payee: "", payer: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid"
 };
 
 /* ─── Component ─── */
 export default function AdminExpensesTab() {
-  const { orders, isViewer } = useHostelOrders();
+  const { isViewer } = useHostelOrders();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -113,7 +109,7 @@ export default function AdminExpensesTab() {
   /* ─── Firestore listener (loads ALL b2b_expenses, splits in memory) ─── */
   useEffect(() => {
     let unsubExpenses = () => { };
-    
+
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       unsubExpenses();
       if (user) {
@@ -153,9 +149,8 @@ export default function AdminExpensesTab() {
     };
   }, []);
 
-  /* ─── Split expenses by account type ─── */
+  /* ─── Personal expenses (non-Andes account) ─── */
   const personalExpenses = useMemo(() => expenses.filter(e => e.accountType !== "andes"), [expenses]);
-  const andesExpenses = useMemo(() => expenses.filter(e => e.accountType === "andes"), [expenses]);
 
   /* ─── Filtering (Personal expense data for analytics) ─── */
   const filtered = useMemo(() => {
@@ -176,63 +171,7 @@ export default function AdminExpensesTab() {
     return list;
   }, [personalExpenses, dateFrom, dateTo, catFilter]);
 
-  /* ─── KPIs ─── */
-  const kpis = useMemo(() => {
-    let totalPaid = 0;
-    let totalPayable = 0;
-
-    filtered.forEach((e) => {
-      const amt = e.amount || 0;
-      const t = e.transactionType || e.type || "debit";
-      if (t === "debit" || t === "Paid") totalPaid += amt;
-      else if (t === "credit" || t === "Payable") totalPayable += amt;
-    });
-
-    let totalReceived = 0;
-    let receivables = 0;
-    orders.forEach((o) => {
-      if (o.status === "CANCELLED" || o.status === "Cancelled" || o.category === "ISSUES") return;
-      const oDate = normalizeDate(o.date || o.createdAt);
-      if (dateFrom && oDate < dateFrom) return;
-      if (dateTo && oDate > dateTo) return;
-      
-      const amt = Number(o.amount) || 0;
-      totalReceived += amt;
-      if (o.type !== "regular") {
-        receivables += amt;
-      }
-    });
-
-    const now = new Date();
-    const thisMonth = expenses.filter((e) => {
-      if (!e.date) return false;
-      const d = new Date(e.date);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    const monthTotal = thisMonth.reduce((s, e) => s + (e.amount || 0), 0);
-    const catMap = {};
-    filtered.forEach((e) => {
-      if (e.transactionType === "credit") return;
-      catMap[e.category] = (catMap[e.category] || 0) + (e.amount || 0);
-    });
-    let topCat = "—";
-    let topVal = 0;
-    Object.entries(catMap).forEach(([c, v]) => { if (v > topVal) { topCat = c; topVal = v; } });
-
-    let andesBalance = 2002969.22;
-    andesExpenses.forEach((e) => {
-      if (e.transactionType === "credit") {
-        andesBalance += Number(e.amount) || 0;
-      } else {
-        andesBalance -= Number(e.amount) || 0;
-      }
-    });
-
-    return { total: totalPaid, totalPaid, totalPayable, totalReceived, receivables, monthTotal, topCat, count: filtered.length, andesBalance };
-  }, [filtered, expenses, orders, dateFrom, dateTo, andesExpenses]);
-
   /* ─── Category Breakdown Data ─── */
-
   const pieData = useMemo(() => {
     const map = {};
     let total = 0;
@@ -242,7 +181,7 @@ export default function AdminExpensesTab() {
       map[e.category] = (map[e.category] || 0) + amt;
       total += amt;
     });
-    
+
     let sorted = Object.entries(map)
       .map(([name, value]) => ({ name, value, percentage: total > 0 ? (value / total) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
@@ -252,19 +191,19 @@ export default function AdminExpensesTab() {
     if (sorted.length > MAX_VISIBLE) {
       const topItems = sorted.slice(0, MAX_VISIBLE - 1);
       const remainingItems = sorted.slice(MAX_VISIBLE - 1);
-      
+
       const otherValue = remainingItems.reduce((sum, item) => sum + item.value, 0);
       const otherPercentage = remainingItems.reduce((sum, item) => sum + item.percentage, 0);
-      
+
       topItems.push({
         name: "All Others",
         value: otherValue,
         percentage: otherPercentage
       });
-      
+
       sorted = topItems;
     }
-    
+
     return sorted;
   }, [filtered]);
 
@@ -451,7 +390,7 @@ export default function AdminExpensesTab() {
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <button 
+            <button
                 onClick={() => {
                   const headers = ["Date", "Beneficiary (Payee)", "Paid By (Payer)", "Description", "Category", "Amount"];
                   const rows = filtered.map(e => [e.date, e.payee, e.payer || "", e.description, e.category, e.amount]);
@@ -461,11 +400,11 @@ export default function AdminExpensesTab() {
                   const localDateObj = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
                   const a = document.createElement("a"); a.href = url; a.download = `corporate_expenses_${localDateObj.toISOString().split("T")[0]}.csv`; a.click();
                   URL.revokeObjectURL(url);
-                }} 
+                }}
                 disabled={filtered.length === 0}
                 className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-[#E3F2FD] text-[12px] font-black text-[#1976D2] border border-brand-200 rounded-xl hover:bg-[#1976D2] hover:text-white transition shadow-sm active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#E3F2FD] disabled:hover:text-[#1976D2]"
               >
-                <Download size={14} /> Export 
+                <Download size={14} /> Export
             </button>
         </div>
         {!isViewer && (
@@ -474,31 +413,6 @@ export default function AdminExpensesTab() {
             <Plus size={18} /> Record Expense
           </button>
         )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <KpiCard 
-          icon={<ArrowDownLeft size={20} />} 
-          label="Revenue" 
-          value={`₹${kpis.totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
-          sub={
-            <div className="flex flex-col gap-0.5 mt-1.5 text-[10px]">
-              <div className="flex justify-between gap-6">
-                <span className="text-slate-400">B2C (Regular):</span>
-                <span className="font-extrabold text-slate-600">₹{(kpis.totalReceived - kpis.receivables).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between gap-6 border-t border-slate-100 pt-0.5 mt-0.5">
-                <span className="text-slate-400">B2B (Linen/Hostel):</span>
-                <span className="font-extrabold text-slate-600">₹{kpis.receivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-          } 
-          color="blue" 
-        />
-        <KpiCard icon={<FaRupeeSign size={20} />} label="Total Paid" value={`₹${kpis.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub={`${kpis.count} entries`} color="indigo" />
-        <KpiCard icon={<ArrowUpRight size={20} />} label="Receivables" value={`₹${kpis.receivables.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Non-Regular Sources" color="rose" />
-        <KpiCard icon={<FaRupeeSign size={20} />} label="Account Balance" value={`₹${kpis.andesBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} sub="Net Account Balance" color="emerald" />
       </div>
 
       {/* Sector Allocation */}
@@ -897,30 +811,6 @@ export default function AdminExpensesTab() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─── KPI Card sub-component ─── */
-function KpiCard({ icon, label, value, sub, color }) {
-  const colorMap = {
-    indigo: { bg: "bg-indigo-50", ring: "ring-indigo-100", icon: "text-indigo-500" },
-    blue: { bg: "bg-blue-50", ring: "ring-blue-100", icon: "text-blue-500" },
-    rose: { bg: "bg-rose-50", ring: "ring-rose-100", icon: "text-rose-500" },
-    amber: { bg: "bg-amber-50", ring: "ring-amber-100", icon: "text-amber-500" },
-    emerald: { bg: "bg-emerald-50", ring: "ring-emerald-100", icon: "text-emerald-500" },
-  };
-  const c = colorMap[color] || colorMap.indigo;
-  return (
-    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-start gap-4 ring-1 ${c.ring}`}>
-      <div className={`${c.bg} p-2.5 rounded-xl`}>
-        <span className={c.icon}>{icon}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-slate-400 font-medium">{label}</p>
-        <p className="text-lg font-bold text-slate-800 truncate">{value}</p>
-        <div className="text-[10px] text-slate-400">{sub}</div>
-      </div>
     </div>
   );
 }
