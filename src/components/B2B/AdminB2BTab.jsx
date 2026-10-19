@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot, query, limit, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, limit, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
   FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiDownload,
@@ -745,7 +745,23 @@ function B2BEditModal({ entry, onClose, onSuccess }) {
     items: Array.isArray(entry.items) ? entry.items.map((it) => ({ name: it.name || "", qty: it.qty ?? "" })) : [],
   }));
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to permanently delete this ${form.client} batch #${form.batchNo}? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "managerB2bEntries", entry.id));
+      onSuccess?.("B2B batch deleted successfully!");
+      onClose();
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+      setDeleting(false);
+    }
+  };
 
   const isH99 = isHostel99Client(form.client);
   const isLinen = isH99 || String(form.client || "").toLowerCase().includes("zolo");
@@ -1029,22 +1045,32 @@ function B2BEditModal({ entry, onClose, onSuccess }) {
           </div>
 
           {/* Footer Actions */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="px-4 py-2 font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+              className="px-4 py-2 font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1.5"
             >
-              Cancel
+              <FiTrash2 size={15} /> {deleting ? "Deleting..." : "Delete Batch"}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors flex items-center gap-2"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving || deleting}
+                className="px-4 py-2 font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors flex items-center gap-2"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
