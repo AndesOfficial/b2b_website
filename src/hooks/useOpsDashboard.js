@@ -43,23 +43,70 @@ export function rangeFor(period, anchor, custom) {
   return { from: anchor, to: anchor };
 }
 
-const inRange = (date, r) => !!date && date >= r.from && date <= r.to;
+export function getOrderDate(o) {
+  if (!o) return new Date(0);
+  if (o.date) {
+    const trimmed = String(o.date).trim();
+    const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+    if (dmyMatch) {
+      const [, day, month, year] = dmyMatch;
+      const d = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (o.pickupDate) {
+    const trimmed = String(o.pickupDate).trim();
+    const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+    if (dmyMatch) {
+      const [, day, month, year] = dmyMatch;
+      const d = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (o.createdAtRaw) {
+    const d = typeof o.createdAtRaw.toDate === "function" ? o.createdAtRaw.toDate() : new Date(o.createdAtRaw);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date(0);
+}
+
+export function getOrderDateStr(o) {
+  const d = getOrderDate(o);
+  if (isNaN(d.getTime()) || d.getTime() === 0) return "";
+  return toDateStr(d);
+}
+
+export function inRange(order, r) {
+  const d = getOrderDate(order);
+  if (isNaN(d.getTime()) || d.getTime() === 0) return false;
+  const from = new Date(r.from);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(r.to);
+  to.setHours(23, 59, 59, 999);
+  return d >= from && d <= to;
+}
+
 const sum = (list, fn) => list.reduce((s, x) => s + (Number(fn(x)) || 0), 0);
 const lower = (v) => String(v || "").trim().toLowerCase();
 
 // ── Classification ──────────────────────────────────────────────────────────
 
 const B2B_TYPES = new Set(["student", "linen", "airbnb"]);
-const B2B_SOURCES = new Set(["b2b", "hostels", "admin"]);
+const B2B_SOURCES = new Set(["b2b", "hostels", "admin", "manager_b2b"]);
 
 export function isB2C(o) {
-  if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue") return false;
+  if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue" || o.isB2bRoomSync) return false;
   return o.source === "cartdetails" || o.source === "website" || (o.source === "admin" && o.type === "regular");
 }
 
 export function isB2B(o) {
   if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue" || o.category === "ISSUES") return false;
   if (o.source === "cartdetails" || (o.source === "admin" && o.type === "regular")) return false;
+  if (o.source === "manager_b2b") return true;
   const t = lower(o.type);
   const cat = lower(o.category);
   return (
@@ -73,9 +120,10 @@ const isCancelled = (o) => o.status === "Cancelled" || ["cancelled", "canceled",
 /** Groups property names into the client (brand) that is billed. */
 export function clientOf(property) {
   const p = lower(property);
-  if (p.startsWith("hostel99") || p.startsWith("hostel 99")) return "Hostel 99";
+  if (p.includes("hostel 99") || p.includes("hostel99") || p.startsWith("99")) return "Hostel 99";
+  if (p.includes("one 8") || p.includes("one8")) return "One 8";
+  if (p.includes("zolo")) return "Zolo";
   if (p.startsWith("tribe")) return "Tribe";
-  if (p.startsWith("zolo")) return "Zolo";
   if (p.startsWith("treebo")) return "Treebo";
   if (p.includes("airbnb")) return "Airbnb";
   return property || "Unknown";
@@ -100,6 +148,7 @@ function daysInMonthOf(dateStr) {
 // New-schema b2b_orders keep weight/amount per room instead of on the order.
 function b2bWeight(o) {
   if (Number(o.weight) > 0) return Number(o.weight);
+  if (Number(o.kg) > 0) return Number(o.kg);
   if (Number(o.hostelTotalWeightKg) > 0) return Number(o.hostelTotalWeightKg);
   return Array.isArray(o.roomOrders) ? sum(o.roomOrders, (r) => r.weightKg) : 0;
 }
@@ -109,6 +158,7 @@ function b2bAmount(o) {
     return HOSTEL_99_MONTHLY_REVENUE / daysInMonthOf(o.date);
   }
   if (Number(o.amount) > 0) return Number(o.amount);
+  if (Number(o.calculatedRevenue) > 0) return Number(o.calculatedRevenue);
   return Array.isArray(o.roomOrders) ? sum(o.roomOrders, (r) => r.amount) : 0;
 }
 
@@ -193,7 +243,7 @@ function serviceLines(o) {
 const isPaid = (o) => ["completed", "paid", "success"].includes(lower(o.paymentStatus)) || !!o.paymentRecordedAt || !!o.paymentDoneOnDelivery;
 
 function periodMetrics(orders, range) {
-  const all = orders.filter((o) => inRange(o.date, range));
+  const all = orders.filter((o) => inRange(o, range));
   const b2cAll = all.filter(isB2C);
   const b2c = b2cAll.filter((o) => !isCancelled(o));
   const b2b = all.filter((o) => isB2B(o) && !isCancelled(o));
@@ -375,7 +425,8 @@ function trendSeries(orders, endDate, days) {
     rows.set(d, { date: d, label: d.slice(8) + "/" + d.slice(5, 7), b2bKg: 0, b2cKg: 0, b2bRevenue: 0, b2cRevenue: 0, hasH99: false });
   }
   for (const o of orders) {
-    const row = rows.get(o.date);
+    const dateStr = getOrderDateStr(o);
+    const row = rows.get(dateStr);
     if (!row || isCancelled(o)) continue;
     if (isB2B(o)) {
       row.b2bKg += b2bWeight(o);

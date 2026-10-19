@@ -1,7 +1,7 @@
 import { ORDER_CATEGORIES, ORDER_CHANNELS, ORDER_STATUSES, ORDER_TYPES, normalizeOrderStatus } from "../constants/orders";
 import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
-import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE } from "../config/orderRateCard";
+import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue } from "../config/orderRateCard";
 import { normalizePhone } from "./phoneUtils";
 
 export function getDaysInMonthForDate(dateStr) {
@@ -914,6 +914,43 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
         normalized.amount = linenTotal;
       }
     }
+  }
+
+  if (source === "manager_b2b") {
+    const isH99 = isHostel99Property(rawOrder.client || rawOrder.property);
+    const clientName = isH99 ? "Hostel 99" : normalizePropertyName(rawOrder.client || rawOrder.property || "B2B Client");
+    normalized.property = clientName;
+    normalized.partnerName = clientName;
+    normalized.client = clientName;
+    normalized.category = ORDER_CATEGORIES.LINEN;
+    normalized.type = ORDER_TYPES.LINEN;
+    normalized.source = "manager_b2b";
+    normalized.kg = Number(rawOrder.kg) || 0;
+    normalized.weight = Number(rawOrder.kg) || 0;
+    normalized.items = Number(rawOrder.clothes) || 0;
+    normalized.clothes = Number(rawOrder.clothes) || 0;
+    normalized.studentCount = Number(rawOrder.students) || 0;
+    normalized.students = Number(rawOrder.students) || 0;
+    normalized.date = rawOrder.date || "";
+    normalized.pickupDate = rawOrder.date || "";
+    normalized.batchNo = rawOrder.batchNo || "1";
+    normalized.photoUrl = rawOrder.photoUrl || "";
+    normalized.note = rawOrder.note || "";
+    normalized.rawStatus = rawOrder.status || "pending";
+    normalized.status = rawOrder.status === "cancelled" ? "Cancelled" : (rawOrder.status === "verified" ? "Delivered" : "Processing");
+    normalized.itemsList = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+
+    const details = {};
+    if (Array.isArray(rawOrder.items)) {
+      rawOrder.items.forEach((it) => {
+        if (it?.name && Number(it.qty) > 0) details[it.name] = Number(it.qty);
+      });
+    }
+    normalized.details = details;
+
+    const rev = calculateBatchRevenue(rawOrder);
+    normalized.calculatedRevenue = rev;
+    normalized.amount = rev;
   }
 
   if (source === "hostels") {

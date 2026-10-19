@@ -5,6 +5,7 @@ import { getDoc, doc, onSnapshot, collection, setDoc, query, where, or, limit, o
 import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orders";
 import { normalizeOrder, normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
+import { isHostel99Client, calculateBatchRevenue } from "../config/orderRateCard";
 
 const HostelAuthContext = createContext(null);
 const EXTERNAL_ORDER_SOURCES = new Set(["website", "cartdetails"]);
@@ -41,6 +42,7 @@ export function HostelAuthProvider({ children }) {
   const [appComplaints, setAppComplaints] = useState([]);
   const [hostelComplaints, setHostelComplaints] = useState([]); // hostel form complaints
   const [managerIssues, setManagerIssues] = useState([]); // manager reported issues (B2B & B2C)
+  const [managerB2bEntries, setManagerB2bEntries] = useState([]); // factory & store manager B2B batches
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
   // Who is signed in, once resolved: { uid, role, allowedProperties }.
@@ -65,6 +67,7 @@ export function HostelAuthProvider({ children }) {
         setAppComplaints([]);
         setHostelComplaints([]);
         setManagerIssues([]);
+        setManagerB2bEntries([]);
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         setIsDataLoaded(true);
@@ -131,7 +134,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 6) setIsDataLoaded(true);
+        if (loadedCount >= 7) setIsDataLoaded(true);
       };
 
       const getAllAliases = (canonicalNames) => {
@@ -207,6 +210,8 @@ export function HostelAuthProvider({ children }) {
             fieldsToCheck = ["property", "hostelName", "hostel", "location"];
           } else if (collectionName === "b2b_orders") {
             fieldsToCheck = ["property", "hostel", "partnerName", "partnername"];
+          } else if (collectionName === "managerB2bEntries") {
+            fieldsToCheck = ["client", "property", "partnerName"];
           }
 
           const chunksData = new Map();
@@ -263,6 +268,7 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("b2b_admin_edits", "admin", setFirestoreEdits);
       setupCollectionListener("hostels_orders", "hostels", setHostelsOrders);
       setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
+      setupCollectionListener("managerB2bEntries", "manager_b2b", setManagerB2bEntries);
       setupCollectionListener("normal_complaint", "complaint", setAppComplaints);
       setupCollectionListener("complaint", "complaint", setHostelComplaints);
       setupCollectionListener("manager_issues", "manager_issues", setManagerIssues);
@@ -476,9 +482,39 @@ export function HostelAuthProvider({ children }) {
       }
     });
 
+    // 7. Factory & Store Manager B2B Entries (One 8, Zolo stays, Hostel 99)
+    const h99CountsByDate = {};
+    managerB2bEntries.forEach((entry) => {
+      if (isHostel99Client(entry.client) && entry.status !== "Cancelled" && entry.rawStatus !== "cancelled") {
+        const d = entry.date || "unknown";
+        h99CountsByDate[d] = (h99CountsByDate[d] || 0) + 1;
+      }
+    });
+
+    managerB2bEntries.forEach((entry) => {
+      const isH99 = isHostel99Client(entry.client);
+      const countOnDate = isH99 ? (h99CountsByDate[entry.date] || 1) : 1;
+      const rev = calculateBatchRevenue(entry, countOnDate);
+      const normalizedEntry = {
+        ...entry,
+        calculatedRevenue: rev,
+        amount: rev,
+        h99BatchesOnDate: countOnDate,
+      };
+
+      const existingKey = findExistingKey(normalizedEntry);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), normalizedEntry));
+        registerAliases(existingKey, normalizedEntry);
+      } else {
+        primaryRecordsMap.set(normalizedEntry.id, normalizedEntry);
+        registerAliases(normalizedEntry.id, normalizedEntry);
+      }
+    });
+
     const merged = [...primaryRecordsMap.values()];
     return merged.filter(isVisibleMergedOrder);
-  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders, appComplaints, hostelComplaints, managerIssues]);
+  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders, appComplaints, hostelComplaints, managerIssues, managerB2bEntries]);
 
   const orders = useMemo(() => {
     if (!client) return [];

@@ -8,109 +8,15 @@ import {
 import { FaIndianRupeeSign, FaWeightHanging } from "react-icons/fa6";
 import LoadingSpinner from "../Shared/LoadingSpinner";
 import EmptyState from "../Shared/EmptyState";
-import { ONE8_RATE_MAP, ZOLO_RATE_MAP, ITEM_RATE_MAP, HOSTEL_99_MONTHLY_REVENUE } from "../../config/orderRateCard";
-
-const ONE8_PRICES = {
-  "wiping cloth": 9,
-  "chef coat": 13,
-  "t-shirt": 13,
-  "tshirt": 13,
-  "t shirt": 13,
-  "pant": 13,
-  "pants": 13,
-  "trouser": 13,
-  "apron": 9,
-  "napkin": 6,
-  "blazer": 200,
-  "cap": 5,
-};
-
-export function getDaysInMonth(dateStr) {
-  if (!dateStr || typeof dateStr !== "string") {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  }
-  const dStr = dateStr.split("T")[0];
-  const parts = dStr.split(/[-/]/);
-  if (parts.length >= 2) {
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
-      return new Date(year, month, 0).getDate();
-    }
-  }
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-}
-
-export function isHostel99Client(clientName) {
-  const c = String(clientName || "").trim().toLowerCase();
-  return c.includes("hostel 99") || c.includes("hostel99") || c.startsWith("99");
-}
-
-export function calculateBatchRevenue(entry, countOnDate = 1) {
-  const clientLower = String(entry.client || "").toLowerCase();
-
-  // Hostel 99 orders have a combined fixed monthly revenue of ₹28,000 across all properties.
-  // For each order daily, divide 28,000 by (number of days in month * count of batches on that day).
-  if (isHostel99Client(clientLower)) {
-    const daysInMonth = getDaysInMonth(entry.date);
-    const dailyTotal = HOSTEL_99_MONTHLY_REVENUE / daysInMonth;
-    const safeCount = Math.max(1, countOnDate || 1);
-    return parseFloat((dailyTotal / safeCount).toFixed(2));
-  }
-
-  const isOne8 = clientLower.includes("one 8") || clientLower.includes("one8");
-  const isZolo = clientLower.includes("zolo");
-  
-  let total = 0;
-  let hasItemRevenue = false;
-
-  if (Array.isArray(entry.items) && entry.items.length > 0) {
-    entry.items.forEach(it => {
-      const qty = Number(it.qty) || 0;
-      if (qty <= 0) return;
-      const nameLower = String(it.name || "").trim().toLowerCase();
-      let rate = 0;
-      if (isOne8) {
-        rate = ONE8_PRICES[nameLower] ?? (ONE8_RATE_MAP[it.name] || 0);
-      } else if (isZolo) {
-        rate = ZOLO_RATE_MAP[it.name] ??
-          (nameLower.includes("pillow") ? 10 :
-           nameLower.includes("towel") ? 12 :
-           nameLower.includes("single bedsheet") || nameLower.includes("single bed sheet") ? 13 :
-           nameLower.includes("double bedsheet") || nameLower.includes("double bed sheet") ? 15 :
-           nameLower.includes("single duvet") ? 30 :
-           nameLower.includes("double duvet") || nameLower.includes("king duvet") ? 35 :
-           (ITEM_RATE_MAP[it.name] || 0));
-      } else {
-        rate = ITEM_RATE_MAP[it.name] || 
-          (nameLower.includes("bedsheet") ? 30 : 
-           nameLower.includes("towel") ? 20 : 
-           nameLower.includes("blanket") ? 110 : 
-           nameLower.includes("cover") ? 25 : 15);
-      }
-
-      if (rate > 0) {
-        total += qty * rate;
-        hasItemRevenue = true;
-      }
-    });
-  }
-
-  // If entry already carries an explicitly confirmed calculatedRevenue, respect it
-  if (!hasItemRevenue && Number(entry.calculatedRevenue) > 0) {
-    return Number(entry.calculatedRevenue);
-  }
-
-  // Fallback to bulk kg calculation if no itemized rate matched
-  if (!hasItemRevenue && Number(entry.kg) > 0) {
-    const kgRate = 35; // Standard B2B / hostel rate per kg
-    total = Number(entry.kg) * kgRate;
-  }
-
-  return Math.round(total);
-}
+import {
+  ONE8_RATE_MAP,
+  ZOLO_RATE_MAP,
+  ITEM_RATE_MAP,
+  HOSTEL_99_MONTHLY_REVENUE,
+  isHostel99Client,
+  getDaysInMonth,
+  calculateBatchRevenue,
+} from "../../config/orderRateCard";
 
 const getTodayStr = () => new Date().toISOString().split("T")[0];
 const getDaysAgoStr = (days) => {
@@ -195,8 +101,11 @@ export default function AdminB2BTab() {
       setDateFrom(getDaysAgoStr(6));
       setDateTo(today);
     } else if (preset === "month") {
+      const year = parseInt(today.slice(0, 4), 10);
+      const month = parseInt(today.slice(5, 7), 10);
+      const lastDay = new Date(year, month, 0).getDate();
       setDateFrom(`${today.slice(0, 8)}01`);
-      setDateTo(today);
+      setDateTo(`${today.slice(0, 8)}${String(lastDay).padStart(2, "0")}`);
     } else if (preset === "all") {
       setDateFrom("");
       setDateTo("");
@@ -248,29 +157,50 @@ export default function AdminB2BTab() {
 
   // Aggregate KPI metrics
   const kpis = useMemo(() => {
-    let totalRevenue = 0;
+    let nonH99Revenue = 0;
     let totalKg = 0;
     let totalClothes = 0;
     let totalStudents = 0;
     let verifiedBatches = 0;
+    const h99Entries = [];
 
     filteredEntries.forEach((e) => {
-      totalRevenue += Number(e.calculatedRevenue) || 0;
       totalKg += Number(e.kg) || 0;
       totalClothes += Number(e.clothes) || 0;
       totalStudents += Number(e.students) || 0;
       if (e.status === "verified") verifiedBatches++;
+
+      if (isHostel99Client(e.client)) {
+        h99Entries.push(e);
+      } else {
+        nonH99Revenue += Number(e.calculatedRevenue) || 0;
+      }
     });
+
+    const h99Dates = new Set();
+    h99Entries.forEach((e) => {
+      if (e.date) h99Dates.add(e.date);
+    });
+
+    const isFullMonth = dateFrom && dateTo && dateFrom.slice(8, 10) === "01" &&
+      dateTo === `${dateTo.slice(0, 8)}${new Date(parseInt(dateTo.slice(0, 4), 10), parseInt(dateTo.slice(5, 7), 10), 0).getDate()}`;
+
+    const hostel99Revenue = isFullMonth
+      ? HOSTEL_99_MONTHLY_REVENUE
+      : Array.from(h99Dates).reduce((sum, d) => sum + (HOSTEL_99_MONTHLY_REVENUE / getDaysInMonth(d)), 0);
+
+    const totalRevenue = nonH99Revenue + (h99Dates.size > 0 ? hostel99Revenue : 0);
 
     return {
       totalBatches: filteredEntries.length,
-      totalRevenue,
+      totalRevenue: Math.round(totalRevenue),
+      hostel99Revenue: Math.round(h99Dates.size > 0 ? hostel99Revenue : 0),
       totalKg: Math.round(totalKg * 10) / 10,
       totalClothes,
       totalStudents,
       verifiedBatches,
     };
-  }, [filteredEntries]);
+  }, [filteredEntries, dateFrom, dateTo]);
 
   // CSV Export
   const handleExportCSV = () => {
@@ -338,7 +268,7 @@ export default function AdminB2BTab() {
               ₹{Math.round(kpis.totalRevenue).toLocaleString("en-IN")}
             </div>
             <div className="text-[11px] font-semibold text-slate-400 mt-1">
-              One8, Hostel 99 & catalogue rates
+              {kpis.hostel99Revenue > 0 ? `Includes ₹${kpis.hostel99Revenue.toLocaleString("en-IN")} Hostel 99 share` : "One8, Hostel 99 & catalogue rates"}
             </div>
           </div>
         </div>
@@ -555,6 +485,7 @@ export default function AdminB2BTab() {
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {filteredEntries.map((e) => {
                   const isOne8 = (e.client || "").toLowerCase().includes("one8") || (e.client || "").toLowerCase().includes("one 8");
+                  const isZolo = (e.client || "").toLowerCase().includes("zolo");
                   const isHostel99 = isHostel99Client(e.client);
                   const daysInMonth = getDaysInMonth(e.date);
                   const isVerified = e.status === "verified";
@@ -645,6 +576,11 @@ export default function AdminB2BTab() {
                         {isOne8 && (
                           <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
                             One8 Rates
+                          </div>
+                        )}
+                        {isZolo && (
+                          <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">
+                            Zolo Rates
                           </div>
                         )}
                         {isHostel99 && (
