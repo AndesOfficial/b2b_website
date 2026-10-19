@@ -24,6 +24,7 @@ function exportSingleCSV(order) {
   ];
   if (order.customerName) rows.push(["Customer", order.customerName]);
   if (order.customerNumber) rows.push(["Phone", order.customerNumber]);
+  if (order.pickupRiderName || order.riderName) rows.push(["Pickup Rider", order.pickupRiderName || order.riderName]);
   if (order.issueType) rows.push(["Issue Type", order.issueType]);
   if (order.reportedBy) rows.push(["Reported By", order.reportedBy]);
   if (order.solution) rows.push(["Solution", `"${order.solution.replace(/"/g, '""')}"`]);
@@ -105,6 +106,7 @@ export default function ClientOrderDetail() {
   if (order.studentCount) fields.push({ label: "Students", value: order.studentCount });
   if (order.customerName) fields.push({ icon: <FiUser />, label: "Customer Name", value: order.customerName });
   if (order.customerNumber) fields.push({ icon: <FiPhone />, label: "Customer Phone", value: order.customerNumber });
+  if (order.pickupRiderName || order.riderName) fields.push({ icon: <FiUser />, label: "Pickup Rider", value: order.pickupRiderName || order.riderName });
   if (order.issueType) fields.push({ icon: <FiAlertCircle />, label: "Issue Type", value: order.issueType });
   if (order.reportedBy) fields.push({ label: "Reported By", value: order.reportedBy });
   if (order.solution) fields.push({ label: "Solution / Resolution", value: order.solution });

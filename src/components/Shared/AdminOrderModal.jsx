@@ -343,6 +343,28 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
               )}
             </div>
           )}
+
+          {/* Pickup Rider & Schedule Information */}
+          <div className="mt-4 bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex items-center justify-between text-[12px]">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🚴</span>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pickup Rider</p>
+                <p className="font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                  <span>{order.pickupRiderName || order.riderName || "Not assigned"}</span>
+                  {order.riderPhone && (
+                    <a href={`tel:${order.riderPhone}`} className="text-blue-600 font-medium hover:underline text-[11px]" title={`Call rider (${order.riderPhone})`}>
+                      📞 {order.riderPhone}
+                    </a>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pickup Slot</p>
+              <p className="font-bold text-slate-700">{formatTimeSlot(order.pickupDate || order.date) || "—"}</p>
+            </div>
+          </div>
         </div>
 
         {/* Service Breakdown */}

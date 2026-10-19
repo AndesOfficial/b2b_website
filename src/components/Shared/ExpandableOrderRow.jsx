@@ -273,6 +273,7 @@ export default function ExpandableOrderRow({ order, showProperty = false, viewMo
 
               {order.issueType ? <MetricCard label="Issue Type" value={order.issueType} /> : null}
               {order.reportedBy ? <MetricCard label="Reported By" value={order.reportedBy} /> : null}
+              {(order.pickupRiderName || order.riderName) ? <MetricCard label="Pickup Rider" value={order.pickupRiderName || order.riderName} /> : null}
               {order.solution ? <MetricCard label="Solution" value={order.solution} /> : null}
             </div>
 

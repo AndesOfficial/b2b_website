@@ -606,6 +606,24 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     source,
   };
 
+  const pickupRider =
+    rawOrder.pickupRiderName ||
+    rawOrder.riderName ||
+    (typeof rawOrder.rider === "string" ? rawOrder.rider : rawOrder.rider?.name || rawOrder.rider?.riderName) ||
+    (typeof rawOrder.assignedTo === "string" ? rawOrder.assignedTo : rawOrder.assignedTo?.name || rawOrder.assignedTo?.riderName) ||
+    rawOrder.deliveryBy ||
+    rawOrder.assignedRiderName ||
+    (rawOrder.riderId ? "Assigned Rider" : "");
+
+  normalized.riderName = pickupRider;
+  normalized.pickupRiderName = pickupRider;
+  normalized.riderPhone =
+    rawOrder.riderPhone ||
+    rawOrder.pickupRiderPhone ||
+    rawOrder.riderMobile ||
+    (typeof rawOrder.rider === "object" ? rawOrder.rider?.phone || rawOrder.rider?.mobile : "") ||
+    "";
+
   if (source === "website") {
     normalized.category = ORDER_CATEGORIES.B2C_RETAIL;
     normalized.type = ORDER_TYPES.REGULAR;

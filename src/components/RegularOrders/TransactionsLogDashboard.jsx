@@ -325,7 +325,13 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                         </td>
                       );
                     })()}
-                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{formatTimeSlot(order.pickupDate || order.date) || "—"}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <p className="text-[12px] font-bold text-slate-700">{formatTimeSlot(order.pickupDate || order.date) || "—"}</p>
+                      <p className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5" title="Pickup Rider">
+                        <span>🚴</span>
+                        <span>{order.pickupRiderName || order.riderName || "Not assigned"}</span>
+                      </p>
+                    </td>
                     <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{formatTimeSlot(order.deliveryDate) || "Pending"}</td>
                     {/* Status */}
                     <td className="px-3 py-3 text-center">
@@ -504,9 +510,15 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                         <FiCalendar size={12} className="text-blue-600" />
                         <span>Placed: <strong className="text-slate-900 font-black">{placed.dateStr}</strong> {placed.timeStr && <span className="text-[9px] font-medium text-slate-400">({placed.timeStr})</span>}</span>
                       </div>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[9px] uppercase tracking-widest text-slate-400">Pickup:</span>
                         <span className="text-slate-700 font-bold">{formatTimeSlot(order.pickupDate || order.date) || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600" title="Pickup Rider">
+                        <span>🚴</span>
+                        <span>{order.pickupRiderName || order.riderName || "Not assigned"}</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">

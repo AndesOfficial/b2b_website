@@ -74,7 +74,7 @@ export function useRegularOrders(orders, channelFilter, searchQuery = "") {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return filteredOrders;
     return filteredOrders.filter((order) =>
-      `${order.customerName || ""}\0${order.customerNumber || ""}\0${order.address || ""}`.toLowerCase().includes(q)
+      `${order.customerName || ""}\0${order.customerNumber || ""}\0${order.address || ""}\0${order.riderName || ""}\0${order.pickupRiderName || ""}`.toLowerCase().includes(q)
     );
   }, [filteredOrders, searchQuery]);
 
