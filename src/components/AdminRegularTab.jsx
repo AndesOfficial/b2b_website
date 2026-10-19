@@ -11,13 +11,13 @@ import TransactionsLogDashboard from "./RegularOrders/TransactionsLogDashboard";
 import RegularOrderFormModal from "./RegularOrders/RegularOrderFormModal";
 
 import { useRegularAnalytics } from "../hooks/useRegularAnalytics";
-import { getTodayString } from "../utils/dateUtils";
+import { getTodayString, getMonthStartString } from "../utils/dateUtils";
 
 const SUB_TABS = ["Overview", "Customers", "Analytics", "Placed Orders"];
 
 export default function AdminRegularTab({ orders, registeredUserIds, onAddOrder, onEditOrder, onDeleteOrder }) {
   const [activeSubTab, setActiveSubTab] = useState("Overview");
-  const [localDateFrom, setLocalDateFrom] = useState(() => getTodayString());
+  const [localDateFrom, setLocalDateFrom] = useState(() => getMonthStartString());
   const [localDateTo, setLocalDateTo] = useState(() => getTodayString());
 
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -6,6 +6,7 @@ import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orde
 import { normalizeOrder, normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
 import { isHostel99Client, calculateBatchRevenue } from "../config/orderRateCard";
+import { B2C_OCTOBER_2026_ORDERS } from "../data/b2cVerifiedLedger";
 
 const HostelAuthContext = createContext(null);
 const EXTERNAL_ORDER_SOURCES = new Set(["website", "cartdetails"]);
@@ -366,11 +367,34 @@ export function HostelAuthProvider({ children }) {
     // Map to detect duplicate cart submission retries from mobile app
     const b2cUserSlotFingerprints = new Map();
 
+    // Seed authoritative verified October 2026 audit orders (1–18 Oct)
+    const octVerifiedIdSet = new Set(B2C_OCTOBER_2026_ORDERS.map((o) => o.id));
+    B2C_OCTOBER_2026_ORDERS.forEach((order) => {
+      primaryRecordsMap.set(order.id, order);
+      registerAliases(order.id, order);
+      const phone = String(order.customerNumber || "").replace(/\D/g, "").slice(-10);
+      const day = order.date || order.pickupDate;
+      if (phone.length === 10 && day) {
+        b2cUserSlotFingerprints.set(`${phone}_${day}`, order.id);
+      }
+    });
+
     cartOrders.forEach(order => {
       if (order.type === "rider_tracking" || order.isB2bRoomSync) return;
 
+      const orderDay = order.date || order.pickupDate;
+      // For Oct 1-18 2026 audit window, preserve the verified audit records as authoritative
+      if (orderDay >= "2026-10-01" && orderDay <= "2026-10-18") {
+        if (octVerifiedIdSet.has(order.id)) return;
+        const phone = String(order.customerNumber || "").replace(/\D/g, "").slice(-10);
+        if (phone.length === 10 && b2cUserSlotFingerprints.has(`${phone}_${orderDay}`)) {
+          return;
+        }
+      }
+
       const existingKey = findExistingKey(order);
       if (existingKey) {
+        if (octVerifiedIdSet.has(existingKey)) return;
         primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
         registerAliases(existingKey, order);
         return;
@@ -385,6 +409,7 @@ export function HostelAuthProvider({ children }) {
         const fp = `${phone}_${day}`;
         if (b2cUserSlotFingerprints.has(fp)) {
           const matchedPrimaryId = b2cUserSlotFingerprints.get(fp);
+          if (octVerifiedIdSet.has(matchedPrimaryId)) return;
           const matchedOrder = primaryRecordsMap.get(matchedPrimaryId);
           if (matchedOrder) {
             primaryRecordsMap.set(matchedPrimaryId, smartMergeOrders(matchedOrder, order));

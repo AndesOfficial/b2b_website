@@ -5,7 +5,7 @@ import { getTodayString, formatDateString, getMonthStartString } from '../../uti
 const PRESETS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'Custom'];
 
 export default function RegularDateFilter({ dateFrom, dateTo, setDateFrom, setDateTo, compact = false }) {
-  const [activePreset, setActivePreset] = useState('Daily');
+  const [activePreset, setActivePreset] = useState('Monthly');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
