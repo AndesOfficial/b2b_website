@@ -1,8 +1,31 @@
 import { ORDER_CATEGORIES, ORDER_CHANNELS, ORDER_STATUSES, ORDER_TYPES, normalizeOrderStatus } from "../constants/orders";
 import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
-import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG } from "../config/orderRateCard";
+import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE } from "../config/orderRateCard";
 import { normalizePhone } from "./phoneUtils";
+
+export function getDaysInMonthForDate(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  }
+  const dStr = dateStr.split("T")[0];
+  const parts = dStr.split(/[-/]/);
+  if (parts.length >= 2) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+      return new Date(year, month, 0).getDate();
+    }
+  }
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
+
+export function isHostel99Property(property) {
+  const p = String(property || "").trim().toLowerCase();
+  return p.includes("hostel 99") || p.includes("hostel99") || p.startsWith("99");
+}
 
 // --- ADDED ALIASES HERE TO FIX CASE SENSITIVITY AND DUPLICATES ---
 export const CANONICAL_PROPERTY_NAMES = {
@@ -94,41 +117,41 @@ export const CANONICAL_PROPERTY_NAMES = {
   orchid: "Orchid",
   "orchid hostel": "Orchid",
 
-  // Other properties
+  // Other properties - all Hostel 99 branches combined
   hostel99: "Hostel 99",
   "hostel 99": "Hostel 99",
-  "hostel99 koregaon park": "Hostel99 koregaon park",
-  "hostel 99 koregaon park": "Hostel99 koregaon park",
-  "hostel99 yerwada 1": "Hostel99 Yerwada 1",
-  "hostel99 yerwada 2": "Hostel99 Yerwada 2",
-  "hostel 99 no-88": "Hostel 99 no-88",
-  "hostel99 no. 88": "Hostel 99 no-88",
-  "hostel99 no.88": "Hostel 99 no-88",
-  "hostel99 no88": "Hostel 99 no-88",
-  "hostel99 no 88": "Hostel 99 no-88",
-  "hostel 99 no. 88": "Hostel 99 no-88",
-  "hostel 99 no 88": "Hostel 99 no-88",
-  "hostel 99 no88": "Hostel 99 no-88",
-  "hostel 99 no-3": "Hostel 99 no-3",
-  "hostel99 no. 3": "Hostel 99 no-3",
-  "hostel99 no.3": "Hostel 99 no-3",
-  "hostel99 no3": "Hostel 99 no-3",
-  "hostel99 no 3": "Hostel 99 no-3",
-  "hostel 99 no. 3": "Hostel 99 no-3",
-  "hostel 99 no 3": "Hostel 99 no-3",
-  "hostel 99 no3": "Hostel 99 no-3",
-  "hostel 99 n0 3": "Hostel 99 no-3",
-  "hostel 99 n03": "Hostel 99 no-3",
-  "hostel99 n0 3": "Hostel 99 no-3",
-  "hostel99 n03": "Hostel 99 no-3",
-  "hostel 99 - 3": "Hostel 99 - 3",
-  "hostel 99 - 88": "Hostel 99 - 88",
-  "hostel 99 - 4": "Hostel 99 - 4",
-  "hostel 99 no-4": "Hostel 99 - 4",
-  "hostel 99 no 4": "Hostel 99 - 4",
-  "hostel99 no-4": "Hostel 99 - 4",
-  "hostel99 no 4": "Hostel 99 - 4",
-  "hostel99 no. 4": "Hostel 99 - 4",
+  "hostel99 koregaon park": "Hostel 99",
+  "hostel 99 koregaon park": "Hostel 99",
+  "hostel99 yerwada 1": "Hostel 99",
+  "hostel99 yerwada 2": "Hostel 99",
+  "hostel 99 no-88": "Hostel 99",
+  "hostel99 no. 88": "Hostel 99",
+  "hostel99 no.88": "Hostel 99",
+  "hostel99 no88": "Hostel 99",
+  "hostel99 no 88": "Hostel 99",
+  "hostel 99 no. 88": "Hostel 99",
+  "hostel 99 no 88": "Hostel 99",
+  "hostel 99 no88": "Hostel 99",
+  "hostel 99 no-3": "Hostel 99",
+  "hostel99 no. 3": "Hostel 99",
+  "hostel99 no.3": "Hostel 99",
+  "hostel99 no3": "Hostel 99",
+  "hostel99 no 3": "Hostel 99",
+  "hostel 99 no. 3": "Hostel 99",
+  "hostel 99 no 3": "Hostel 99",
+  "hostel 99 no3": "Hostel 99",
+  "hostel 99 n0 3": "Hostel 99",
+  "hostel 99 n03": "Hostel 99",
+  "hostel99 n0 3": "Hostel 99",
+  "hostel99 n03": "Hostel 99",
+  "hostel 99 - 3": "Hostel 99",
+  "hostel 99 - 88": "Hostel 99",
+  "hostel 99 - 4": "Hostel 99",
+  "hostel 99 no-4": "Hostel 99",
+  "hostel 99 no 4": "Hostel 99",
+  "hostel99 no-4": "Hostel 99",
+  "hostel99 no 4": "Hostel 99",
+  "hostel99 no. 4": "Hostel 99",
   "one 8": "One 8",
   "one8": "One 8",
   "one 8 hostel": "One 8",
@@ -202,6 +225,8 @@ function firstPositiveNumber(...values) {
 export function normalizePropertyName(value) {
   const trimmed = String(value || "").trim();
   if (!trimmed) return "Unknown Property";
+
+  if (isHostel99Property(trimmed)) return "Hostel 99";
 
   // This converts whatever the user typed to lowercase (e.g. "Tulsi Hostel" -> "tulsi hostel")
   const collapsed = trimmed.replace(/\s+/g, " ").toLowerCase();
@@ -435,6 +460,69 @@ function normalizeSlot(val) {
   return "—";
 }
 
+/**
+ * Normalizes payment information from both customer checkout and rider app on delivery.
+ * Rider-entered payment (paymentMethodOnDelivery, paymentDoneOnDelivery) takes precedence for actual collection.
+ */
+export function resolvePaymentInfo(rawOrder = {}) {
+  const riderMethod = rawOrder.paymentMethodOnDelivery || rawOrder.payment_method_on_delivery;
+  const initialMethod = rawOrder.paymentMethod || rawOrder.payment_method || rawOrder.pMethodName || rawOrder.paymentType || "";
+  const rawStatus = String(rawOrder.paymentStatus || rawOrder.payment_status || "").toLowerCase();
+  const isPaidOnDelivery = rawOrder.paymentDoneOnDelivery === true || rawOrder.payment_done_on_delivery === true;
+  const hasPaymentTimestamp = !!(rawOrder.paymentRecordedAt || rawOrder.payment_recorded_at);
+
+  let paymentMode = "pending"; // "cash" | "online" | "pending"
+  let paymentMethodLabel = "Pending";
+  let isRiderPayment = false;
+
+  if (riderMethod && typeof riderMethod === "string") {
+    isRiderPayment = true;
+    const rLower = riderMethod.toLowerCase();
+    if (rLower.includes("cash")) {
+      paymentMode = "cash";
+      paymentMethodLabel = "Cash (Rider)";
+    } else if (rLower.includes("app")) {
+      paymentMode = "online";
+      paymentMethodLabel = "Online (App)";
+    } else if (rLower.includes("online") || rLower.includes("qr") || rLower.includes("upi")) {
+      paymentMode = "online";
+      paymentMethodLabel = "Online (UPI/QR)";
+    } else {
+      paymentMode = "online";
+      paymentMethodLabel = riderMethod;
+    }
+  } else if (initialMethod && typeof initialMethod === "string") {
+    const iLower = initialMethod.toLowerCase();
+    if (iLower === "cod" || iLower.includes("cash")) {
+      paymentMode = "cash";
+      paymentMethodLabel = "Cash (COD)";
+    } else if (iLower.includes("online") || iLower.includes("upi") || iLower.includes("razorpay") || iLower.includes("card") || iLower.includes("wallet")) {
+      paymentMode = "online";
+      paymentMethodLabel = "Online (Prepaid)";
+    } else {
+      paymentMode = "online";
+      paymentMethodLabel = initialMethod;
+    }
+  }
+
+  const isPaid = isPaidOnDelivery || ["completed", "paid", "success"].includes(rawStatus) || hasPaymentTimestamp;
+  const paymentStatus = isPaid ? "Paid" : (rawStatus === "failed" ? "Failed" : "Pending");
+
+  return {
+    paymentMode,
+    paymentMethodLabel,
+    isRiderPayment,
+    isCashPayment: paymentMode === "cash",
+    isOnlinePayment: paymentMode === "online",
+    isPaid,
+    paymentStatus,
+    paymentMethodOnDelivery: riderMethod || null,
+    paymentDoneOnDelivery: isPaidOnDelivery,
+    paymentRecordedAt: rawOrder.paymentRecordedAt || rawOrder.payment_recorded_at || null,
+    paymentRecordedBy: rawOrder.paymentRecordedBy || rawOrder.payment_recorded_by || null,
+  };
+}
+
 export function normalizeOrder(rawOrder = {}, source = "unknown") {
   let rawLocationProp = "";
   if (typeof rawOrder.location === "string") {
@@ -468,8 +556,20 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     ? Object.values(rawOrder.partnerItems).reduce((sum, value) => sum + normalizeNumber(value), 0)
     : 0;
 
+  const payment = resolvePaymentInfo(rawOrder);
+  const canonicalOrderId = String(
+    rawOrder.globalOrderNumber ||
+    rawOrder.orderId ||
+    rawOrder.orderNumber ||
+    rawOrder.bookingId ||
+    rawOrder.id ||
+    `${source}-${Date.now()}`
+  ).trim();
+
   const normalized = {
     id: String(rawOrder.id || rawOrder.orderId || `${source}-${Date.now()}`),
+    canonicalOrderId,
+    globalOrderNumber: rawOrder.globalOrderNumber || (rawOrder.orderId ? String(rawOrder.orderId) : null),
     ...rawOrder,
     property,
     createdAtRaw: rawOrder.createdAt || rawOrder.orderTimestamp || rawOrder.orderDate || rawOrder.date || null,
@@ -491,6 +591,18 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     deliveryDate: normalizeSlot(rawOrder.deliveryDate || rawOrder.dropTime || ""),
     pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.scheduledPickupDate || rawOrder.pickup || rawOrder.date || ""),
     service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",
+    payment,
+    paymentMode: payment.paymentMode,
+    paymentMethodLabel: payment.paymentMethodLabel,
+    isRiderPayment: payment.isRiderPayment,
+    isCashPayment: payment.isCashPayment,
+    isOnlinePayment: payment.isOnlinePayment,
+    isPaid: payment.isPaid,
+    paymentStatus: payment.paymentStatus,
+    paymentMethodOnDelivery: payment.paymentMethodOnDelivery,
+    paymentDoneOnDelivery: payment.paymentDoneOnDelivery,
+    paymentRecordedAt: payment.paymentRecordedAt,
+    paymentRecordedBy: payment.paymentRecordedBy,
     source,
   };
 
@@ -517,6 +629,21 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   }
 
   if (source === "cartdetails") {
+    // 1. Exclude B2B room sync orders (rider creates cartDocId 'b2b_${orderDocId}_$i' in cartdetails)
+    const isB2bRoomSync = !!(
+      rawOrder.b2bOrderId ||
+      (typeof rawOrder.id === 'string' && rawOrder.id.startsWith('b2b_')) ||
+      rawOrder.roomNo ||
+      (typeof rawOrder.userName === 'string' && rawOrder.userName.startsWith('Room '))
+    );
+    if (isB2bRoomSync) {
+      normalized.category = ORDER_CATEGORIES.STUDENT_LAUNDRY;
+      normalized.type = ORDER_TYPES.STUDENT;
+      normalized.property = normalizePropertyName(rawOrder.property || rawOrder.partnerName || "Hostel Student");
+      normalized.isB2bRoomSync = true;
+      return normalized;
+    }
+
     const breakdown = buildCartServiceBreakdown(rawOrder);
     const summaryParts = breakdown.map((item) => {
       const metrics = [
@@ -642,14 +769,24 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalizeNumber(rawOrder.clothesCount) > 0 ||
       hasNumericServices; // Only counts keys with numeric values > 0
     // Protect valid 0-item pickup requests (where the customer checked out but skipped adding specific items)
-    const isCheckoutComplete = !!(
-      rawOrder.pickupTime ||
-      rawOrder.paymentMethod ||
+    const rawSt = String(rawOrder.status || '').toLowerCase();
+    const paySt = String(rawOrder.paymentStatus || '').toLowerCase();
+    const isInitiatedUnpaid = (rawSt === 'initiated' || paySt === 'initiated' || rawSt === 'failed' || paySt === 'failed') &&
+      !rawOrder.paymentRecordedAt &&
+      !rawOrder.pickupOtpVerifiedAt &&
+      !rawOrder.paymentDoneOnDelivery;
+
+    const isCheckoutComplete = !isInitiatedUnpaid && !!(
       rawOrder.whatsappConfirmationSent ||
-      rawOrder.paymentStatus
+      rawOrder.pickupOtpVerifiedAt ||
+      rawOrder.deliveryOtpVerifiedAt ||
+      rawOrder.paymentRecordedAt ||
+      rawOrder.paymentDoneOnDelivery === true ||
+      ['completed', 'delivered', 'processing', 'confirmed', 'pickup done'].includes(rawSt) ||
+      ['completed', 'paid', 'success'].includes(paySt)
     );
 
-    if (normalized.amount === 0 && !hasAnyItems && !isCheckoutComplete) {
+    if ((normalized.amount === 0 && !hasAnyItems) || isInitiatedUnpaid || (!hasAnyItems && !isCheckoutComplete)) {
       normalized.category = "ABANDONED_CART";
       normalized.type = "abandoned";
       normalized.status = "Abandoned";
@@ -853,8 +990,13 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.service = rawOrder.description || rawOrder.title || "Manager Issue";
     normalized.title = rawOrder.title || "";
     normalized.date = normalizeDate(rawOrder.createdAt || rawOrder.date);
-    normalized.reportedBy = rawOrder.reportedBy || "Manager";
+    const reportedByName = typeof rawOrder.reportedBy === 'object' && rawOrder.reportedBy !== null
+      ? (rawOrder.reportedBy.name || rawOrder.reportedBy.email || "Manager")
+      : (typeof rawOrder.reportedBy === 'string' ? rawOrder.reportedBy : "Manager");
+    normalized.reportedBy = reportedByName;
+    normalized.reportedByDetails = rawOrder.reportedBy || null;
     normalized.linkedHostel = rawOrder.linkedEntity || rawOrder.linkedClient || rawOrder.linkedOrder || "";
+    normalized.linkedEntity = rawOrder.linkedEntity || rawOrder.linkedClient || rawOrder.linkedOrder || "";
     normalized.property = normalized.linkedHostel || (rawOrder.scope === "b2b" ? "B2B Client" : "B2C Retail");
     normalized.resolveStatus = (rawOrder.status === "resolved" || rawOrder.resolveStatus === "Resolved") ? "Resolved" : (rawOrder.status === "checking" ? "Checking" : "Unresolved");
     normalized.severity = rawOrder.severity === "critical" ? "critical" : (rawOrder.severity === "high" ? "high" : "pending");
@@ -872,6 +1014,23 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
   if (normalized.category === ORDER_CATEGORIES.INDIVIDUAL_STUDENT) {
     normalized.category = ORDER_CATEGORIES.STUDENT_LAUNDRY;
     normalized.type = ORDER_TYPES.STUDENT;
+  }
+
+  // Hostel 99 orders have a fixed monthly revenue of ₹28,000 for all properties combined.
+  if (
+    isHostel99Property(normalized.property) ||
+    isHostel99Property(normalized.linkedHostel) ||
+    isHostel99Property(rawOrder.hostel) ||
+    isHostel99Property(rawOrder.property) ||
+    isHostel99Property(rawOrder.client)
+  ) {
+    normalized.subProperty = rawOrder.property || rawOrder.hostel || normalized.property;
+    normalized.property = "Hostel 99";
+    const daysInMonth = getDaysInMonthForDate(normalized.date);
+    normalized.amount = parseFloat((HOSTEL_99_MONTHLY_REVENUE / daysInMonth).toFixed(2));
+    normalized.billingType = "fixed_monthly";
+    normalized.billingNote = `Fixed ₹28,000/mo (₹${normalized.amount.toFixed(2)}/day)`;
+    normalized.ratePerKg = 0;
   }
 
   return normalized;

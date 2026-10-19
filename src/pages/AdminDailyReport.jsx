@@ -179,7 +179,7 @@ export default function AdminDailyReport() {
             <KpiCard
               label="B2B Orders"
               value={report.totalB2BOrders}
-              sublabel="hostel orders"
+              sublabel="deliveries today"
               color="violet"
             />
             <KpiCard

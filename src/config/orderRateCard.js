@@ -33,6 +33,7 @@ export const ONE8_ITEMS = [
 ];
 
 export const STUDENT_RATE_PER_KG = 55;
+export const HOSTEL_99_MONTHLY_REVENUE = 28000;
 
 export const ONE8_RATE_MAP = {
   "Wiping Cloth": 9,
@@ -43,6 +44,37 @@ export const ONE8_RATE_MAP = {
   "Napkin": 6,
   "Blazer": 200,
   "Cap": 5,
+};
+
+export const ZOLO_RATE_MAP = {
+  "Towel": 12,
+  "Bath towel": 12,
+  "Bath Towel": 12,
+  "Single Bedsheet": 13,
+  "Single Bed Sheet": 13,
+  "Double Bedsheet": 15,
+  "Double Bed Sheet": 15,
+  "Pillow Cover": 10,
+  "Single Duvet Cover": 30,
+  "Double Duvet Cover": 35,
+  "King Duvet Cover": 35,
+  "Duvet Cover": 35,
+};
+
+export const ZOLO_ITEM_WEIGHTS = {
+  "Single Bedsheet": 0.47,
+  "Single Bed Sheet": 0.47,
+  "Double Bedsheet": 0.87,
+  "Double Bed Sheet": 0.87,
+  "Single Duvet Cover": 0.92,
+  "Duvet Cover Single": 0.92,
+  "Double Duvet Cover": 1.5,
+  "Duvet Cover Double": 1.5,
+  "King Duvet Cover": 1.5,
+  "Pillow Cover": 0.175,
+  "Towel": 0.72,
+  "Bath towel": 0.72,
+  "Bath Towel": 0.72,
 };
 
 export const ITEM_RATE_MAP = {

@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { HOSTEL_99_MONTHLY_REVENUE } from '../config/orderRateCard';
+import { isHostel99Property, getDaysInMonthForDate } from '../utils/orderNormalization';
 
 /**
  * Extracts a local-date string (YYYY-MM-DD) from a raw timestamp field.
@@ -104,16 +106,16 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
 
     // ── Pickup Detection ────────────────────────────────────────────────────
     // An order counts as "picked up on selectedDate" if:
-    //   1. Its otpSentAt (pickup OTP timestamp) falls on selectedDate, OR
+    //   1. Its pickupOtpVerifiedAt or otpSentAt timestamp falls on selectedDate, OR
     //   2. Its createdAt/order date falls on selectedDate AND status >= "picked up"
     const pickupOrders = b2cOrders.filter(o => {
-      // Primary: otpSentAt timestamp
-      const otpDate = toDateString(o.otpSentAt);
+      // Primary: pickupOtpVerifiedAt or otpSentAt timestamp
+      const otpDate = toDateString(o.pickupOtpVerifiedAt) || toDateString(o.otpSentAt);
       if (otpDate) {
         return otpDate === selectedDate && wasPickedUp(o.status);
       }
 
-      // Fallback ONLY if otpSentAt is missing
+      // Fallback ONLY if OTP timestamps are missing
       const orderDate = o.date || toDateString(o.createdAtRaw);
       return orderDate === selectedDate && wasPickedUp(o.status);
     });
@@ -128,7 +130,8 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
     // ── Delivery Detection ──────────────────────────────────────────────────
     // An order counts as "delivered on selectedDate" if:
     //   1. Its deliveryOtpVerifiedAt falls on selectedDate, OR
-    //   2. Its updatedAt falls on selectedDate AND status is "completed"/"delivered"
+    //   2. Its paymentRecordedAt falls on selectedDate, OR
+    //   3. Its updatedAt falls on selectedDate AND status is "completed"/"delivered"
     const deliveryOrders = b2cOrders.filter(o => {
       if (!wasDelivered(o.status)) return false;
 
@@ -146,7 +149,13 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
 
       // Fallback: updatedAt
       const updatedDate = toDateString(o.updatedAtRaw);
-      return updatedDate === selectedDate;
+      if (updatedDate) {
+        return updatedDate === selectedDate;
+      }
+
+      // Last fallback: order date if status is delivered
+      const orderDate = o.date || toDateString(o.createdAtRaw);
+      return orderDate === selectedDate;
     });
 
     // ── Orders Received (new orders placed on this date) ────────────────────
@@ -175,14 +184,18 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
     const allDayOrders = [...new Set([...ordersReceived, ...deliveryOrders])];
     const paymentBreakdown = { cod: 0, online: 0, pending: 0, completed: 0 };
     allDayOrders.forEach(o => {
+      const riderMethod = String(o.paymentMethodOnDelivery || '').toLowerCase();
       const method = String(o.paymentMethod || '').toLowerCase();
-      if (method === 'cod' || method === 'cash') {
+      const isCash = riderMethod.includes('cash') || (!riderMethod && (method === 'cod' || method.includes('cash')));
+      if (isCash) {
         paymentBreakdown.cod++;
       } else {
         paymentBreakdown.online++;
       }
-      const pStatus = String(o.paymentStatus || '').toLowerCase();
-      if (pStatus === 'completed' || pStatus === 'paid' || pStatus === 'success') {
+      const isPaid = o.paymentDoneOnDelivery === true ||
+        ['completed', 'paid', 'success'].includes(String(o.paymentStatus || '').toLowerCase()) ||
+        !!o.paymentRecordedAt;
+      if (isPaid) {
         paymentBreakdown.completed++;
       } else {
         paymentBreakdown.pending++;
@@ -263,52 +276,82 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
     ];
 
     // ──────────────────────────────────────────────────────────────────────────
-    // B2B ORDERS  (hostel orders — source === 'hostels')
+    // B2B ORDERS  (hostels, linen, hotels/airbnb)
     // ──────────────────────────────────────────────────────────────────────────
-    const hostelOrders = allOrders.filter(o =>
-      (o.source === 'hostels' || o.source === 'b2b' || o.source === 'admin') && o.type === 'student'
-    );
+    const b2bOrders = allOrders.filter(o => {
+      if (EXCLUDED_STATUSES.has(o.status) || o.type === 'abandoned' || o.type === 'rider_tracking') return false;
+      if (o.type === 'regular' || o.category === 'B2C_RETAIL' || o.source === 'cartdetails' || o.source === 'website') return false;
+      const isB2B = o.source === 'hostels' || o.source === 'b2b' ||
+                    o.type === 'student' || o.type === 'linen' || o.type === 'airbnb' ||
+                    o.category === 'STUDENT_LAUNDRY' || o.category === 'LINEN' || o.category === 'AIRBNB';
+      return isB2B;
+    });
 
-    // Hostel deliveries on selectedDate
-    const hostelDeliveries = hostelOrders.filter(o => {
+    // B2B deliveries on selectedDate
+    const hostelDeliveries = b2bOrders.filter(o => {
       const orderDate = o.date || toDateString(o.createdAtRaw);
       return orderDate === selectedDate;
     });
 
-    // Group by hostel property
+    // Group by hostel/client property
     const hostelGroupMap = new Map();
+    let hasHostel99Delivery = false;
+    let nonH99Revenue = 0;
+
     hostelDeliveries.forEach(o => {
-      const hostel = o.property || 'Unknown Hostel';
+      const hostel = o.property || 'Unknown Client';
+      const isH99 = isHostel99Property(hostel);
+      if (isH99) {
+        hasHostel99Delivery = true;
+      }
+
       if (!hostelGroupMap.has(hostel)) {
-        hostelGroupMap.set(hostel, { hostel, weight: 0, clothes: 0, students: 0 });
+        hostelGroupMap.set(hostel, { hostel, weight: 0, clothes: 0, students: 0, orderCount: 0, revenue: 0 });
       }
       const group = hostelGroupMap.get(hostel);
       group.weight += (o.weight || 0);
       group.clothes += (o.items || 0);
       group.students += (o.studentCount || 0);
+      group.orderCount += 1;
+
+      if (!isH99) {
+        const amt = Number.isFinite(parseFloat(o.amount)) ? parseFloat(o.amount) : 0;
+        group.revenue += amt;
+        nonH99Revenue += amt;
+      }
     });
+
+    // Hostel 99 fixed daily revenue calculation
+    const daysInMonth = getDaysInMonthForDate(selectedDate);
+    const h99DailyRevenue = hasHostel99Delivery ? (HOSTEL_99_MONTHLY_REVENUE / daysInMonth) : 0;
+
+    if (hasHostel99Delivery && hostelGroupMap.has("Hostel 99")) {
+      hostelGroupMap.get("Hostel 99").revenue = h99DailyRevenue;
+    }
 
     const hostelDeliveryDetails = [...hostelGroupMap.values()];
     const hostelsDeliveredNames = hostelDeliveryDetails.map(h => h.hostel);
     const b2bTotalWeight = hostelDeliveryDetails.reduce((sum, h) => sum + h.weight, 0);
     const B2B_RATE_PER_KG = 55;
     
-    // Sum the actual amount from the hostel orders instead of deriving from weight
-    const b2bRevenue = hostelDeliveries.reduce((sum, o) => sum + (o.amount || 0), 0);
+    // Total B2B revenue for selectedDate
+    const b2bRevenue = nonH99Revenue + h99DailyRevenue;
 
     const b2bDelayed = hostelDeliveries.filter(o =>
       !wasDelivered(o.status) && o.status !== 'Cancelled'
     );
 
-    // Individual student breakdown
-    const hostelStudentDetails = hostelDeliveries.map(o => ({
-      id: o.id,
-      customer: o.userName || o.customerName || 'Unknown',
-      room: o.room || '-',
-      hostel: o.property || o.hostel || 'Unknown',
-      clothes: o.items || o.clothes || 0,
-      status: o.status || 'Pending',
-    })).sort((a, b) => a.hostel.localeCompare(b.hostel));
+    // Individual student breakdown (only student orders)
+    const hostelStudentDetails = hostelDeliveries
+      .filter(o => o.type === 'student' || (o.studentCount > 0) || o.room)
+      .map(o => ({
+        id: o.id,
+        customer: o.userName || o.customerName || 'Unknown',
+        room: o.room || '-',
+        hostel: o.property || o.hostel || 'Unknown',
+        clothes: o.items || o.clothes || 0,
+        status: o.status || 'Pending',
+      })).sort((a, b) => a.hostel.localeCompare(b.hostel));
 
     // ── Hostel Issues ───────────────────────────────────────────────────────
     // Orders from hostels flagged as issues or with problems on this date
@@ -316,7 +359,7 @@ export function useDailyOpsReport(allOrders, complaints, selectedDate) {
       const orderDate = o.date || toDateString(o.createdAtRaw);
       return orderDate === selectedDate
         && (o.category === 'ISSUES' || o.type === 'issue')
-        && o.source === 'hostels';
+        && (o.source === 'hostels' || o.source === 'b2b');
     });
 
     // Check for weight discrepancies (claimedItems vs verifiedItems)

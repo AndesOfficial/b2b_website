@@ -65,6 +65,7 @@ const DEFAULT_METRICS = {
         { month: "Mar 2026", b2cRevenue: 15585, b2bRevenue: 102872, totalRevenue: 118457, b2cShare: 13.2, b2bShare: 86.8 },
         { month: "Apr 2026", b2cRevenue: 18911, b2bRevenue: 107166, totalRevenue: 126077, b2cShare: 15.0, b2bShare: 85.0 },
         { month: "May 2026", b2cRevenue: 0,     b2bRevenue: 114843, totalRevenue: 114843, b2cShare: 0,    b2bShare: 100 },
+        { month: "Oct 2026", b2cRevenue: 53623, b2bRevenue: 11821,  totalRevenue: 65444,  b2cShare: 81.9, b2bShare: 18.1 },
     ],
 };
 

@@ -7,7 +7,8 @@ import { FiChevronDown, FiChevronRight, FiXCircle, FiEdit2, FiTrash2 } from "rea
 
 import { BiRupee } from "react-icons/bi";
 import AdminOrderModal from "../Shared/AdminOrderModal";
-import { normalizePropertyName } from "../../utils/orderNormalization";
+import { normalizePropertyName, getDaysInMonthForDate, isHostel99Property } from "../../utils/orderNormalization";
+import { HOSTEL_99_MONTHLY_REVENUE } from "../../config/orderRateCard";
 import { useWindowWidth } from "../../hooks/windowHooks";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../firebase";
@@ -23,11 +24,6 @@ const DEFAULT_HOSTEL_COLORS = {
   "Samshrushti": "#4338CA", 
   "Tara": "#DC2626", 
   "Hostel 99": "#7C3AED", 
-  "Hostel 99 - 3": "#D97706",
-  "Hostel 99 no-3": "#D97706", 
-  "Hostel 99 - 88": "#059669",
-  "Hostel 99 no-88": "#059669", 
-  "Hostel 99 - 4": "#E11D48",
   "One 8": "#2563EB",
   "Zolo stays": "#10B981"
 };
@@ -36,6 +32,14 @@ const HIDDEN_HOSTEL_PROPERTIES = new Set(["Unknown Property"]);
 
 function getPropertyColor(name, index) {
   return DEFAULT_HOSTEL_COLORS[name] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
+
+function calculatePropertyRevenue(name, ordersList) {
+  if (isHostel99Property(name)) {
+    const activeDates = new Set(ordersList.map((o) => o.date).filter(Boolean));
+    return Array.from(activeDates).reduce((sum, d) => sum + (HOSTEL_99_MONTHLY_REVENUE / getDaysInMonthForDate(d)), 0);
+  }
+  return ordersList.reduce((s, o) => s + (o.amount || 0), 0);
 }
 
 const BarTooltip = ({ active, payload, label }) => {
@@ -291,7 +295,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
       const kg = ho.reduce((s, o) => s + (o.weight || 0), 0);
       const clothes = ho.reduce((s, o) => s + (o.items || 0), 0);
       const students = ho.reduce((s, o) => s + (o.studentCount || 0), 0);
-      const revenue = ho.reduce((s, o) => s + (o.amount || 0), 0);
+      const revenue = calculatePropertyRevenue(name, ho);
       return {
         name, orders: ho.length, kg, clothes, students, revenue,
         avgKgPerStudent: students > 0 ? kg / students : 0,
@@ -324,7 +328,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
   const linenSummaries = useMemo(() =>
     linenProperties.map((name, index) => {
       const ho = linenOrders.filter(o => o.property === name);
-      const revenue = ho.reduce((s, o) => s + (o.amount || 0), 0);
+      const revenue = calculatePropertyRevenue(name, ho);
       return { name, orders: ho, revenue, color: getPropertyColor(name, index) };
     }).filter(h => h.orders.length > 0),
     [linenOrders, linenProperties]
@@ -357,7 +361,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
         }
       });
 
-      const revenue = [...studentO, ...linenO].reduce((s, o) => s + (o.amount || 0), 0);
+      const revenue = calculatePropertyRevenue(name, [...studentO, ...linenO]);
 
       return {
         name,

@@ -12,6 +12,7 @@ import {
   REGULAR_STATUS_OPTIONS,
 } from "../../hooks/useRegularOrders";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
+import { recalculateB2COrderTotal, getServiceRatePerKg, isKgService } from "../../utils/orderPricing";
 
 const POSITIVE_NUMERIC_FIELDS = new Set(["amount"]);
 const SERVICE_LINE_NUMERIC_FIELDS = ["weight", "quantity", "amount"];
@@ -70,12 +71,38 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
 
   const updateServiceLine = useCallback((lineId, field, value) => {
     if (SERVICE_LINE_NUMERIC_FIELDS.includes(field) && isNegativeNumberInput(value)) return;
-    setForm((prev) => ({
-      ...prev,
-      serviceBreakdown: prev.serviceBreakdown.map((line) =>
-        line.id === lineId ? { ...line, [field]: value } : line
-      ),
-    }));
+    setForm((prev) => {
+      const updatedLines = prev.serviceBreakdown.map((line) => {
+        if (line.id !== lineId) return line;
+        const updated = { ...line, [field]: value };
+
+        // Auto-recalculate line amount when weight is entered for a kg service
+        if (field === "weight") {
+          const wt = parseFloat(value);
+          if (!isNaN(wt) && wt >= 0) {
+            const svcType = updated.serviceType || REGULAR_SERVICE_TYPES[0];
+            const rate = REGULAR_RATE_MAP[svcType] || getServiceRatePerKg(svcType, prev.originalOrder || {});
+            if (rate > 0) {
+              updated.amount = String(Math.round(wt * rate));
+            }
+          }
+        } else if (field === "serviceType") {
+          const wt = parseFloat(updated.weight);
+          if (!isNaN(wt) && wt > 0) {
+            const rate = REGULAR_RATE_MAP[value] || getServiceRatePerKg(value, prev.originalOrder || {});
+            if (rate > 0) {
+              updated.amount = String(Math.round(wt * rate));
+            }
+          }
+        }
+        return updated;
+      });
+
+      return {
+        ...prev,
+        serviceBreakdown: updatedLines,
+      };
+    });
   }, []);
 
   const addServiceLine = useCallback(() => {
@@ -135,8 +162,11 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
       : `${primaryService} + ${parsedBreakdown.length - 1} more`;
 
     const baseOrder = form.originalOrder || {};
+    const pricingUpdates = recalculateB2COrderTotal(baseOrder, totalWeight, finalAmount);
+
     const nextOrder = {
       ...baseOrder,
+      ...pricingUpdates,
       id: form.id || `reg-new-${Date.now()}`,
       property: "Regular Customers",
       category: "B2C_RETAIL",
@@ -145,9 +175,14 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
       date: form.pickupDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0],
       deliveryDate: form.deliveryDate || baseOrder.deliveryDate || "",
       amount: finalAmount,
+      totalCost: finalAmount,
+      originalTotalCost: pricingUpdates.originalTotalCost || finalAmount,
+      calculatedAmount: finalAmount,
       status: form.status,
       items: Math.max(1, Math.round(totalQuantity)),
+      clothesCount: Math.max(1, Math.round(totalQuantity)),
       weight: totalWeight,
+      clothesWeightKg: totalWeight,
       customerName: form.customerName,
       customerNumber: form.phone,
       address: form.address || "",

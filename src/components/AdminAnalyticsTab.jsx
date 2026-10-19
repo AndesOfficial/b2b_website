@@ -2,6 +2,25 @@ import React, { useMemo, useState } from "react";
 import { FiMonitor, FiSearch, FiLayers, FiChevronDown, FiTrendingUp, FiUsers, FiShoppingBag, FiGlobe } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import EmptyState from "./Shared/EmptyState";
+import { getDaysInMonthForDate, isHostel99Property } from "../utils/orderNormalization";
+import { HOSTEL_99_MONTHLY_REVENUE } from "../config/orderRateCard";
+
+function matchServiceCategory(nameStr) {
+    const service = String(nameStr || "").toLowerCase();
+    if (service.includes("wash") && service.includes("fold") && service.includes("iron")) return "Wash & Iron";
+    if (service.includes("wash") && service.includes("fold")) return "Wash & Fold";
+    if (service.includes("wash") && service.includes("iron")) return "Wash & Iron";
+    if (service.includes("iron") || service.includes("steam")) return "Iron Only";
+    if (service.includes("dry")) return "Dry Cleaning";
+    if (service.includes("bed") || service.includes("blanket") || service.includes("duvet") || service.includes("quilt")) return "Single Bedsheet/Blanket";
+    if (service.includes("shoe") || service.includes("sneaker") || service.includes("sports") || service.includes("boot")) return "Sports Shoes Regular";
+    if (service.includes("saree")) return "Saree Regular";
+    if (service.includes("loafer")) return "Loafers/Sneakers";
+    if (service.includes("kurta")) return "Kurta Pajama Regular";
+    if (service.includes("trouser") || service.includes("jeans")) return "Trousers Regular";
+    if (service.includes("shirt") || service.includes("pant")) return "Shirt & Pant";
+    return "Other";
+}
 
 // Re-using the card style for the main stats
 const StatCard = ({ label, value, icon, color, subValue }) => (
@@ -69,7 +88,7 @@ export default function AdminAnalyticsTab({ orders = [], screens = [], searches 
         o && o.category !== "ISSUES" && o.type !== "issue" && o.status !== "Cancelled"
     ), [orders]);
 
-    // Calculate real data from orders for "Services Ordered"
+    // Calculate real data from orders for "Services Ordered" (inspecting breakdowns when present)
     const serviceStats = useMemo(() => {
         const stats = {
             "Wash & Fold": 0,
@@ -87,20 +106,16 @@ export default function AdminAnalyticsTab({ orders = [], screens = [], searches 
         };
 
         activeOrders.forEach(o => {
-            // `service` is not always a string on older or app-created orders.
-            const service = (typeof o.service === "string" ? o.service : "").toLowerCase();
-            if (service.includes("wash") && service.includes("fold")) stats["Wash & Fold"]++;
-            else if (service.includes("wash") && service.includes("iron")) stats["Wash & Iron"]++;
-            else if (service.includes("iron")) stats["Iron Only"]++;
-            else if (service.includes("dry")) stats["Dry Cleaning"]++;
-            else if (service.includes("bed") || service.includes("blanket")) stats["Single Bedsheet/Blanket"]++;
-            else if (service.includes("shoe") || service.includes("sports")) stats["Sports Shoes Regular"]++;
-            else if (service.includes("saree")) stats["Saree Regular"]++;
-            else if (service.includes("loafer") || service.includes("sneaker")) stats["Loafers/Sneakers"]++;
-            else if (service.includes("kurta")) stats["Kurta Pajama Regular"]++;
-            else if (service.includes("trouser")) stats["Trousers Regular"]++;
-            else if (service.includes("shirt") || service.includes("pant")) stats["Shirt & Pant"]++;
-            else stats["Other"]++;
+            const bd = Array.isArray(o.serviceBreakdown) && o.serviceBreakdown.length > 0 ? o.serviceBreakdown : null;
+            if (bd) {
+                bd.forEach(item => {
+                    const cat = matchServiceCategory(item.name || item.service || o.service);
+                    stats[cat] = (stats[cat] || 0) + (Number(item.quantity) || 1);
+                });
+            } else {
+                const cat = matchServiceCategory(o.service);
+                stats[cat] = (stats[cat] || 0) + 1;
+            }
         });
 
         return Object.entries(stats)
@@ -108,9 +123,29 @@ export default function AdminAnalyticsTab({ orders = [], screens = [], searches 
             .sort((a, b) => b[1] - a[1]);
     }, [activeOrders]);
 
-    const totalRevenue = useMemo(() => {
-        return activeOrders.filter(o => o.type === "regular").reduce((acc, o) => acc + (Number.isFinite(parseFloat(o.amount)) ? parseFloat(o.amount) : 0), 0);
+    const b2cRevenue = useMemo(() => {
+        return activeOrders
+            .filter(o => o.type === "regular" || o.category === "B2C_RETAIL" || o.source === "cartdetails")
+            .reduce((acc, o) => acc + (Number.isFinite(parseFloat(o.amount)) ? parseFloat(o.amount) : 0), 0);
     }, [activeOrders]);
+
+    const b2bRevenue = useMemo(() => {
+        const h99Dates = new Set();
+        let nonH99 = 0;
+        activeOrders.forEach(o => {
+            const isB2B = o.type === "student" || o.type === "linen" || o.type === "airbnb" || o.category === "STUDENT_LAUNDRY" || o.category === "LINEN" || o.category === "AIRBNB";
+            if (!isB2B) return;
+            if (isHostel99Property(o.property)) {
+                if (o.date) h99Dates.add(o.date);
+            } else {
+                nonH99 += (Number.isFinite(parseFloat(o.amount)) ? parseFloat(o.amount) : 0);
+            }
+        });
+        const h99Rev = Array.from(h99Dates).reduce((sum, d) => sum + (HOSTEL_99_MONTHLY_REVENUE / getDaysInMonthForDate(d)), 0);
+        return nonH99 + h99Rev;
+    }, [activeOrders]);
+
+    const totalCombinedRevenue = b2cRevenue + b2bRevenue;
 
     return (
         <div className="space-y-6" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -167,7 +202,7 @@ export default function AdminAnalyticsTab({ orders = [], screens = [], searches 
                                 value={activeOrders.length} 
                                 icon={<FiShoppingBag />} 
                                 color="indigo"
-                                subValue="Overall Total"
+                                subValue="Selected Period"
                             />
                             <StatCard 
                                 label="Total Users" 
@@ -184,11 +219,11 @@ export default function AdminAnalyticsTab({ orders = [], screens = [], searches 
                                 subValue="Active Service Types"
                             />
                             <StatCard 
-                                label="Revenue (B2C)" 
-                                value={`₹${totalRevenue.toLocaleString()}`} 
+                                label="Total Revenue" 
+                                value={`₹${Math.round(totalCombinedRevenue).toLocaleString("en-IN")}`} 
                                 icon={<BiRupee />} 
                                 color="indigo"
-                                subValue="B2C Total"
+                                subValue={`B2C: ₹${Math.round(b2cRevenue).toLocaleString("en-IN")} · B2B: ₹${Math.round(b2bRevenue).toLocaleString("en-IN")}`}
                             />
                         </div>
                     </div>

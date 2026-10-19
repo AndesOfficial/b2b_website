@@ -58,7 +58,14 @@ export function isB2C(o) {
 }
 
 export function isB2B(o) {
-  return B2B_SOURCES.has(o.source) && B2B_TYPES.has(o.type);
+  if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue" || o.category === "ISSUES") return false;
+  if (o.source === "cartdetails" || (o.source === "admin" && o.type === "regular")) return false;
+  const t = lower(o.type);
+  const cat = lower(o.category);
+  return (
+    (B2B_SOURCES.has(o.source) && (B2B_TYPES.has(t) || cat.includes("linen") || cat.includes("student") || cat.includes("airbnb") || o.source === "hostels" || o.source === "b2b")) ||
+    B2B_TYPES.has(t)
+  );
 }
 
 const isCancelled = (o) => o.status === "Cancelled" || ["cancelled", "canceled", "abandoned"].includes(lower(o.rawStatus));
@@ -74,6 +81,22 @@ export function clientOf(property) {
   return property || "Unknown";
 }
 
+export const HOSTEL_99_MONTHLY_REVENUE = 28000;
+
+function daysInMonthOf(dateStr) {
+  if (!dateStr) return 30;
+  const parts = String(dateStr).split("T")[0].split(/[-/]/);
+  if (parts.length >= 2) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+      return new Date(year, month, 0).getDate();
+    }
+  }
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
+
 // New-schema b2b_orders keep weight/amount per room instead of on the order.
 function b2bWeight(o) {
   if (Number(o.weight) > 0) return Number(o.weight);
@@ -82,6 +105,9 @@ function b2bWeight(o) {
 }
 
 function b2bAmount(o) {
+  if (clientOf(o.property) === "Hostel 99") {
+    return HOSTEL_99_MONTHLY_REVENUE / daysInMonthOf(o.date);
+  }
   if (Number(o.amount) > 0) return Number(o.amount);
   return Array.isArray(o.roomOrders) ? sum(o.roomOrders, (r) => r.amount) : 0;
 }
@@ -173,7 +199,24 @@ function periodMetrics(orders, range) {
   const b2b = all.filter((o) => isB2B(o) && !isCancelled(o));
 
   const b2bWeightTotal = sum(b2b, b2bWeight);
-  const b2bRevenue = sum(b2b, b2bAmount);
+
+  // For Hostel 99, all properties are combined into "Hostel 99" with fixed ₹28,000/month.
+  // We count distinct active dates so revenue is not multiplied across multiple properties/batches on the same day.
+  const hostel99Dates = new Set();
+  for (const o of b2b) {
+    if (clientOf(o.property) === "Hostel 99" && o.date) {
+      hostel99Dates.add(o.date);
+    }
+  }
+  const isFullMonth = range.from && range.to && range.from.slice(8, 10) === "01" &&
+    range.to === toDateStr(new Date(parseInt(range.to.slice(0, 4), 10), parseInt(range.to.slice(5, 7), 10), 0));
+
+  const hostel99Revenue = isFullMonth
+    ? HOSTEL_99_MONTHLY_REVENUE
+    : Array.from(hostel99Dates).reduce((sum, d) => sum + (HOSTEL_99_MONTHLY_REVENUE / daysInMonthOf(d)), 0);
+
+  const nonH99B2b = b2b.filter((o) => clientOf(o.property) !== "Hostel 99");
+  const b2bRevenue = sum(nonH99B2b, b2bAmount) + (hostel99Dates.size > 0 ? hostel99Revenue : 0);
   const b2cWeight = sum(b2c, (o) => o.weight);
   const b2cRevenue = sum(b2c, (o) => o.amount);
   const totalWeight = b2bWeightTotal + b2cWeight;
@@ -193,20 +236,25 @@ function periodMetrics(orders, range) {
     const w = b2bWeight(o);
     c.pickupKg += w;
     if (o.status === "Delivered") c.deliveryKg += w;
-    c.revenue += b2bAmount(o);
     c.orders += 1;
-    const rate = Number(o.ratePerKg);
-    if (rate > 0) c.rates.set(rate, (c.rates.get(rate) || 0) + 1);
+    if (name === "Hostel 99") {
+      c.revenue = hostel99Revenue;
+    } else {
+      c.revenue += b2bAmount(o);
+      const rate = Number(o.ratePerKg);
+      if (rate > 0) c.rates.set(rate, (c.rates.get(rate) || 0) + 1);
+    }
   }
   const clients = [...clientMap.values()].map((c) => {
     const topRate = [...c.rates.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const isHostel99 = c.name === "Hostel 99";
     return {
       name: c.name,
       pickupKg: c.pickupKg,
       deliveryKg: b2bDeliveryTracked ? c.deliveryKg : null,
       revenue: c.revenue,
       orders: c.orders,
-      billing: topRate ? `₹${topRate}/kg` : "—",
+      billing: isHostel99 ? "Fixed ₹28,000/mo" : (topRate ? `₹${topRate}/kg` : "—"),
       perKg: per(c.revenue, c.pickupKg),
       share: b2bRevenue > 0 ? (c.revenue / b2bRevenue) * 100 : 0,
     };
@@ -324,13 +372,28 @@ function trendSeries(orders, endDate, days) {
   const rows = new Map();
   for (let i = 0; i < days; i++) {
     const d = addDays(from, i);
-    rows.set(d, { date: d, label: d.slice(8) + "/" + d.slice(5, 7), b2bKg: 0, b2cKg: 0, b2bRevenue: 0, b2cRevenue: 0 });
+    rows.set(d, { date: d, label: d.slice(8) + "/" + d.slice(5, 7), b2bKg: 0, b2cKg: 0, b2bRevenue: 0, b2cRevenue: 0, hasH99: false });
   }
   for (const o of orders) {
     const row = rows.get(o.date);
     if (!row || isCancelled(o)) continue;
-    if (isB2B(o)) { row.b2bKg += b2bWeight(o); row.b2bRevenue += b2bAmount(o); }
-    else if (isB2C(o)) { row.b2cKg += Number(o.weight) || 0; row.b2cRevenue += Number(o.amount) || 0; }
+    if (isB2B(o)) {
+      row.b2bKg += b2bWeight(o);
+      if (clientOf(o.property) === "Hostel 99") {
+        row.hasH99 = true;
+      } else {
+        row.b2bRevenue += b2bAmount(o);
+      }
+    } else if (isB2C(o)) {
+      row.b2cKg += Number(o.weight) || 0;
+      row.b2cRevenue += Number(o.amount) || 0;
+    }
+  }
+  for (const row of rows.values()) {
+    if (row.hasH99) {
+      row.b2bRevenue += HOSTEL_99_MONTHLY_REVENUE / daysInMonthOf(row.date);
+    }
+    delete row.hasH99;
   }
   return [...rows.values()];
 }

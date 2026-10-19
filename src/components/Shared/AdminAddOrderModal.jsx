@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { FiX, FiLoader, FiPlus, FiTrash2 } from "react-icons/fi";
-import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG, getItemsForPartner } from "../../config/orderRateCard";
+import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, getItemsForPartner } from "../../config/orderRateCard";
 import { ORDER_CATEGORIES, ORDER_STATUSES, ORDER_TYPES } from "../../constants/orders";
-import { normalizePropertyName } from "../../utils/orderNormalization";
+import { normalizePropertyName, getDaysInMonthForDate, isHostel99Property } from "../../utils/orderNormalization";
 import { getTodayString } from "../../utils/dateUtils";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 
@@ -13,7 +13,7 @@ const KNOWN_PROPERTIES = {
   hostel: [
     "Aakansha", "Adarsha", "Keerti", "Meera", "Plato", 
     "Samshrushti", "Tara", "Orchid",
-    "Hostel 99", "Hostel 99 - 3", "Hostel 99 - 88", "Hostel 99 - 4", 
+    "Hostel 99", 
     "One 8", "Zolo stays"
   ],
   hotel: [
@@ -54,9 +54,20 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
 
   const isStudent = orderCategory === "hostel" && hostelType === "student";
   const isItemized = orderCategory === "hotel" || (orderCategory === "hostel" && hostelType === "linen");
+  const isHostel99 = isHostel99Property(propertyName);
   const partnerItems = useMemo(() => getItemsForPartner(propertyName), [propertyName]);
 
+  const hostel99DailyRevenue = useMemo(() => {
+    if (!isHostel99) return 0;
+    const days = getDaysInMonthForDate(orderDate);
+    return parseFloat((HOSTEL_99_MONTHLY_REVENUE / days).toFixed(2));
+  }, [isHostel99, orderDate]);
+
   const calculatedAmount = useMemo(() => {
+    if (isHostel99) {
+      return hostel99DailyRevenue;
+    }
+
     if (isStudent) {
       const parsedWeight = Number(weight);
       const parsedRate = Number(studentRate);
@@ -69,7 +80,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
     }
 
     return 0;
-  }, [hotelItems, isItemized, isStudent, studentRate, weight]);
+  }, [hostel99DailyRevenue, hotelItems, isHostel99, isItemized, isStudent, studentRate, weight]);
 
   const aggregatedStudentServiceAmount = useMemo(() => {
     return studentServiceLines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
@@ -164,17 +175,21 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
     if (isStudent) {
       if (hostelEntryMode === "bulk") {
         if (!weight || !studentCount) throw new Error("Weight and Student Count are required for Student Laundry.");
+        const finalAmount = isHostel99 ? hostel99DailyRevenue : calculatedAmount;
         const basePayload = {
           ...orderPayload,
           category: ORDER_CATEGORIES.STUDENT_LAUNDRY,
           type: ORDER_TYPES.STUDENT,
-          amount: calculatedAmount,
+          amount: finalAmount,
           weight: Number(weight),
           studentCount: Number(studentCount),
           items: totalClothes ? Number(totalClothes) : 0,
           service: `${Number(studentCount)} Students, ${Number(weight)} KG`,
           ratePerKg: Number(studentRate) || 0,
-          details: { entryMode: "bulk" },
+          details: {
+            entryMode: "bulk",
+            ...(isHostel99 ? { fixedMonthlyRevenue: HOSTEL_99_MONTHLY_REVENUE, dailyRate: finalAmount } : {}),
+          },
         };
         orderPayload = basePayload;
       } else {
@@ -226,11 +241,13 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
           totalCalculatedItems += Number(item.quantity);
         });
 
+        const finalAmount = isHostel99 ? hostel99DailyRevenue : calculatedAmount;
+
         orderPayload = {
           ...orderPayload,
           category: orderCategory === "hotel" ? ORDER_CATEGORIES.AIRBNB : ORDER_CATEGORIES.LINEN,
           type: orderCategory === "hotel" ? ORDER_TYPES.AIRBNB : ORDER_TYPES.LINEN,
-          amount: calculatedAmount,
+          amount: finalAmount,
           details,
           items: totalCalculatedItems,
           service: validItems.map((item) => `${item.quantity} ${item.name}`).join(", "),
@@ -386,7 +403,11 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 <div>
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Bill Amount</label>
                   <input type="text" value={`Rs ${calculatedAmount.toFixed(2)}`} readOnly className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-black text-emerald-700 bg-emerald-50 focus:outline-none" />
-                  <p className="mt-1 text-[11px] font-bold text-slate-400">Auto-calculated at Rs {Number(studentRate) || 0}/kg</p>
+                  <p className="mt-1 text-[11px] font-bold text-slate-400">
+                    {isHostel99
+                      ? `Fixed ₹28,000/mo (₹28,000 ÷ ${getDaysInMonthForDate(orderDate)} days = ₹${hostel99DailyRevenue.toFixed(2)}/day)`
+                      : `Auto-calculated at Rs ${Number(studentRate) || 0}/kg`}
+                  </p>
                 </div>
               </div>
             )}
@@ -587,7 +608,11 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 <div className="pt-2">
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Bill Amount</label>
                   <input type="text" value={`Rs ${calculatedAmount.toFixed(2)}`} readOnly className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-black text-emerald-700 bg-emerald-50 focus:outline-none" />
-                  <p className="mt-1 text-[11px] font-bold text-slate-400">Auto-calculated from the selected item quantities and rate card.</p>
+                  <p className="mt-1 text-[11px] font-bold text-slate-400">
+                    {isHostel99
+                      ? `Fixed ₹28,000/mo (₹28,000 ÷ ${getDaysInMonthForDate(orderDate)} days = ₹${hostel99DailyRevenue.toFixed(2)}/day)`
+                      : "Auto-calculated from the selected item quantities and rate card."}
+                  </p>
                 </div>
               </div>
             )}

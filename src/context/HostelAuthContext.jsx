@@ -292,21 +292,44 @@ export function HostelAuthProvider({ children }) {
 
   const allOrdersMerged = useMemo(() => {
     const primaryRecordsMap = new Map();
+    const aliasMap = new Map(); // maps orderId / globalOrderNumber / alternate id -> primary id
+
+    const STATUS_PRIORITY = {
+      Delivered: 5,
+      Completed: 5,
+      "Pickup Done": 4,
+      Processing: 3,
+      Confirmed: 2,
+      Pending: 1,
+      Tracking: 0,
+      Abandoned: -1,
+      Cancelled: -2,
+    };
 
     const smartMergeOrders = (existing, order) => {
       const merged = { ...existing };
       
       for (const [key, val] of Object.entries(order)) {
-        // Skip explicitly empty values
         if (val === undefined || val === null || val === "" || Number.isNaN(val)) continue;
         if (Array.isArray(val) && val.length === 0) continue;
         
-        // Skip generic placeholders if we already have a real value
         if (key === "service" && ["Web Store Order", "Regular Service", "Order"].includes(val) && existing.service) continue;
         if (key === "customerName" && ["Website Customer", "Regular Customer"].includes(val) && existing.customerName) continue;
         
-        // Prevent overwriting a valid numeric amount/weight/items with 0
         if ((key === "amount" || key === "weight" || key === "items") && val === 0 && (existing[key] > 0)) continue;
+
+        // Preserve higher operational status unless explicitly cancelled
+        if (key === "status") {
+          const oldPrio = STATUS_PRIORITY[existing.status] ?? 0;
+          const newPrio = STATUS_PRIORITY[val] ?? 0;
+          if (val === "Cancelled" || existing.status === "Cancelled") {
+            merged.status = "Cancelled";
+            continue;
+          }
+          if (newPrio < oldPrio && oldPrio > 0) {
+            continue; // keep higher existing status
+          }
+        }
 
         merged[key] = val;
       }
@@ -314,68 +337,148 @@ export function HostelAuthProvider({ children }) {
       return merged;
     };
 
+    const findExistingKey = (order) => {
+      if (primaryRecordsMap.has(order.id)) return order.id;
+      if (order.canonicalOrderId && aliasMap.has(order.canonicalOrderId)) return aliasMap.get(order.canonicalOrderId);
+      if (order.globalOrderNumber && aliasMap.has(String(order.globalOrderNumber))) return aliasMap.get(String(order.globalOrderNumber));
+      if (order.orderId && aliasMap.has(String(order.orderId))) return aliasMap.get(String(order.orderId));
+      if (order.orderNumber && aliasMap.has(String(order.orderNumber))) return aliasMap.get(String(order.orderNumber));
+      if (aliasMap.has(order.id)) return aliasMap.get(order.id);
+      return null;
+    };
+
+    const registerAliases = (primaryId, order) => {
+      aliasMap.set(primaryId, primaryId);
+      if (order.id) aliasMap.set(String(order.id), primaryId);
+      if (order.canonicalOrderId) aliasMap.set(String(order.canonicalOrderId), primaryId);
+      if (order.globalOrderNumber) aliasMap.set(String(order.globalOrderNumber), primaryId);
+      if (order.orderId) aliasMap.set(String(order.orderId), primaryId);
+      if (order.orderNumber) aliasMap.set(String(order.orderNumber), primaryId);
+    };
+
+    // 1. Process cartOrders (B2C)
+    // Map to detect duplicate cart submission retries from mobile app
+    const b2cUserSlotFingerprints = new Map();
+
     cartOrders.forEach(order => {
-      if (order.type === "rider_tracking") return;
+      if (order.type === "rider_tracking" || order.isB2bRoomSync) return;
+
+      const existingKey = findExistingKey(order);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
+        registerAliases(existingKey, order);
+        return;
+      }
+
+      // Check semantic fingerprint for B2C orders: same phone + same pickup day + similar amount or slot
+      const phone = String(order.customerNumber || "").replace(/\D/g, "").slice(-10);
+      const day = order.date || order.pickupDate;
+      const isRegular = order.type === ORDER_TYPES.REGULAR || order.category === ORDER_CATEGORIES.B2C_RETAIL;
+
+      if (isRegular && phone.length === 10 && day) {
+        const fp = `${phone}_${day}`;
+        if (b2cUserSlotFingerprints.has(fp)) {
+          const matchedPrimaryId = b2cUserSlotFingerprints.get(fp);
+          const matchedOrder = primaryRecordsMap.get(matchedPrimaryId);
+          if (matchedOrder) {
+            primaryRecordsMap.set(matchedPrimaryId, smartMergeOrders(matchedOrder, order));
+            registerAliases(matchedPrimaryId, order);
+            return;
+          }
+        } else {
+          b2cUserSlotFingerprints.set(fp, order.id);
+        }
+      }
+
       primaryRecordsMap.set(order.id, order);
+      registerAliases(order.id, order);
     });
 
+    // 2. Website Store Orders
     websiteOrders.forEach((order) => {
-      const existing = primaryRecordsMap.get(order.id);
-      if (existing) {
-        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
+      const existingKey = findExistingKey(order);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
+        registerAliases(existingKey, order);
       } else {
         primaryRecordsMap.set(order.id, order);
+        registerAliases(order.id, order);
       }
     });
 
-    appComplaints.forEach((order) => {
-      primaryRecordsMap.set(order.id, order);
+    // 3. Complaints & Issues
+    appComplaints.forEach((issue) => {
+      const orderKey = issue.orderId ? findExistingKey({ id: issue.orderId, orderId: issue.orderId }) : null;
+      if (orderKey) {
+        const existing = primaryRecordsMap.get(orderKey);
+        primaryRecordsMap.set(orderKey, { ...existing, hasIssue: true, issueDetails: issue });
+      } else {
+        primaryRecordsMap.set(issue.id, { ...issue, category: ORDER_CATEGORIES.ISSUES, type: ORDER_TYPES.ISSUE });
+        registerAliases(issue.id, issue);
+      }
     });
 
-    // Hostel-submitted complaints (from 'complaint' collection via hostel order form)
-    hostelComplaints.forEach((order) => {
-      const existing = primaryRecordsMap.get(order.id);
-      if (!existing) primaryRecordsMap.set(order.id, order);
+    hostelComplaints.forEach((issue) => {
+      const orderKey = issue.orderId ? findExistingKey({ id: issue.orderId, orderId: issue.orderId }) : null;
+      if (orderKey) {
+        const existing = primaryRecordsMap.get(orderKey);
+        primaryRecordsMap.set(orderKey, { ...existing, hasIssue: true, issueDetails: issue });
+      } else {
+        primaryRecordsMap.set(issue.id, { ...issue, category: ORDER_CATEGORIES.ISSUES, type: ORDER_TYPES.ISSUE });
+        registerAliases(issue.id, issue);
+      }
     });
 
-    // Manager-submitted operational issues (from 'manager_issues' collection for B2B & B2C)
-    managerIssues.forEach((order) => {
-      primaryRecordsMap.set(order.id, order);
+    managerIssues.forEach((issue) => {
+      const orderKey = issue.orderId ? findExistingKey({ id: issue.orderId, orderId: issue.orderId }) : null;
+      if (orderKey) {
+        const existing = primaryRecordsMap.get(orderKey);
+        primaryRecordsMap.set(orderKey, { ...existing, hasIssue: true, issueDetails: issue });
+      } else {
+        primaryRecordsMap.set(issue.id, { ...issue, category: ORDER_CATEGORIES.ISSUES, type: ORDER_TYPES.ISSUE });
+        registerAliases(issue.id, issue);
+      }
     });
 
-    // 3. Base Data: B2B Orders
+    // 4. Base Data: B2B Orders
     b2bOrders.forEach(order => {
-      const existing = primaryRecordsMap.get(order.id);
-      if (existing) {
-        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
+      const existingKey = findExistingKey(order);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
+        registerAliases(existingKey, order);
       } else {
         primaryRecordsMap.set(order.id, order);
+        registerAliases(order.id, order);
       }
     });
     
-    // 3.5 Base Data: Hostels Orders (NEW)
+    // 5. Hostels Orders
     hostelsOrders.forEach(order => {
-      const existing = primaryRecordsMap.get(order.id);
-      if (existing) {
-        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
+      const existingKey = findExistingKey(order);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
+        registerAliases(existingKey, order);
       } else {
         primaryRecordsMap.set(order.id, order);
+        registerAliases(order.id, order);
       }
     });
 
-    // 4. Overrides: Admin Edits (Regular/Issues)
+    // 6. Overrides: Admin Edits
     firestoreEdits.forEach(order => {
-      const existing = primaryRecordsMap.get(order.id);
-      if (existing) {
-        primaryRecordsMap.set(order.id, smartMergeOrders(existing, order));
+      const existingKey = findExistingKey(order);
+      if (existingKey) {
+        primaryRecordsMap.set(existingKey, smartMergeOrders(primaryRecordsMap.get(existingKey), order));
+        registerAliases(existingKey, order);
       } else {
         primaryRecordsMap.set(order.id, order);
+        registerAliases(order.id, order);
       }
     });
 
     const merged = [...primaryRecordsMap.values()];
     return merged.filter(isVisibleMergedOrder);
-  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders, appComplaints, hostelComplaints]);
+  }, [cartOrders, b2bOrders, hostelsOrders, firestoreEdits, websiteOrders, appComplaints, hostelComplaints, managerIssues]);
 
   const orders = useMemo(() => {
     if (!client) return [];

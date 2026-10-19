@@ -214,6 +214,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                 <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em]">Service</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em] whitespace-nowrap">KG / PCS</th>
                 <th className="text-right text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Amount</th>
+                <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Payment</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Placed On</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Pickup</th>
                 <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
@@ -227,7 +228,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
             <tbody>
               {paginatedOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={!isViewer ? 10 : 9} className="px-4 py-12">
+                  <td colSpan={!isViewer ? 11 : 10} className="px-4 py-12">
                     <EmptyState
                       icon={deferredSearch ? FiSearch : FiInbox}
                       title={deferredSearch ? "No results found" : "No matching transactions"}
@@ -284,6 +285,34 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       )}
                       {order.couponDiscount > 0 && (
                         <div className="text-[9px] font-bold text-emerald-500 mt-0.5 text-right whitespace-nowrap">🏷️ -₹{order.couponDiscount?.toLocaleString()}</div>
+                      )}
+                    </td>
+                    {/* Payment: Cash vs Online + Rider confirmation */}
+                    <td className="px-3 py-3 text-center whitespace-nowrap">
+                      {order.isCashPayment ? (
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+                            💵 {order.isRiderPayment ? "Cash (Rider)" : "Cash (COD)"}
+                          </span>
+                          <span className={`text-[9px] font-bold mt-0.5 ${order.isPaid ? "text-emerald-600" : "text-amber-600"}`}>
+                            {order.isPaid ? "● Paid" : "○ Pending"}
+                          </span>
+                        </div>
+                      ) : order.isOnlinePayment ? (
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            💳 {order.isRiderPayment ? (order.paymentMethodLabel || "Online (Rider)") : "Online"}
+                          </span>
+                          <span className={`text-[9px] font-bold mt-0.5 ${order.isPaid ? "text-emerald-600" : "text-amber-600"}`}>
+                            {order.isPaid ? "● Paid" : "○ Pending"}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200">
+                            {order.paymentMethodLabel || "Pending"}
+                          </span>
+                        </div>
                       )}
                     </td>
                     {/* Dates */}
@@ -436,6 +465,21 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                   <div className="flex items-center gap-0.5 text-sm font-black text-blue-600">
                     <BiRupee size={12} className="text-blue-400" />
                     <span>{order.amount?.toLocaleString()}</span>
+                  </div>
+                  <div className="mt-1">
+                    {order.isCashPayment ? (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200">
+                        💵 {order.isRiderPayment ? "Cash (Rider)" : "Cash (COD)"}
+                      </span>
+                    ) : order.isOnlinePayment ? (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        💳 {order.isRiderPayment ? (order.paymentMethodLabel || "Online (Rider)") : "Online"}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-slate-400 bg-slate-50 border border-slate-200">
+                        {order.paymentMethodLabel || "Pending"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

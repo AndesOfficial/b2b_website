@@ -8,7 +8,7 @@ import {
 import { FaIndianRupeeSign, FaWeightHanging } from "react-icons/fa6";
 import LoadingSpinner from "../Shared/LoadingSpinner";
 import EmptyState from "../Shared/EmptyState";
-import { ONE8_RATE_MAP, ITEM_RATE_MAP } from "../../config/orderRateCard";
+import { ONE8_RATE_MAP, ZOLO_RATE_MAP, ITEM_RATE_MAP, HOSTEL_99_MONTHLY_REVENUE } from "../../config/orderRateCard";
 
 const ONE8_PRICES = {
   "wiping cloth": 9,
@@ -25,9 +25,43 @@ const ONE8_PRICES = {
   "cap": 5,
 };
 
-export function calculateBatchRevenue(entry) {
+export function getDaysInMonth(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  }
+  const dStr = dateStr.split("T")[0];
+  const parts = dStr.split(/[-/]/);
+  if (parts.length >= 2) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+      return new Date(year, month, 0).getDate();
+    }
+  }
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
+
+export function isHostel99Client(clientName) {
+  const c = String(clientName || "").trim().toLowerCase();
+  return c.includes("hostel 99") || c.includes("hostel99") || c.startsWith("99");
+}
+
+export function calculateBatchRevenue(entry, countOnDate = 1) {
   const clientLower = String(entry.client || "").toLowerCase();
+
+  // Hostel 99 orders have a combined fixed monthly revenue of ₹28,000 across all properties.
+  // For each order daily, divide 28,000 by (number of days in month * count of batches on that day).
+  if (isHostel99Client(clientLower)) {
+    const daysInMonth = getDaysInMonth(entry.date);
+    const dailyTotal = HOSTEL_99_MONTHLY_REVENUE / daysInMonth;
+    const safeCount = Math.max(1, countOnDate || 1);
+    return parseFloat((dailyTotal / safeCount).toFixed(2));
+  }
+
   const isOne8 = clientLower.includes("one 8") || clientLower.includes("one8");
+  const isZolo = clientLower.includes("zolo");
   
   let total = 0;
   let hasItemRevenue = false;
@@ -40,6 +74,15 @@ export function calculateBatchRevenue(entry) {
       let rate = 0;
       if (isOne8) {
         rate = ONE8_PRICES[nameLower] ?? (ONE8_RATE_MAP[it.name] || 0);
+      } else if (isZolo) {
+        rate = ZOLO_RATE_MAP[it.name] ??
+          (nameLower.includes("pillow") ? 10 :
+           nameLower.includes("towel") ? 12 :
+           nameLower.includes("single bedsheet") || nameLower.includes("single bed sheet") ? 13 :
+           nameLower.includes("double bedsheet") || nameLower.includes("double bed sheet") ? 15 :
+           nameLower.includes("single duvet") ? 30 :
+           nameLower.includes("double duvet") || nameLower.includes("king duvet") ? 35 :
+           (ITEM_RATE_MAP[it.name] || 0));
       } else {
         rate = ITEM_RATE_MAP[it.name] || 
           (nameLower.includes("bedsheet") ? 30 : 
@@ -53,6 +96,11 @@ export function calculateBatchRevenue(entry) {
         hasItemRevenue = true;
       }
     });
+  }
+
+  // If entry already carries an explicitly confirmed calculatedRevenue, respect it
+  if (!hasItemRevenue && Number(entry.calculatedRevenue) > 0) {
+    return Number(entry.calculatedRevenue);
   }
 
   // Fallback to bulk kg calculation if no itemized rate matched
@@ -91,14 +139,35 @@ export default function AdminB2BTab() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => {
+        const rawList = snapshot.docs.map((docSnap) => {
           const data = docSnap.data();
           return {
             id: docSnap.id,
             ...data,
-            calculatedRevenue: calculateBatchRevenue(data),
           };
-        }).sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.client || "").localeCompare(b.client || ""));
+        });
+
+        // Count active Hostel 99 batches per date to evenly divide daily ₹28k share
+        const hostel99CountByDate = {};
+        rawList.forEach((e) => {
+          if (isHostel99Client(e.client) && e.status !== "cancelled") {
+            const d = e.date || "unknown";
+            hostel99CountByDate[d] = (hostel99CountByDate[d] || 0) + 1;
+          }
+        });
+
+        const list = rawList.map((data) => {
+          const isH99 = isHostel99Client(data.client);
+          const d = data.date || "unknown";
+          const countOnDate = isH99 ? (hostel99CountByDate[d] || 1) : 1;
+          return {
+            ...data,
+            canonicalClient: isH99 ? "Hostel 99" : (data.client || "").trim(),
+            h99BatchesOnDate: countOnDate,
+            calculatedRevenue: calculateBatchRevenue(data, countOnDate),
+          };
+        }).sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.canonicalClient || a.client || "").localeCompare(b.canonicalClient || b.client || ""));
+
         setEntries(list);
         setLoading(false);
       },
@@ -134,11 +203,12 @@ export default function AdminB2BTab() {
     }
   };
 
-  // Unique clients list for filter dropdown
+  // Unique clients list for filter dropdown (all Hostel 99 properties combined)
   const uniqueClients = useMemo(() => {
     const set = new Set();
     entries.forEach((e) => {
-      if (e.client && e.client.trim()) set.add(e.client.trim());
+      const canonical = isHostel99Client(e.client) ? "Hostel 99" : (e.client && e.client.trim());
+      if (canonical) set.add(canonical);
     });
     return Array.from(set).sort();
   }, [entries]);
@@ -150,8 +220,14 @@ export default function AdminB2BTab() {
       if (dateFrom && e.date && e.date < dateFrom) return false;
       if (dateTo && e.date && e.date > dateTo) return false;
 
-      // Client filter
-      if (selectedClient !== "All" && e.client !== selectedClient) return false;
+      // Client filter (handles combined Hostel 99)
+      if (selectedClient !== "All") {
+        if (selectedClient === "Hostel 99") {
+          if (!isHostel99Client(e.client)) return false;
+        } else if ((e.client || "").trim() !== selectedClient) {
+          return false;
+        }
+      }
 
       // Status filter
       if (statusFilter !== "All" && e.status !== statusFilter.toLowerCase()) return false;
@@ -259,10 +335,10 @@ export default function AdminB2BTab() {
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900 tracking-tight">
-              ₹{kpis.totalRevenue.toLocaleString("en-IN")}
+              ₹{Math.round(kpis.totalRevenue).toLocaleString("en-IN")}
             </div>
             <div className="text-[11px] font-semibold text-slate-400 mt-1">
-              One8 & client catalogue rates
+              One8, Hostel 99 & catalogue rates
             </div>
           </div>
         </div>
@@ -479,6 +555,8 @@ export default function AdminB2BTab() {
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {filteredEntries.map((e) => {
                   const isOne8 = (e.client || "").toLowerCase().includes("one8") || (e.client || "").toLowerCase().includes("one 8");
+                  const isHostel99 = isHostel99Client(e.client);
+                  const daysInMonth = getDaysInMonth(e.date);
                   const isVerified = e.status === "verified";
                   const isCancelled = e.status === "cancelled";
 
@@ -495,9 +573,21 @@ export default function AdminB2BTab() {
                       {/* Client Name */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
-                          <span className={`inline-block w-2 h-2 rounded-full ${isOne8 ? "bg-amber-500" : "bg-blue-500"}`} />
-                          <span className="font-extrabold text-slate-900">{e.client}</span>
+                          <span className={`inline-block w-2 h-2 rounded-full ${isOne8 ? "bg-amber-500" : isHostel99 ? "bg-purple-600" : "bg-blue-500"}`} />
+                          <span className="font-extrabold text-slate-900">
+                            {isHostel99 ? "Hostel 99" : e.client}
+                          </span>
+                          {isHostel99 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-black bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-tight">
+                              Fixed ₹28k/mo
+                            </span>
+                          )}
                         </div>
+                        {isHostel99 && e.client && e.client.trim().toLowerCase() !== "hostel 99" && (
+                          <div className="text-[10.5px] text-slate-500 font-semibold mt-0.5">
+                            Property: {e.client}
+                          </div>
+                        )}
                         {e.note && (
                           <p className="text-[11px] text-slate-400 italic mt-0.5 max-w-xs truncate" title={e.note}>
                             "{e.note}"
@@ -547,11 +637,21 @@ export default function AdminB2BTab() {
                       {/* Calculated Revenue */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="font-black text-slate-900 text-sm">
-                          ₹{(e.calculatedRevenue || 0).toLocaleString("en-IN")}
+                          ₹{(e.calculatedRevenue || 0).toLocaleString("en-IN", {
+                            minimumFractionDigits: Number.isInteger(e.calculatedRevenue) ? 0 : 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </div>
                         {isOne8 && (
                           <div className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">
                             One8 Rates
+                          </div>
+                        )}
+                        {isHostel99 && (
+                          <div className="text-[10px] text-purple-600 font-bold uppercase tracking-wider">
+                            {e.h99BatchesOnDate > 1
+                              ? `₹28k ÷ ${daysInMonth}d ÷ ${e.h99BatchesOnDate} batches`
+                              : `₹28,000 ÷ ${daysInMonth} days`}
                           </div>
                         )}
                       </td>

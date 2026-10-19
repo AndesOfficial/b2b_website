@@ -10,9 +10,11 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     // + orders manually logged by admin from this portal (b2b_admin_edits, type: "regular")
     const allRegularOrders = orders.filter(
       (o) =>
-        o.source === 'cartdetails' ||
+        !o.isB2bRoomSync &&
+        o.type !== 'rider_tracking' &&
+        (o.source === 'cartdetails' ||
         o.source === 'website' ||
-        (o.source === 'admin' && o.type === 'regular')
+        (o.source === 'admin' && o.type === 'regular'))
     );
 
     // Explicitly exclude Cancelled and Abandoned orders from all metric calculations.

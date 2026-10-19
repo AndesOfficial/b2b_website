@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FiX, FiEdit2, FiCheck, FiLoader, FiDownload } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { doc, setDoc } from "firebase/firestore";
@@ -8,6 +8,8 @@ import { useHostelAuth } from "../../context/HostelAuthContext";
 import { getOrAssignInvoiceNumber } from "../../utils/invoiceCounter";
 import { generateSingleInvoicePDF } from "../../utils/pdfGenerator";
 import { formatTimeSlot, humanizeServiceLabel } from "../../utils/formatUtils";
+import { recalculateB2COrderTotal } from "../../utils/orderPricing";
+import { cleanFirestoreData } from "../../utils/cleanFirestoreData";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
   const { client } = useHostelAuth();
@@ -23,34 +25,59 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
     items: 0
   });
 
+  const isB2COrder = order
+    ? order.type === "regular" ||
+      order.category === "B2C_RETAIL" ||
+      order.source === "cartdetails" ||
+      order.source === "website"
+    : false;
+
   // Load the current order data into the edit form whenever the modal opens
   useEffect(() => {
     if (order) {
       setEditForm({
         status: order.status || "Pending",
-        amount: order.amount || 0,
-        weight: order.weight || 0,
+        amount: order.amount ?? order.totalCost ?? 0,
+        weight: order.weight ?? order.clothesWeightKg ?? 0,
         studentCount: order.studentCount || 0,
-        items: order.items || 0
+        items: order.items ?? order.clothesCount ?? 0
       });
       setIsEditing(false); // Always start in "View" mode
     }
   }, [order, isOpen]);
 
+  // Dynamic pricing preview recalculated whenever weight changes in edit mode
+  const pricingPreview = useMemo(() => {
+    if (!order) return null;
+    return recalculateB2COrderTotal(order, editForm.weight);
+  }, [order, editForm.weight]);
+
   if (!isOpen || !order) return null;
 
-  // Helper to remove undefined fields which Firestore doesn't support
-  const cleanObject = (obj) => {
-    const newObj = { ...obj };
-    Object.keys(newObj).forEach((key) => {
-      if (newObj[key] === undefined) delete newObj[key];
-    });
-    return newObj;
-  };
+  // Helper to remove undefined fields recursively which Firestore doesn't support
+  const cleanObject = (obj) => cleanFirestoreData(obj);
 
   const updatePositiveField = (field, rawValue) => {
     if (isNegativeNumberInput(rawValue)) return;
     setEditForm((prev) => ({ ...prev, [field]: rawValue }));
+  };
+
+  const handleWeightChange = (newWeightVal) => {
+    if (isNegativeNumberInput(newWeightVal)) return;
+
+    if (isB2COrder) {
+      const recomputed = recalculateB2COrderTotal(order, newWeightVal);
+      setEditForm((prev) => ({
+        ...prev,
+        weight: newWeightVal,
+        amount: recomputed.amount,
+      }));
+    } else {
+      setEditForm((prev) => ({
+        ...prev,
+        weight: newWeightVal,
+      }));
+    }
   };
 
   // The function that securely updates the exact document in the correct collection
@@ -79,6 +106,11 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
       
       const docRef = doc(db, targetCollection, String(order.id));
 
+      let pricingUpdates = {};
+      if (isB2COrder || targetCollection === "cartdetails") {
+        pricingUpdates = recalculateB2COrderTotal(order, editForm.weight, editForm.amount);
+      }
+
       const updatedPayload = {
         ...order,
         status: editForm.status,
@@ -86,11 +118,22 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         weight: Number(editForm.weight),
         studentCount: Number(editForm.studentCount),
         items: Number(editForm.items),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        ...pricingUpdates,
       };
 
       if (targetCollection === "hostels_orders" || order.source === "hostels") {
         updatedPayload.clothesWeightKg = Number(editForm.weight);
+      }
+
+      if (targetCollection === "cartdetails" || order.source === "cartdetails" || isB2COrder) {
+        updatedPayload.clothesWeightKg = Number(editForm.weight);
+        updatedPayload.clothesCount = Number(editForm.items);
+        updatedPayload.totalCost = Number(editForm.amount);
+        updatedPayload.calculatedAmount = Number(editForm.amount);
+        if (!updatedPayload.originalTotalCost) {
+          updatedPayload.originalTotalCost = Number(editForm.amount);
+        }
       }
 
       await setDoc(docRef, cleanObject(updatedPayload), { merge: true });
@@ -189,15 +232,15 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Weight (kg)</p>
                   {isEditing ? (
-                    <input type="number" step="0.1" min="0" value={editForm.weight} onChange={(e) => updatePositiveField("weight", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none" />
+                    <input type="number" step="0.1" min="0" value={editForm.weight} onChange={(e) => updatePositiveField("weight", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
-                    <p className="text-[18px] font-black text-[#0F172A]">{order.weight?.toFixed(1) || '0.0'} <span className="text-[12px] text-slate-500">kg</span></p>
+                    <p className="text-[18px] font-black text-[#0F172A]">{Number(order.weight || 0).toFixed(1)} <span className="text-[12px] text-slate-500">kg</span></p>
                   )}
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Students</p>
                   {isEditing ? (
-                    <input type="number" min="0" value={editForm.studentCount} onChange={(e) => updatePositiveField("studentCount", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none" />
+                    <input type="number" min="0" value={editForm.studentCount} onChange={(e) => updatePositiveField("studentCount", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
                     <p className="text-[18px] font-black text-[#0F172A]">{order.studentCount || '—'}</p>
                   )}
@@ -208,7 +251,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                 <div className="flex items-center justify-between py-2 border-b border-slate-50">
                   <span className="text-[14px] font-bold text-slate-600">Total Clothes (pcs)</span>
                   {isEditing ? (
-                    <input type="number" min="0" value={editForm.items} onChange={(e) => updatePositiveField("items", e.target.value)} className="w-24 text-right text-[14px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none" />
+                    <input type="number" min="0" value={editForm.items} onChange={(e) => updatePositiveField("items", e.target.value)} className="w-24 text-right text-[14px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
                     <span className="text-[14px] font-black text-[#0F172A]">{order.items || 0} pcs</span>
                   )}
@@ -217,19 +260,75 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
             </div>
           ) : (
             <div className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                  <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Item Breakdown</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Total Pcs:</span>
-                    {isEditing ? (
-                    <input type="number" min="0" value={editForm.items} onChange={(e) => updatePositiveField("items", e.target.value)} className="w-16 text-center text-[12px] font-black text-blue-600 bg-white border border-slate-200 rounded px-1 outline-none" />
-                    ) : (
-                      <span className="text-[12px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{order.items || Object.values(order.details || {}).reduce((s, v) => s + v, 0) || 0}</span>
+              {/* B2C Weight & Pieces */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Weight</p>
+                    {pricingPreview?.ratePerKg > 0 && (
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                        ₹{pricingPreview.ratePerKg}/kg
+                      </span>
                     )}
                   </div>
+                  {isEditing ? (
+                    <div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={editForm.weight}
+                          onChange={(e) => handleWeightChange(e.target.value)}
+                          className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-7"
+                          placeholder="0.0"
+                        />
+                        <span className="absolute right-2 top-1.5 text-[11px] font-bold text-slate-400">kg</span>
+                      </div>
+                      <p className="text-[10px] text-blue-600 font-semibold mt-1">
+                        Auto-recalculates total bill
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[18px] font-black text-[#0F172A]">
+                      {Number(order.weight ?? order.clothesWeightKg ?? 0).toFixed(1)}{" "}
+                      <span className="text-[12px] text-slate-500">kg</span>
+                    </p>
+                  )}
                 </div>
-                {order.details && Object.keys(order.details).length > 0 ? (
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Clothes</p>
+                  {isEditing ? (
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={editForm.items}
+                        onChange={(e) => updatePositiveField("items", e.target.value)}
+                        className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-8"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-2 top-1.5 text-[11px] font-bold text-slate-400">pcs</span>
+                    </div>
+                  ) : (
+                    <p className="text-[18px] font-black text-[#0F172A]">
+                      {order.items ?? order.clothesCount ?? Object.values(order.details || {}).reduce((s, v) => s + v, 0) ?? 0}{" "}
+                      <span className="text-[12px] text-slate-500">pcs</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Item Breakdown from details object */}
+              {order.details && Object.keys(order.details).length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                    <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Itemized Pieces</h3>
+                    <span className="text-[12px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      {Object.values(order.details).reduce((s, v) => s + v, 0)} pcs
+                    </span>
+                  </div>
                   <div className="space-y-2">
                     {Object.entries(order.details).filter(([, v]) => v > 0).map(([item, qty]) => (
                       <div key={item} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg opacity-80">
@@ -238,30 +337,40 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-[13px] font-medium text-slate-500 italic py-4 text-center">No detailed item breakdown available.</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {order.serviceBreakdown?.length > 0 && (
+        {/* Service Breakdown */}
+        {((isEditing ? pricingPreview?.serviceBreakdown : order.serviceBreakdown)?.length > 0 || (isB2COrder && Number(editForm.weight) > 0)) && (
           <div className="p-6 space-y-3 border-t border-slate-100">
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Service Breakdown</div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Service Breakdown</span>
+              {isEditing && (
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                  Live Recalculation
+                </span>
+              )}
+            </div>
             <div className="space-y-2">
-              {order.serviceBreakdown.map((item) => (
-                <div key={`${item.name}-${item.quantity}-${item.amount}`} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
+              {(isEditing && pricingPreview?.serviceBreakdown?.length > 0
+                ? pricingPreview.serviceBreakdown
+                : (order.serviceBreakdown || [])
+              ).map((item, idx) => (
+                <div key={`${item.name}-${item.quantity}-${item.amount}-${idx}`} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
                   <div>
                     <p className="text-[13px] font-bold text-slate-700">{humanizeServiceLabel(item.name)}</p>
                     <p className="text-[11px] text-slate-500">
                       {item.quantity ? `${item.quantity} pcs` : "—"}
-                      {item.weight ? ` • ${item.weight} kg` : ""}
+                      {item.weight !== undefined && Number(item.weight) > 0 ? ` • ${Number(item.weight).toFixed(1)} kg` : ""}
+                      {item.rate ? ` (@ ₹${item.rate}/kg)` : ""}
                     </p>
                   </div>
-                  {item.amount ? (
+                  {item.amount !== undefined ? (
                     <div className="text-[13px] font-black text-[#0F172A]">
-                      <BiRupee size={14} className="inline-block" /> {item.amount.toLocaleString()}
+                      <BiRupee size={14} className="inline-block" /> {Number(item.amount).toLocaleString()}
                     </div>
                   ) : null}
                 </div>
@@ -269,6 +378,49 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
             </div>
           </div>
         )}
+
+        {/* Payment Details */}
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Payment Information</span>
+            {order.isPaid ? (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
+                ● Paid
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 uppercase tracking-wider">
+                ○ Pending
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-[13px]">
+            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Payment Mode</span>
+              <span className="font-black text-slate-800 flex items-center gap-1.5">
+                {order.isCashPayment ? "💵 Cash" : order.isOnlinePayment ? "💳 Online" : "—"}
+                {order.isRiderPayment && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100 uppercase">
+                    Rider
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Method / Recorded</span>
+              <span className="font-bold text-slate-800 text-[12px] truncate block" title={order.paymentMethodOnDelivery || order.paymentMethod}>
+                {order.paymentMethodOnDelivery || order.paymentMethod || order.paymentMethodLabel || "Not specified"}
+              </span>
+            </div>
+            {order.paymentRecordedAt && (
+              <div className="col-span-2 text-[11px] text-slate-500 font-medium">
+                ⏱️ Payment recorded on delivery:{" "}
+                <span className="font-bold text-slate-700">
+                  {new Date(order.paymentRecordedAt?.toDate ? order.paymentRecordedAt.toDate() : order.paymentRecordedAt).toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-[#F8FAFC]">
