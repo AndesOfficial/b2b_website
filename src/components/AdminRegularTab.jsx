@@ -11,19 +11,14 @@ import TransactionsLogDashboard from "./RegularOrders/TransactionsLogDashboard";
 import RegularOrderFormModal from "./RegularOrders/RegularOrderFormModal";
 
 import { useRegularAnalytics } from "../hooks/useRegularAnalytics";
+import { getTodayString } from "../utils/dateUtils";
 
 const SUB_TABS = ["Overview", "Customers", "Analytics", "Placed Orders"];
 
-// Computed once at module load — avoids Date() allocation on every render
-const _today = new Date();
-const _fmt = (d) => d.toISOString().split("T")[0];
-const DEFAULT_DATE_FROM = _fmt(_today);
-const DEFAULT_DATE_TO = _fmt(_today);
-
 export default function AdminRegularTab({ orders, registeredUserIds, onAddOrder, onEditOrder, onDeleteOrder }) {
   const [activeSubTab, setActiveSubTab] = useState("Overview");
-  const [localDateFrom, setLocalDateFrom] = useState(DEFAULT_DATE_FROM);
-  const [localDateTo, setLocalDateTo] = useState(DEFAULT_DATE_TO);
+  const [localDateFrom, setLocalDateFrom] = useState(() => getTodayString());
+  const [localDateTo, setLocalDateTo] = useState(() => getTodayString());
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);

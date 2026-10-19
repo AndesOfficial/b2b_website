@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { FiCalendar, FiChevronDown } from 'react-icons/fi';
-import { getTodayString, formatDateString } from '../../utils/dateUtils';
+import { getTodayString, formatDateString, getMonthStartString } from '../../utils/dateUtils';
 
 const PRESETS = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly', 'Custom'];
 
@@ -36,7 +36,7 @@ export default function RegularDateFilter({ dateFrom, dateTo, setDateFrom, setDa
         newFrom = formatDateString(-7);
         break;
       case 'Monthly':
-        newFrom = formatDateString(-30);
+        newFrom = getMonthStartString();
         break;
       case 'Quarterly':
         newFrom = formatDateString(-90);

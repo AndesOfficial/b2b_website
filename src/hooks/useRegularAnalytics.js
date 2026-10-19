@@ -12,6 +12,7 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
       (o) =>
         !o.isB2bRoomSync &&
         o.type !== 'rider_tracking' &&
+        o.type !== 'issue' &&
         (o.source === 'cartdetails' ||
         o.source === 'website' ||
         (o.source === 'admin' && o.type === 'regular'))
@@ -25,6 +26,7 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
 
     // 2. Parse dates for periods
     const from = new Date(dateFrom);
+    from.setHours(0, 0, 0, 0);
     const to = new Date(dateTo);
     to.setHours(23, 59, 59, 999);
     
@@ -59,19 +61,32 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
     const lookbackTo   = new Date(from.getTime() - 1);
 
     const getOrderDate = (o) => {
+      if (!o) return new Date(0);
       if (o.date) {
-          let dateStr = o.date;
-          const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
-          if (dmyMatch) {
-              const [, day, month, year] = dmyMatch;
-              dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-          }
-          const d = new Date(dateStr);
-          if (!isNaN(d)) return d;
+        const trimmed = String(o.date).trim();
+        const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+        if (dmyMatch) {
+          const [, day, month, year] = dmyMatch;
+          const d = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+          if (!isNaN(d.getTime())) return d;
+        }
+        const d = new Date(trimmed);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (o.pickupDate) {
+        const trimmed = String(o.pickupDate).trim();
+        const dmyMatch = trimmed.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+        if (dmyMatch) {
+          const [, day, month, year] = dmyMatch;
+          const d = new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`);
+          if (!isNaN(d.getTime())) return d;
+        }
+        const d = new Date(trimmed);
+        if (!isNaN(d.getTime())) return d;
       }
       if (o.createdAtRaw) {
-          const d = typeof o.createdAtRaw.toDate === 'function' ? o.createdAtRaw.toDate() : new Date(o.createdAtRaw);
-          if (!isNaN(d)) return d;
+        const d = typeof o.createdAtRaw.toDate === "function" ? o.createdAtRaw.toDate() : new Date(o.createdAtRaw);
+        if (!isNaN(d.getTime())) return d;
       }
       return new Date(0); // Treat missing/invalid date as epoch so it doesn't pollute current stats
     };

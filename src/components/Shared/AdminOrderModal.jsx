@@ -96,6 +96,8 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         targetCollection = "b2b_orders";
       } else if (order.source === "admin") {
         targetCollection = "b2b_admin_edits";
+      } else if (order.source === "manager_b2b") {
+        targetCollection = "managerB2bEntries";
       } else {
         const isB2B = 
           order.category === "STUDENT_LAUNDRY" || 

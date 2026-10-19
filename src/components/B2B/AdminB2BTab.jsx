@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot, query, limit, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, limit, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
   FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiDownload,
-  FiEye, FiFilter, FiImage, FiLayers, FiRefreshCw, FiSearch, FiTag, FiUsers, FiX
+  FiEye, FiFilter, FiImage, FiLayers, FiRefreshCw, FiSearch, FiTag, FiUsers, FiX,
+  FiEdit2, FiPlus, FiTrash2, FiCheck,
 } from "react-icons/fi";
 import { FaIndianRupeeSign, FaWeightHanging } from "react-icons/fa6";
 import LoadingSpinner from "../Shared/LoadingSpinner";
@@ -16,6 +17,8 @@ import {
   isHostel99Client,
   getDaysInMonth,
   calculateBatchRevenue,
+  calculateLinenWeight,
+  getItemsForPartner,
 } from "../../config/orderRateCard";
 
 const getTodayStr = () => new Date().toISOString().split("T")[0];
@@ -29,11 +32,19 @@ export default function AdminB2BTab() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
 
   // Filters
   const [datePreset, setDatePreset] = useState("month");
   const [dateFrom, setDateFrom] = useState(() => `${getTodayStr().slice(0, 8)}01`);
-  const [dateTo, setDateTo] = useState(getTodayStr());
+  const [dateTo, setDateTo] = useState(() => {
+    const today = getTodayStr();
+    const year = parseInt(today.slice(0, 4), 10);
+    const month = parseInt(today.slice(5, 7), 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${today.slice(0, 8)}${String(lastDay).padStart(2, "0")}`;
+  });
   const [selectedClient, setSelectedClient] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -480,6 +491,7 @@ export default function AdminB2BTab() {
                   <th className="py-3 px-4 text-right">Revenue</th>
                   <th className="py-3 px-4 text-center">Proof Photo</th>
                   <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -629,6 +641,17 @@ export default function AdminB2BTab() {
                           {e.status || "pending"}
                         </span>
                       </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setEditingEntry(e)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 shadow-sm"
+                        >
+                          <FiEdit2 size={12} /> Edit
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -682,6 +705,349 @@ export default function AdminB2BTab() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-[100] bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700/60 animate-slide-left">
+          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+            <FiCheck size={14} />
+          </div>
+          <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* 5. EDIT B2B ENTRY MODAL */}
+      {editingEntry && (
+        <B2BEditModal
+          entry={editingEntry}
+          onClose={() => setEditingEntry(null)}
+          onSuccess={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(""), 3500);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function B2BEditModal({ entry, onClose, onSuccess }) {
+  const [form, setForm] = useState(() => ({
+    date: entry.date || "",
+    client: entry.client || "",
+    batchNo: entry.batchNo || "1",
+    kg: entry.kg ?? "",
+    clothes: entry.clothes ?? "",
+    students: entry.students ?? "",
+    note: entry.note || "",
+    status: entry.status || "pending",
+    photoUrl: entry.photoUrl || "",
+    items: Array.isArray(entry.items) ? entry.items.map((it) => ({ name: it.name || "", qty: it.qty ?? "" })) : [],
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const isH99 = isHostel99Client(form.client);
+  const isLinen = isH99 || String(form.client || "").toLowerCase().includes("zolo");
+  const partnerItems = useMemo(() => getItemsForPartner(form.client), [form.client]);
+
+  const updateItems = (newItems) => {
+    const autoW = calculateLinenWeight(newItems);
+    const totalPcs = newItems.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+    setForm((f) => ({
+      ...f,
+      items: newItems,
+      kg: isLinen && autoW > 0 ? autoW : autoW > 0 && (!f.kg || f.kg === "0" || f.kg === "") ? autoW : f.kg,
+      clothes: totalPcs > 0 ? totalPcs : f.clothes,
+    }));
+  };
+
+  const handleItemChange = (index, field, value) => {
+    const updated = form.items.map((it, idx) => (idx === index ? { ...it, [field]: value } : it));
+    updateItems(updated);
+  };
+
+  const addItem = (name = "", qty = 1) => {
+    const updated = [...form.items, { name, qty }];
+    updateItems(updated);
+  };
+
+  const removeItem = (index) => {
+    const updated = form.items.filter((_, idx) => idx !== index);
+    updateItems(updated);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      const cleanItems = form.items
+        .filter((it) => it.name.trim() && Number(it.qty) > 0)
+        .map((it) => ({ name: it.name.trim(), qty: Number(it.qty) }));
+
+      const cleanKg = Number(form.kg) || 0;
+      const cleanClothes = cleanItems.length > 0
+        ? cleanItems.reduce((s, it) => s + it.qty, 0)
+        : Number(form.clothes) || 0;
+
+      const payload = {
+        date: form.date,
+        client: form.client.trim(),
+        batchNo: String(form.batchNo || "1").trim(),
+        kg: cleanKg,
+        clothes: cleanClothes,
+        students: Number(form.students) || 0,
+        status: form.status,
+        note: form.note.trim(),
+        photoUrl: form.photoUrl.trim(),
+        items: cleanItems,
+        updatedAt: serverTimestamp(),
+        updatedBy: "admin",
+      };
+
+      const newRev = calculateBatchRevenue(payload, entry.h99BatchesOnDate || 1);
+      payload.calculatedRevenue = newRev;
+      payload.amount = newRev;
+
+      const docRef = doc(db, "managerB2bEntries", entry.id);
+      await updateDoc(docRef, payload);
+
+      onSuccess("B2B entry updated successfully!");
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to update entry.");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in" onClick={onClose}>
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] my-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Edit B2B Entry</h2>
+            <p className="text-xs text-slate-500 font-semibold">{entry.client} · Batch #{entry.batchNo} · {entry.date}</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors">
+            <FiX size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          {error && (
+            <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl font-bold">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Client</label>
+              <input
+                type="text"
+                value={form.client}
+                onChange={(e) => setForm((f) => ({ ...f, client: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Batch No.</label>
+              <input
+                type="text"
+                value={form.batchNo}
+                onChange={(e) => setForm((f) => ({ ...f, batchNo: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Weight (KG)</label>
+                {isH99 && <span className="text-[10px] text-blue-600 font-bold">Auto-calculated</span>}
+              </div>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={form.kg}
+                onChange={(e) => setForm((f) => ({ ...f, kg: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Clothes (Pcs)</label>
+              <input
+                type="number"
+                min="0"
+                value={form.items.length ? form.items.reduce((s, it) => s + (Number(it.qty) || 0), 0) : form.clothes}
+                onChange={(e) => setForm((f) => ({ ...f, clothes: e.target.value }))}
+                disabled={form.items.length > 0}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500 disabled:opacity-70"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Students</label>
+              <input
+                type="number"
+                min="0"
+                value={form.students}
+                onChange={(e) => setForm((f) => ({ ...f, students: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</label>
+              <select
+                value={form.status}
+                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Items breakdown */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                Item Breakdown {isH99 ? "(Hostel 99 Linen - Weights Auto-Calculated)" : ""}
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const existing = new Set(form.items.map((it) => it.name.toLowerCase()));
+                  const toAdd = partnerItems.filter((name) => !existing.has(name.toLowerCase())).map((name) => ({ name, qty: 1 }));
+                  updateItems([...form.items, ...toAdd]);
+                }}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg"
+              >
+                + Pre-fill Catalogue
+              </button>
+            </div>
+
+            {/* Quick add chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2">
+              {partnerItems.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => {
+                    const idx = form.items.findIndex((it) => it.name.toLowerCase() === name.toLowerCase());
+                    if (idx >= 0) {
+                      handleItemChange(idx, "qty", (Number(form.items[idx].qty) || 0) + 1);
+                    } else {
+                      addItem(name, 1);
+                    }
+                  }}
+                  className="shrink-0 px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-md text-[10px] font-semibold transition-colors"
+                >
+                  + {name}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+              {form.items.map((it, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={it.name}
+                    onChange={(e) => handleItemChange(idx, "name", e.target.value)}
+                    placeholder="Item name"
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    value={it.qty}
+                    onChange={(e) => handleItemChange(idx, "qty", e.target.value)}
+                    placeholder="Qty"
+                    className="w-24 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500 text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                  >
+                    <FiTrash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => addItem("", 1)}
+              className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <FiPlus size={13} /> Add item
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Note</label>
+            <input
+              type="text"
+              value={form.note}
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="e.g. Sent for deep wash, special handling"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Proof Photo URL</label>
+            <input
+              type="text"
+              value={form.photoUrl}
+              onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
+              placeholder="https://..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* Footer Actions */}
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="px-4 py-2 font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors flex items-center gap-2"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

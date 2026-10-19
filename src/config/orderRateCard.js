@@ -77,6 +77,26 @@ export const ZOLO_ITEM_WEIGHTS = {
   "Bath Towel": 0.72,
 };
 
+export function calculateLinenWeight(items) {
+  if (!Array.isArray(items) || !items.length) return 0;
+  let total = 0;
+  items.forEach((it) => {
+    const qty = Number(it.qty ?? it.quantity) || 0;
+    if (qty <= 0) return;
+    const name = String(it.name || "").trim().toLowerCase();
+    let unitWeight = 0;
+    if (name.includes("pillow")) unitWeight = 0.175;
+    else if (name.includes("towel")) unitWeight = 0.72;
+    else if (name.includes("single duvet") || name.includes("duvet cover single")) unitWeight = 0.92;
+    else if (name.includes("double duvet") || name.includes("king duvet") || name.includes("duvet cover")) unitWeight = 1.5;
+    else if (name.includes("single bedsheet") || name.includes("single bed sheet")) unitWeight = 0.47;
+    else if (name.includes("double bedsheet") || name.includes("double bed sheet")) unitWeight = 0.87;
+    else if (ZOLO_ITEM_WEIGHTS[it.name]) unitWeight = ZOLO_ITEM_WEIGHTS[it.name];
+    total += qty * unitWeight;
+  });
+  return Math.round(total * 10) / 10;
+}
+
 export const ITEM_RATE_MAP = {
   "Single Bedsheet": 30,
   "Bedsheet": 30,

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { FiX, FiLoader, FiPlus, FiTrash2 } from "react-icons/fi";
-import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, getItemsForPartner } from "../../config/orderRateCard";
+import { HOTEL_ITEMS, ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, getItemsForPartner, calculateLinenWeight } from "../../config/orderRateCard";
 import { ORDER_CATEGORIES, ORDER_STATUSES, ORDER_TYPES } from "../../constants/orders";
 import { normalizePropertyName, getDaysInMonthForDate, isHostel99Property } from "../../utils/orderNormalization";
 import { getTodayString } from "../../utils/dateUtils";
@@ -144,6 +144,16 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
     setStudentRevenue(value);
   };
 
+  const updateHotelItemsAndWeight = (nextItems) => {
+    setHotelItems(nextItems);
+    if (isItemized || isHostel99) {
+      const autoW = calculateLinenWeight(nextItems);
+      if (autoW > 0) {
+        setWeight(String(autoW));
+      }
+    }
+  };
+
   const handleHotelItemChange = (index, field, value) => {
     if ((field === "quantity" || field === "rate") && isNegativeNumberInput(value)) return;
     const nextItems = [...hotelItems];
@@ -153,7 +163,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
     } else {
       nextItems[index][field] = value;
     }
-    setHotelItems(nextItems);
+    updateHotelItemsAndWeight(nextItems);
   };
 
   const handleSubmit = async (event) => {
@@ -524,7 +534,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                       const toAdd = partnerItems
                         .filter(name => !existingNames.has(name.toLowerCase()))
                         .map(name => ({ name, quantity: 1, rate: ITEM_RATE_MAP[name] || "" }));
-                      setHotelItems([...hotelItems.filter(it => it.name.trim() !== ""), ...toAdd]);
+                      updateHotelItemsAndWeight([...hotelItems.filter(it => it.name.trim() !== ""), ...toAdd]);
                     }}
                     className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg transition-colors"
                   >
@@ -543,9 +553,9 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                         if (existingIdx >= 0) {
                           const next = [...hotelItems];
                           next[existingIdx].quantity = Number(next[existingIdx].quantity || 0) + 1;
-                          setHotelItems(next);
+                          updateHotelItemsAndWeight(next);
                         } else {
-                          setHotelItems([...hotelItems, { name: catName, quantity: 1, rate: ITEM_RATE_MAP[catName] || "" }]);
+                          updateHotelItemsAndWeight([...hotelItems, { name: catName, quantity: 1, rate: ITEM_RATE_MAP[catName] || "" }]);
                         }
                       }}
                       className="shrink-0 px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-lg text-[11px] font-semibold transition-colors"
@@ -591,7 +601,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                     />
                     <button
                       type="button"
-                      onClick={() => setHotelItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                      onClick={() => updateHotelItemsAndWeight(hotelItems.filter((_, itemIndex) => itemIndex !== index))}
                       className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
                       <FiTrash2 size={16} />
@@ -600,7 +610,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setHotelItems((current) => [...current, { name: "", quantity: 1, rate: "" }])}
+                  onClick={() => updateHotelItemsAndWeight([...hotelItems, { name: "", quantity: 1, rate: "" }])}
                   className="flex items-center gap-1.5 text-xs font-black text-indigo-600 hover:text-indigo-700 mt-2 uppercase tracking-wide"
                 >
                   <FiPlus size={14} /> Add Line Item

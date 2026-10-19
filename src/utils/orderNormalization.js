@@ -1,7 +1,7 @@
 import { ORDER_CATEGORIES, ORDER_CHANNELS, ORDER_STATUSES, ORDER_TYPES, normalizeOrderStatus } from "../constants/orders";
 import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
-import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue } from "../config/orderRateCard";
+import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue, calculateLinenWeight } from "../config/orderRateCard";
 import { normalizePhone } from "./phoneUtils";
 
 export function getDaysInMonthForDate(dateStr) {
@@ -895,6 +895,14 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       if (pcsSum > 0 && (!normalized.items || normalized.items === 0)) {
         normalized.items = pcsSum;
       }
+      if ((!normalized.weight || normalized.weight === 0) && (normalized.type === "linen" || isHostel99Property(normalized.property))) {
+        const itemsArr = Object.entries(normalized.details).map(([name, qty]) => ({ name, qty }));
+        const autoW = calculateLinenWeight(itemsArr);
+        if (autoW > 0) {
+          normalized.weight = autoW;
+          normalized.kg = autoW;
+        }
+      }
     }
 
     // Dynamic Revenue Calculation (if missing)
@@ -925,8 +933,12 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.category = ORDER_CATEGORIES.LINEN;
     normalized.type = ORDER_TYPES.LINEN;
     normalized.source = "manager_b2b";
-    normalized.kg = Number(rawOrder.kg) || 0;
-    normalized.weight = Number(rawOrder.kg) || 0;
+    let kgVal = Number(rawOrder.kg) || 0;
+    if (kgVal <= 0 && Array.isArray(rawOrder.items) && rawOrder.items.length > 0) {
+      kgVal = calculateLinenWeight(rawOrder.items);
+    }
+    normalized.kg = kgVal;
+    normalized.weight = kgVal;
     normalized.items = Number(rawOrder.clothes) || 0;
     normalized.clothes = Number(rawOrder.clothes) || 0;
     normalized.studentCount = Number(rawOrder.students) || 0;
