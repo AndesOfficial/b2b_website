@@ -844,6 +844,26 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     return normalized;
   }
 
+  if (source === "manager_issues") {
+    normalized.category = ORDER_CATEGORIES.ISSUES;
+    normalized.type = "issue";
+    normalized.source = "manager_issues";
+    normalized.scope = rawOrder.scope || "b2b"; // "b2b" or "b2c"
+    normalized.issueType = rawOrder.issueType || "Operations Issue";
+    normalized.service = rawOrder.description || rawOrder.title || "Manager Issue";
+    normalized.title = rawOrder.title || "";
+    normalized.date = normalizeDate(rawOrder.createdAt || rawOrder.date);
+    normalized.reportedBy = rawOrder.reportedBy || "Manager";
+    normalized.linkedHostel = rawOrder.linkedEntity || rawOrder.linkedClient || rawOrder.linkedOrder || "";
+    normalized.property = normalized.linkedHostel || (rawOrder.scope === "b2b" ? "B2B Client" : "B2C Retail");
+    normalized.resolveStatus = (rawOrder.status === "resolved" || rawOrder.resolveStatus === "Resolved") ? "Resolved" : (rawOrder.status === "checking" ? "Checking" : "Unresolved");
+    normalized.severity = rawOrder.severity === "critical" ? "critical" : (rawOrder.severity === "high" ? "high" : "pending");
+    normalized.solution = rawOrder.solution || "";
+    normalized.photoUrls = rawOrder.photoUrls || (rawOrder.photoUrl ? [rawOrder.photoUrl] : []);
+    normalized.id = rawOrder.id;
+    return normalized;
+  }
+
   if (normalized.category === ORDER_CATEGORIES.ISSUES) {
     normalized.type = ORDER_TYPES.ISSUE;
   }

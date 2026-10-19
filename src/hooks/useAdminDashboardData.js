@@ -315,7 +315,9 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
     b2b: "b2b_orders",
     admin: "b2b_admin_edits",
     complaint: "complaint",
-    normal_complaint: "normal_complaint"
+    normal_complaint: "normal_complaint",
+    manager_issues: "manager_issues",
+    manager_b2b: "managerB2bEntries"
   };
 
   const getTargetCollection = (item) => {
@@ -373,6 +375,19 @@ export function useAdminDashboardData({ activeTab, baseOrders, dateFrom, dateTo 
         batch.set(complaintRef, {
           status: firestoreStatus,
           flagged: updatedIssue.severity === "critical",
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else if (source === "manager_issues") {
+        const managerIssueRef = doc(db, "manager_issues", String(updatedIssue.id));
+        const firestoreStatus =
+          updatedIssue.resolveStatus === "Resolved" ? "resolved" :
+          updatedIssue.resolveStatus === "Checking" ? "checking" : "pending";
+
+        batch.set(managerIssueRef, {
+          status: firestoreStatus,
+          resolveStatus: updatedIssue.resolveStatus,
+          solution: updatedIssue.solution || "",
+          severity: updatedIssue.severity || "pending",
           updatedAt: serverTimestamp(),
         }, { merge: true });
       }

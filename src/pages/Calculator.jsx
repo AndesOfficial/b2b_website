@@ -1595,6 +1595,7 @@ export default function Calculator() {
   const handleSidebarTabChange = useCallback((t) => {
     setIsMobileMenuOpen(false);
     if (t === "calculator") return;
+    if (t === "b2b") { navigate("/admin/b2b-orders"); return; }
     if (t === "investors") { navigate("/admin/investors"); return; }
     if (t === "expenses") { navigate("/admin/expenses"); return; }
     if (t === "salaries") { navigate("/admin/salaries"); return; }

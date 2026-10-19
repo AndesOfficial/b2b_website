@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminExpenses from "./pages/AdminExpenses";
 import AdminRegularOrders from "./pages/AdminRegularOrders";
+import AdminB2BOrders from "./pages/AdminB2BOrders";
 import InvestorDashboard from "./pages/InvestorDashboard";
 import Calculator from "./pages/Calculator";
 import ClientDashboard from "./pages/ClientDashboard";
@@ -31,6 +32,7 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/b2b-orders" element={<AdminRoute><AdminB2BOrders /></AdminRoute>} />
           <Route path="/admin/regular-orders" element={<AdminRoute><AdminRegularOrders /></AdminRoute>} />
           <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
           <Route path="/admin/salaries" element={<AdminRoute><AdminSalaries /></AdminRoute>} />

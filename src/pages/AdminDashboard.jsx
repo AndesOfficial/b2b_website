@@ -108,6 +108,11 @@ export default function AdminDashboard() {
 
   const handleTabChange = useCallback((tab) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
+    if (tab === "b2b") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/b2b-orders");
+      return;
+    }
     if (tab === "regular") {
       setIsMobileMenuOpen(false);
       navigate("/admin/regular-orders");

@@ -32,6 +32,7 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
     originalService: "", source: ""
   });
   const [statusFilter, setStatusFilter] = useState("All"); // All, Pending, Critical, Resolved
+  const [scopeFilter, setScopeFilter] = useState("All"); // All, B2B, B2C, HostelApp
 
   const openEditModal = (issue) => {
     setForm({
@@ -55,13 +56,18 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
 
   const issues = useMemo(() => {
     let list = allIssues;
-    // Pending = not resolved; Critical = critical and still open (what needs action now).
+    // Status Filter
     if (statusFilter === "Pending") list = list.filter(i => !isResolved(i));
     else if (statusFilter === "Critical") list = list.filter(i => i.severity === "critical" && !isResolved(i));
     else if (statusFilter === "Resolved") list = list.filter(isResolved);
 
+    // Scope / Source Filter
+    if (scopeFilter === "B2B") list = list.filter(i => i.scope === "b2b");
+    else if (scopeFilter === "B2C") list = list.filter(i => i.scope === "b2c");
+    else if (scopeFilter === "HostelApp") list = list.filter(i => i.source === "complaint" || i.source === "normal_complaint");
+
     return [...list].sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99) || new Date(b.date) - new Date(a.date));
-  }, [allIssues, statusFilter]);
+  }, [allIssues, statusFilter, scopeFilter]);
 
   const kpis = useMemo(() => ({
     pending: allIssues.filter(i => !isResolved(i)).length,
@@ -134,23 +140,36 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
       )}
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all flex-wrap">
         <div className="flex items-center gap-3">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex-shrink-0">Status:</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="flex-1 sm:flex-none bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[12px] font-bold text-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500 appearance-none min-w-[140px]">
-            <option value="All">All Issues</option>
+            <option value="All">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="Critical">Critical (open)</option>
             <option value="Resolved">Resolved</option>
           </select>
         </div>
 
-        {statusFilter !== "All" && (
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex-shrink-0">Scope / Source:</label>
+          <select
+            value={scopeFilter}
+            onChange={(e) => setScopeFilter(e.target.value)}
+            className="flex-1 sm:flex-none bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[12px] font-bold text-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500 appearance-none min-w-[150px]">
+            <option value="All">All Scopes</option>
+            <option value="B2B">Manager B2B</option>
+            <option value="B2C">Manager B2C</option>
+            <option value="HostelApp">Hostel / App Form</option>
+          </select>
+        </div>
+
+        {(statusFilter !== "All" || scopeFilter !== "All") && (
           <button
-            onClick={() => setStatusFilter("All")}
+            onClick={() => { setStatusFilter("All"); setScopeFilter("All"); }}
             className="w-fit text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest flex items-center gap-1.5 transition-colors">
             <FiX size={14} /> Clear Selected Filters
           </button>
@@ -173,8 +192,23 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
               <div className="flex-1">
                 <p className="text-[13.5px] font-bold text-[#0F172A] leading-relaxed">{issue.service}</p>
 
-                {/* Room + Source tags */}
+                {/* Scope + Origin tags */}
                 <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {issue.source === "manager_issues" && (
+                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      Manager Log
+                    </span>
+                  )}
+                  {issue.scope === "b2b" && (
+                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                      Scope: B2B
+                    </span>
+                  )}
+                  {issue.scope === "b2c" && (
+                    <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
+                      Scope: B2C
+                    </span>
+                  )}
                   {issue.room && (
                     <span className="text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full">
                       Room {issue.room}

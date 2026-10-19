@@ -27,6 +27,7 @@ export default function AdminExpenses() {
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
     if (tab === "expenses") return;
+    if (tab === "b2b") { navigate("/admin/b2b-orders"); return; }
     if (tab === "salaries") { navigate("/admin/salaries"); return; }
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "regular") { navigate("/admin/regular-orders"); return; }

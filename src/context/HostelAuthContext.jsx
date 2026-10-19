@@ -40,6 +40,7 @@ export function HostelAuthProvider({ children }) {
   const [hostelsOrders, setHostelsOrders] = useState([]); // NEW
   const [appComplaints, setAppComplaints] = useState([]);
   const [hostelComplaints, setHostelComplaints] = useState([]); // hostel form complaints
+  const [managerIssues, setManagerIssues] = useState([]); // manager reported issues (B2B & B2C)
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [profileNeedsSetup, setProfileNeedsSetup] = useState(false);
   // Who is signed in, once resolved: { uid, role, allowedProperties }.
@@ -63,6 +64,7 @@ export function HostelAuthProvider({ children }) {
         setHostelsOrders([]);
         setAppComplaints([]);
         setHostelComplaints([]);
+        setManagerIssues([]);
         sessionStorage.removeItem("hostelClient");
         setProfileNeedsSetup(false);
         setIsDataLoaded(true);
@@ -129,7 +131,7 @@ export function HostelAuthProvider({ children }) {
       let loadedCount = 0;
       const checkAllLoaded = () => {
         loadedCount++;
-        if (loadedCount >= 5) setIsDataLoaded(true);
+        if (loadedCount >= 6) setIsDataLoaded(true);
       };
 
       const getAllAliases = (canonicalNames) => {
@@ -263,6 +265,7 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("b2b_orders", "b2b", setB2bOrders);
       setupCollectionListener("normal_complaint", "complaint", setAppComplaints);
       setupCollectionListener("complaint", "complaint", setHostelComplaints);
+      setupCollectionListener("manager_issues", "manager_issues", setManagerIssues);
 
       if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
         setWebsiteOrders([]);
@@ -333,6 +336,11 @@ export function HostelAuthProvider({ children }) {
     hostelComplaints.forEach((order) => {
       const existing = primaryRecordsMap.get(order.id);
       if (!existing) primaryRecordsMap.set(order.id, order);
+    });
+
+    // Manager-submitted operational issues (from 'manager_issues' collection for B2B & B2C)
+    managerIssues.forEach((order) => {
+      primaryRecordsMap.set(order.id, order);
     });
 
     // 3. Base Data: B2B Orders

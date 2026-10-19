@@ -60,6 +60,7 @@ export default function AdminSalaries() {
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
     if (tab === "salaries") return;
+    if (tab === "b2b") { navigate("/admin/b2b-orders"); return; }
     if (tab === "regular") { navigate("/admin/regular-orders"); return; }
     if (tab === "investors") { navigate("/admin/investors"); return; }
     if (tab === "expenses") { navigate("/admin/expenses"); return; }

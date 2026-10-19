@@ -1,4 +1,4 @@
-import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiBriefcase, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
@@ -11,6 +11,16 @@ export const ADMIN_TAB_CONFIG = {
     showSidebar: true,
     showHeaderActions: true,
     showKpis: false,
+    kpiColumnsClass: "lg:grid-cols-4",
+  },
+  b2b: {
+    key: "b2b",
+    title: "B2B Orders",
+    navLabel: "B2B Orders",
+    navIcon: FiBriefcase,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: true,
     kpiColumnsClass: "lg:grid-cols-4",
   },
   regular: {
