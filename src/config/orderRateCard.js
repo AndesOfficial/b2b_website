@@ -22,28 +22,54 @@ export const ZOLO_ITEMS = [
 ];
 
 export const ONE8_ITEMS = [
+  "Yellow Wiping Cloth",
+  "White Wiping Cloth",
+  "White Chef Coat",
+  "Black Chef Coat",
+  "Beanie Chef Cap",
   "Wiping Cloth",
   "Chef Coat",
+  "Cap",
   "T-Shirt",
   "Pant",
   "Apron",
   "Napkin",
   "Blazer",
-  "Cap",
 ];
 
 export const STUDENT_RATE_PER_KG = 55;
 export const HOSTEL_99_MONTHLY_REVENUE = 28000;
 
 export const ONE8_RATE_MAP = {
+  "Yellow Wiping Cloth": 9,
+  "White Wiping Cloth": 9,
   "Wiping Cloth": 9,
+  "White Chef Coat": 13,
+  "Black Chef Coat": 13,
   "Chef Coat": 13,
+  "Beanie Chef Cap": 5,
+  "Cap": 5,
   "T-Shirt": 13,
   "Pant": 13,
   "Apron": 9,
   "Napkin": 6,
   "Blazer": 200,
-  "Cap": 5,
+};
+
+export const ONE8_ITEM_WEIGHTS = {
+  "Yellow Wiping Cloth": 0.11,
+  "White Wiping Cloth": 0.135,
+  "Wiping Cloth": 0.11,
+  "White Chef Coat": 0.32,
+  "Black Chef Coat": 0.5,
+  "Chef Coat": 0.32,
+  "Beanie Chef Cap": 0.05,
+  "Cap": 0.05,
+  "T-Shirt": 0.2,
+  "Pant": 0.4,
+  "Apron": 0.15,
+  "Napkin": 0.05,
+  "Blazer": 0.8,
 };
 
 export const ZOLO_RATE_MAP = {
@@ -77,25 +103,69 @@ export const ZOLO_ITEM_WEIGHTS = {
   "Bath Towel": 0.72,
 };
 
-export function calculateLinenWeight(items) {
+export function calculateB2bWeight(items, clientName = "") {
   if (!Array.isArray(items) || !items.length) return 0;
   let total = 0;
   items.forEach((it) => {
     const qty = Number(it.qty ?? it.quantity) || 0;
     if (qty <= 0) return;
-    const name = String(it.name || "").trim().toLowerCase();
+    const rawName = String(it.name || "").trim();
+    const name = rawName.toLowerCase();
     let unitWeight = 0;
-    if (name.includes("pillow")) unitWeight = 0.175;
-    else if (name.includes("towel")) unitWeight = 0.72;
-    else if (name.includes("single duvet") || name.includes("duvet cover single")) unitWeight = 0.92;
-    else if (name.includes("double duvet") || name.includes("king duvet") || name.includes("duvet cover")) unitWeight = 1.5;
-    else if (name.includes("single bedsheet") || name.includes("single bed sheet")) unitWeight = 0.47;
-    else if (name.includes("double bedsheet") || name.includes("double bed sheet")) unitWeight = 0.87;
-    else if (ZOLO_ITEM_WEIGHTS[it.name]) unitWeight = ZOLO_ITEM_WEIGHTS[it.name];
+
+    // Direct dictionary match
+    if (ONE8_ITEM_WEIGHTS[rawName] !== undefined) {
+      unitWeight = ONE8_ITEM_WEIGHTS[rawName];
+    } else if (ZOLO_ITEM_WEIGHTS[rawName] !== undefined) {
+      unitWeight = ZOLO_ITEM_WEIGHTS[rawName];
+    }
+    // One8 items fuzzy matching
+    else if (name.includes("yellow") && (name.includes("wiping") || name.includes("cloth"))) {
+      unitWeight = 0.11;
+    } else if (name.includes("white") && (name.includes("wiping") || name.includes("cloth"))) {
+      unitWeight = 0.135;
+    } else if (name.includes("wiping") || (name.includes("cloth") && !name.includes("table"))) {
+      unitWeight = 0.11;
+    } else if (name.includes("white") && name.includes("chef")) {
+      unitWeight = 0.32;
+    } else if (name.includes("black") && name.includes("chef")) {
+      unitWeight = 0.5;
+    } else if (name.includes("chef") || name.includes("coat")) {
+      unitWeight = 0.32;
+    } else if (name.includes("beanie") || name.includes("cap")) {
+      unitWeight = 0.05;
+    } else if (name.includes("apron")) {
+      unitWeight = 0.15;
+    } else if (name.includes("napkin")) {
+      unitWeight = 0.05;
+    } else if (name.includes("pant") || name.includes("trouser")) {
+      unitWeight = 0.4;
+    } else if (name.includes("t-shirt") || name.includes("tshirt")) {
+      unitWeight = 0.2;
+    } else if (name.includes("blazer")) {
+      unitWeight = 0.8;
+    }
+    // Linen / Hostel 99 / Zolo items fuzzy matching
+    else if (name.includes("pillow")) {
+      unitWeight = 0.175;
+    } else if (name.includes("towel")) {
+      unitWeight = 0.72;
+    } else if (name.includes("single duvet") || name.includes("duvet cover single")) {
+      unitWeight = 0.92;
+    } else if (name.includes("double duvet") || name.includes("king duvet") || name.includes("duvet cover")) {
+      unitWeight = 1.5;
+    } else if (name.includes("single bedsheet") || name.includes("single bed sheet")) {
+      unitWeight = 0.47;
+    } else if (name.includes("double bedsheet") || name.includes("double bed sheet")) {
+      unitWeight = 0.87;
+    }
+
     total += qty * unitWeight;
   });
   return Math.round(total * 10) / 10;
 }
+
+export const calculateLinenWeight = calculateB2bWeight;
 
 export const ITEM_RATE_MAP = {
   "Single Bedsheet": 30,

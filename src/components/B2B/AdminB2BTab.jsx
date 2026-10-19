@@ -17,6 +17,7 @@ import {
   isHostel99Client,
   getDaysInMonth,
   calculateBatchRevenue,
+  calculateB2bWeight,
   calculateLinenWeight,
   getItemsForPartner,
 } from "../../config/orderRateCard";
@@ -77,8 +78,10 @@ export default function AdminB2BTab() {
           const isH99 = isHostel99Client(data.client);
           const d = data.date || "unknown";
           const countOnDate = isH99 ? (hostel99CountByDate[d] || 1) : 1;
+          const autoWeight = (Number(data.kg) > 0) ? Number(data.kg) : calculateB2bWeight(data.items, data.client);
           return {
             ...data,
+            kg: autoWeight > 0 ? autoWeight : (Number(data.kg) || 0),
             canonicalClient: isH99 ? "Hostel 99" : (data.client || "").trim(),
             h99BatchesOnDate: countOnDate,
             calculatedRevenue: calculateBatchRevenue(data, countOnDate),
@@ -768,12 +771,12 @@ function B2BEditModal({ entry, onClose, onSuccess }) {
   const partnerItems = useMemo(() => getItemsForPartner(form.client), [form.client]);
 
   const updateItems = (newItems) => {
-    const autoW = calculateLinenWeight(newItems);
+    const autoW = calculateB2bWeight(newItems, form.client);
     const totalPcs = newItems.reduce((s, it) => s + (Number(it.qty) || 0), 0);
     setForm((f) => ({
       ...f,
       items: newItems,
-      kg: isLinen && autoW > 0 ? autoW : autoW > 0 && (!f.kg || f.kg === "0" || f.kg === "") ? autoW : f.kg,
+      kg: autoW > 0 ? autoW : f.kg,
       clothes: totalPcs > 0 ? totalPcs : f.clothes,
     }));
   };

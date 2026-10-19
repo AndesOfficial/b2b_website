@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { calculateB2bWeight } from "../config/orderRateCard";
 
 // Metrics for the admin Operations & Revenue dashboard.
 //
@@ -150,6 +151,11 @@ function b2bWeight(o) {
   if (Number(o.weight) > 0) return Number(o.weight);
   if (Number(o.kg) > 0) return Number(o.kg);
   if (Number(o.hostelTotalWeightKg) > 0) return Number(o.hostelTotalWeightKg);
+  const items = o.items || o.itemsList;
+  if (Array.isArray(items) && items.length > 0) {
+    const w = calculateB2bWeight(items, o.client || o.property);
+    if (w > 0) return w;
+  }
   return Array.isArray(o.roomOrders) ? sum(o.roomOrders, (r) => r.weightKg) : 0;
 }
 

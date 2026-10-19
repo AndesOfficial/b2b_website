@@ -1,7 +1,7 @@
 import { ORDER_CATEGORIES, ORDER_CHANNELS, ORDER_STATUSES, ORDER_TYPES, normalizeOrderStatus } from "../constants/orders";
 import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
-import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue, calculateLinenWeight } from "../config/orderRateCard";
+import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue, calculateB2bWeight, calculateLinenWeight } from "../config/orderRateCard";
 import { normalizePhone } from "./phoneUtils";
 
 export function getDaysInMonthForDate(dateStr) {
@@ -694,11 +694,20 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
         rawOrder.totalCost,
         rawOrder.originalTotalCost,
         bdTotal,
+        rawOrder.cashCollected,
+        rawOrder.paymentData?.cashCollected,
+        rawOrder.cashAmount,
+        rawOrder.amountPaid,
+        rawOrder.collectedAmount,
+        rawOrder.paidAmount,
         rawOrder.amount,
         rawOrder.paymentData?.totalWithFee,
         rawOrder.paymentData?.originalAmount,
         rawOrder.totalWithFee,
         rawOrder.originalAmount,
+        rawOrder.totalAmount,
+        rawOrder.finalAmount,
+        rawOrder.orderAmount,
         rawOrder.total,
         amountFromBreakdown > 0 ? amountFromBreakdown : chargesSubtotal
       );
@@ -708,12 +717,21 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
       normalized.amount = firstPositiveNumber(
         rawOrder.paymentData?.totalWithFee,
         rawOrder.paymentData?.originalAmount,
+        rawOrder.cashCollected,
+        rawOrder.paymentData?.cashCollected,
+        rawOrder.cashAmount,
+        rawOrder.amountPaid,
+        rawOrder.collectedAmount,
+        rawOrder.paidAmount,
         rawOrder.totalCost,
         rawOrder.originalTotalCost,
         bdTotal,
         rawOrder.amount,
         rawOrder.totalWithFee,
         rawOrder.originalAmount,
+        rawOrder.totalAmount,
+        rawOrder.finalAmount,
+        rawOrder.orderAmount,
         rawOrder.total,
         amountFromBreakdown > 0 ? amountFromBreakdown : chargesSubtotal
       );
@@ -935,7 +953,7 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.source = "manager_b2b";
     let kgVal = Number(rawOrder.kg) || 0;
     if (kgVal <= 0 && Array.isArray(rawOrder.items) && rawOrder.items.length > 0) {
-      kgVal = calculateLinenWeight(rawOrder.items);
+      kgVal = calculateB2bWeight(rawOrder.items, rawOrder.client);
     }
     normalized.kg = kgVal;
     normalized.weight = kgVal;
