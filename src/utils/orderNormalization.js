@@ -717,11 +717,18 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
 
     const bdTotal        = normalizeNumber(rawOrder.breakdown?.total);
     const chargesSubtotal = normalizeNumber(rawOrder.breakdown?.fees?.chargesSubtotal);
+    const hasManagerVerification = !!(rawOrder.managerVerification || rawOrder.managerUpdatedAt);
+    const hasRecordedWeight = Number(rawOrder.clothesWeightKg) > 0 || Number(rawOrder.riderRecordedWeightKg) > 0 || Number(rawOrder.weight) > 0 || !!rawOrder.weightUpdatedAt;
+    const isWeighed = hasBreakdownServiceItems || hasManagerVerification || hasRecordedWeight;
 
-    if (hasBreakdownServiceItems) {
-      // Clothes have been weighed/counted — totalCost is the confirmed service cost.
+    if (isWeighed) {
+      // Clothes have been weighed/counted/verified — totalCost is the confirmed service cost.
       normalized.amount = firstPositiveNumber(
+        rawOrder.managerVerification?.calculatedPrice,
         rawOrder.totalCost,
+        rawOrder.totalAmount,
+        rawOrder.amount,
+        rawOrder.finalAmount,
         rawOrder.originalTotalCost,
         bdTotal,
         rawOrder.cashCollected,
@@ -730,13 +737,10 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
         rawOrder.amountPaid,
         rawOrder.collectedAmount,
         rawOrder.paidAmount,
-        rawOrder.amount,
         rawOrder.paymentData?.totalWithFee,
         rawOrder.paymentData?.originalAmount,
         rawOrder.totalWithFee,
         rawOrder.originalAmount,
-        rawOrder.totalAmount,
-        rawOrder.finalAmount,
         rawOrder.orderAmount,
         rawOrder.total,
         amountFromBreakdown > 0 ? amountFromBreakdown : chargesSubtotal
@@ -768,12 +772,12 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     }
 
     const itemsFromBreakdown = breakdown.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    normalized.items = normalizeNumber(rawOrder.totalItems ?? rawOrder.clothesCount ?? itemsFromBreakdown);
+    normalized.items = normalizeNumber(firstPositiveNumber(rawOrder.clothesCount, rawOrder.totalItems, itemsFromBreakdown));
     if (!normalized.items || normalized.items === 0) {
       normalized.items = normalizeNumber(Array.isArray(rawOrder.items) ? rawOrder.items.length : 0);
     }
     const weightFromBreakdown = breakdown.reduce((sum, item) => sum + (item.weight || 0), 0);
-    normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.weight, weightFromBreakdown);
+    normalized.weight = firstPositiveNumber(rawOrder.clothesWeightKg, rawOrder.riderRecordedWeightKg, rawOrder.weight, weightFromBreakdown);
     normalized.status = normalizeOrderStatus(rawOrder.status || rawOrder.orderStatus || rawOrder.paymentStatus);
     
     if (cartCreatedDate) {
