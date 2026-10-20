@@ -107,6 +107,7 @@ export function calculateB2bWeight(items, clientName = "") {
   if (!Array.isArray(items) || !items.length) return 0;
   let total = 0;
   items.forEach((it) => {
+    if (!it || typeof it !== "object") return;
     const qty = Number(it.qty ?? it.quantity) || 0;
     if (qty <= 0) return;
     const rawName = String(it.name || "").trim();

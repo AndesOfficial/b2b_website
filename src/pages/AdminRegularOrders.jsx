@@ -8,6 +8,8 @@ import { useAdminDashboardData } from "../hooks/useAdminDashboardData";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 
+import SectionErrorBoundary from "../components/Shared/SectionErrorBoundary";
+
 export default function AdminRegularOrders() {
   const navigate = useNavigate();
   const { client, orders: baseOrders, logout, isDataLoaded, isViewer } = useHostelOrders();
@@ -99,14 +101,16 @@ export default function AdminRegularOrders() {
           {!isDataLoaded ? (
             <DashboardSkeleton />
           ) : (
-            <AdminRegularTab
-              orders={baseOrders}
-              baseOrders={baseOrders}
-              registeredUserIds={registeredUserIds}
-              onAddOrder={!isViewer ? handleAddOrder : undefined}
-              onEditOrder={!isViewer ? handleEditOrder : undefined}
-              onDeleteOrder={!isViewer ? handleDeleteData : undefined}
-            />
+            <SectionErrorBoundary section="regular-orders" title="B2C Orders could not be displayed">
+              <AdminRegularTab
+                orders={baseOrders}
+                baseOrders={baseOrders}
+                registeredUserIds={registeredUserIds}
+                onAddOrder={!isViewer ? handleAddOrder : undefined}
+                onEditOrder={!isViewer ? handleEditOrder : undefined}
+                onDeleteOrder={!isViewer ? handleDeleteData : undefined}
+              />
+            </SectionErrorBoundary>
           )}
         </div>
       </main>

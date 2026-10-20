@@ -546,7 +546,9 @@ export function HostelAuthProvider({ children }) {
     if (client.role === "admin" || client.role === "admin_viewer") return allOrdersMerged;
 
     const allowedProperties = client.properties || client.partnernames || [];
-    const normalizedAllowed = allowedProperties.map((property) => property.toLowerCase());
+    const normalizedAllowed = allowedProperties
+      .map((property) => String(typeof property === "object" ? property?.name || "" : property || "").toLowerCase())
+      .filter(Boolean);
 
     return allOrdersMerged.filter((order) => {
       const propertyName = (order.property || "").toLowerCase();

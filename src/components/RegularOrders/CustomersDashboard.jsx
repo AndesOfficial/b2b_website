@@ -21,17 +21,15 @@ import EmptyState from '../Shared/EmptyState';
 function CustomerHistoryModal({ user, onClose }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
 
-  if (!user) return null;
-
   // Sort orders newest → oldest so the most recent activity is always at the top
   const sortedOrders = useMemo(() => {
-    if (!user.orders) return [];
+    if (!user?.orders) return [];
     return [...user.orders].sort((a, b) => {
       const dateA = a.date || '';
       const dateB = b.date || '';
       return dateB.localeCompare(dateA);
     });
-  }, [user.orders]);
+  }, [user?.orders]);
 
   // Group by month for visual separation (e.g., "August 2026", "July 2026")
   const groupedByMonth = useMemo(() => {
@@ -46,6 +44,8 @@ function CustomerHistoryModal({ user, onClose }) {
     });
     return Object.entries(groups);
   }, [sortedOrders]);
+
+  if (!user) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>

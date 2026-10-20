@@ -170,6 +170,7 @@ function getKpiDefinitions({ activeTab, onTabChange, stats }) {
 }
 
 export default function AdminDashboardKpis({ activeTab, columnsClass, onTabChange, stats }) {
+  if (!stats || !stats.breakdown) return null;
   const kpis = getKpiDefinitions({ activeTab, onTabChange, stats });
 
   return (

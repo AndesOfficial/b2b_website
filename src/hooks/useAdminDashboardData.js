@@ -60,7 +60,7 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
   daysInRange.forEach(d => trendsByDate[d] = { sparkVal: 0, issues: 0 });
 
   orders.forEach(order => {
-    if (order.category === "ISSUES") {
+    if (!order || order.category === "ISSUES") {
       return;
     }
     
@@ -91,7 +91,8 @@ function buildDashboardStats({ activeTab, allManagers, daysInRange, orders }) {
       totalOrders++;
       totalKg += wt;
       
-      if (activeTab === "regular" && order.customerName && !order.id.includes("adj")) {
+      const orderIdStr = String(order.id || "");
+      if (activeTab === "regular" && order.customerName && !orderIdStr.includes("adj")) {
         clientSet.add(order.customerName);
       } else if ((activeTab === "hostels" || activeTab === "hotels") && order.property) {
         clientSet.add(order.property);

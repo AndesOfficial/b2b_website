@@ -566,11 +566,13 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     `${source}-${Date.now()}`
   ).trim();
 
+  const finalId = String(rawOrder.id || rawOrder.orderId || `${source}-${Date.now()}`);
+
   const normalized = {
-    id: String(rawOrder.id || rawOrder.orderId || `${source}-${Date.now()}`),
+    ...rawOrder,
+    id: finalId,
     canonicalOrderId,
     globalOrderNumber: rawOrder.globalOrderNumber || (rawOrder.orderId ? String(rawOrder.orderId) : null),
-    ...rawOrder,
     property,
     createdAtRaw: rawOrder.createdAt || rawOrder.orderTimestamp || rawOrder.orderDate || rawOrder.date || null,
     updatedAtRaw: rawOrder.updatedAt || rawOrder.lastModified || null,

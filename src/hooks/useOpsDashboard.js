@@ -100,11 +100,13 @@ const B2B_TYPES = new Set(["student", "linen", "airbnb"]);
 const B2B_SOURCES = new Set(["b2b", "hostels", "admin", "manager_b2b"]);
 
 export function isB2C(o) {
+  if (!o) return false;
   if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue" || o.isB2bRoomSync) return false;
   return o.source === "cartdetails" || o.source === "website" || (o.source === "admin" && o.type === "regular");
 }
 
 export function isB2B(o) {
+  if (!o) return false;
   if (o.type === "rider_tracking" || o.type === "abandoned" || o.type === "issue" || o.category === "ISSUES") return false;
   if (o.source === "cartdetails" || (o.source === "admin" && o.type === "regular")) return false;
   if (o.source === "manager_b2b") return true;
@@ -168,7 +170,7 @@ function b2bAmount(o) {
   return Array.isArray(o.roomOrders) ? sum(o.roomOrders, (r) => r.amount) : 0;
 }
 
-const weightOf = (o) => (isB2B(o) ? b2bWeight(o) : Number(o.weight) || 0);
+const weightOf = (o) => (!o ? 0 : isB2B(o) ? b2bWeight(o) : Number(o.weight) || 0);
 
 // ── Processing stage ────────────────────────────────────────────────────────
 

@@ -29,15 +29,26 @@ class ErrorBoundary extends Component {
             <pre style={{ background: "#F1F5F9", padding: "14px", borderRadius: "10px", color: "#0F172A", fontSize: "12px", overflowX: "auto", whiteSpace: "pre-wrap" }}>
               {this.state.error?.toString()}
             </pre>
-            <button
-              onClick={() => {
-                sessionStorage.clear();
-                window.location.href = "/login";
-              }}
-              style={{ marginTop: "20px", padding: "10px 20px", background: "#1976D2", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
-            >
-              Reset Session & Go to Login
-            </button>
+            <div style={{ marginTop: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                style={{ padding: "10px 20px", background: "#1976D2", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
+              >
+                Reload Application
+              </button>
+              <button
+                onClick={() => {
+                  sessionStorage.clear();
+                  window.location.href = "/login";
+                }}
+                style={{ padding: "10px 20px", background: "#E2E8F0", color: "#334155", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
+              >
+                Reset Session & Go to Login
+              </button>
+            </div>
           </div>
         </div>
       );

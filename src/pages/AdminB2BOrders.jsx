@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiMenu, FiBriefcase } from "react-icons/fi";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminB2BTab from "../components/B2B/AdminB2BTab";
+import SectionErrorBoundary from "../components/Shared/SectionErrorBoundary";
 import { useHostelOrders } from "../context/HostelAuthContext";
 
 export default function AdminB2BOrders() {
@@ -78,7 +79,9 @@ export default function AdminB2BOrders() {
         </header>
 
         <div className="p-4 lg:p-8">
-          <AdminB2BTab />
+          <SectionErrorBoundary section="b2b-orders" title="B2B Orders & Batches could not be displayed">
+            <AdminB2BTab />
+          </SectionErrorBoundary>
         </div>
       </main>
     </div>
