@@ -219,9 +219,16 @@ export default function AdminDashboard() {
       analytics: (
         <AdminAnalyticsTab
           orders={orders}
+          allOrders={baseOrders}
           screens={screenStats}
           searches={searchStats}
           totalUsers={totalUsers}
+          currentDateFrom={dateFrom}
+          currentDateTo={dateTo}
+          onDateRangeChange={(from, to) => {
+            setDateFrom(from);
+            setDateTo(to);
+          }}
         />
       ),
     };
@@ -230,6 +237,8 @@ export default function AdminDashboard() {
   }, [
     activeTab,
     baseOrders,
+    dateFrom,
+    dateTo,
     handleAddIssue,
     handleDeleteData,
     handleEditIssue,
