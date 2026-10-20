@@ -290,137 +290,119 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
           Overview
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-3.5">
           
           {/* Card 1: Total Orders */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100/70 flex items-center justify-center text-blue-600 shrink-0">
-                <FiShoppingCart size={18} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Orders</p>
-                <p className="text-2xl font-black text-[#0F172A] tracking-tight mt-0.5">
-                  {kpis.totalOrders.value.toLocaleString()}
-                </p>
-              </div>
+          <div className="bg-[#EFF6FF] border border-blue-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center shrink-0">
+              <FiShoppingCart size={18} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px]">
-                ↑ {kpis.totalOrders.changePct}%
-              </span>
-              <span className="text-slate-400 font-medium">{kpis.totalOrders.subtext}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">Total Orders</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                  {kpis.totalOrders.value.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
+                  ↑ {kpis.totalOrders.changePct}%
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{kpis.totalOrders.subtext}</p>
             </div>
           </div>
 
           {/* Card 2: Total Customers */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100/70 flex items-center justify-center text-purple-600 shrink-0">
-                <FiUsers size={18} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Customers</p>
-                <p className="text-2xl font-black text-[#0F172A] tracking-tight mt-0.5">
-                  {kpis.totalCustomers.value.toLocaleString()}
-                </p>
-              </div>
+          <div className="bg-[#F5F3FF] border border-purple-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#EDE9FE] text-[#7C3AED] flex items-center justify-center shrink-0">
+              <FiUsers size={18} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px]">
-                ↑ {kpis.totalCustomers.changePct}%
-              </span>
-              <span className="text-slate-400 font-medium">{kpis.totalCustomers.subtext}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">Total Customers</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                  {kpis.totalCustomers.value.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
+                  ↑ {kpis.totalCustomers.changePct}%
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{kpis.totalCustomers.subtext}</p>
             </div>
           </div>
 
           {/* Card 3: New Customers */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100/70 flex items-center justify-center text-emerald-600 shrink-0">
-                <FiUserPlus size={18} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">New Customers</p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-2xl font-black text-[#0F172A] tracking-tight">
-                    {kpis.newCustomers.value.toLocaleString()}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[11px]">
-                    ↑ {kpis.newCustomers.changePct}%
-                  </span>
-                </div>
-              </div>
+          <div className="bg-[#F0FDF4] border border-emerald-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+              <FiUserPlus size={18} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-500">
-              {kpis.newCustomers.subtext}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">New Customers</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                  {kpis.newCustomers.value.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
+                  ↑ {kpis.newCustomers.changePct}%
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{kpis.newCustomers.subtext}</p>
             </div>
           </div>
 
           {/* Card 4: Existing Customers */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-100/70 flex items-center justify-center text-amber-600 shrink-0">
-                <FiUsers size={18} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Existing Customers</p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-2xl font-black text-[#0F172A] tracking-tight">
-                    {kpis.existingCustomers.value.toLocaleString()}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[11px]">
-                    ↑ {kpis.existingCustomers.changePct}%
-                  </span>
-                </div>
-              </div>
+          <div className="bg-[#FEFCE8] border border-amber-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#FEF9C3] text-[#CA8A04] flex items-center justify-center shrink-0">
+              <FiUsers size={18} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-500">
-              {kpis.existingCustomers.subtext}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">Existing Customers</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                  {kpis.existingCustomers.value.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
+                  ↑ {kpis.existingCustomers.changePct}%
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{kpis.existingCustomers.subtext}</p>
             </div>
           </div>
 
           {/* Card 5: Repeat Orders */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-rose-100/70 flex items-center justify-center text-rose-600 shrink-0">
-                <FiRepeat size={18} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Repeat Orders</p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-2xl font-black text-[#0F172A] tracking-tight">
-                    {kpis.repeatOrders.value.toLocaleString()}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[11px]">
-                    ↑ {kpis.repeatOrders.changePct}%
-                  </span>
-                </div>
-              </div>
+          <div className="bg-[#FFF1F2] border border-rose-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#FFE4E6] text-[#E11D48] flex items-center justify-center shrink-0">
+              <FiRepeat size={18} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-500">
-              {kpis.repeatOrders.subtext}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">Repeat Orders</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                  {kpis.repeatOrders.value.toLocaleString()}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
+                  ↑ {kpis.repeatOrders.changePct}%
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{kpis.repeatOrders.subtext}</p>
             </div>
           </div>
 
           {/* Card 6: Total Revenue */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-100/70 flex items-center justify-center text-cyan-700 shrink-0">
-                <BiRupee size={20} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Revenue</p>
-                <p className="text-2xl font-black text-[#0F172A] tracking-tight mt-0.5">
-                  ₹{kpis.totalRevenue.value.toLocaleString()}
-                </p>
-              </div>
+          <div className="bg-[#ECFEFF] border border-cyan-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#CFFAFE] text-[#0891B2] flex items-center justify-center shrink-0">
+              <BiRupee size={20} />
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
-              <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px]">
-                ↑ {kpis.totalRevenue.changePct}%
-              </span>
-              <span className="text-slate-400 font-medium">{kpis.totalRevenue.subtext}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-slate-500 truncate">Total Revenue</p>
+              <div className="mt-0.5">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight truncate block">
+                  ₹{Math.round(kpis.totalRevenue.value).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate flex items-center gap-1">
+                <span className="font-bold text-emerald-600 shrink-0">↑ {kpis.totalRevenue.changePct}%</span>
+                <span className="truncate">{kpis.totalRevenue.subtext}</span>
+              </p>
             </div>
           </div>
 
@@ -428,16 +410,14 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. MAIN LAYOUT: TWO COLUMNS (LEFT: TABLES, RIGHT: CHARTS)
+          3. UPPER ROW: NEW CUSTOMERS TABLE (LEFT) + 2 DONUT CHARTS (RIGHT)
       ────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
-        {/* ─── LEFT COLUMN: TABLES (7 COLS ON LARGE) ─── */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* Table 1: New Customers by Source */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
+        {/* ─── LEFT: Table 1 (New Customers by Source) ─── */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="px-5 py-3.5 border-b border-slate-100">
               <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
                 New Customers by Source
               </h3>
@@ -450,11 +430,11 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50/70 text-slate-500 uppercase tracking-wider text-[10.5px] font-bold border-b border-slate-100">
-                    <th className="py-3 px-5">Source</th>
-                    <th className="py-3 px-4 text-center">New Customers</th>
-                    <th className="py-3 px-4 text-center">Orders (New Customers)</th>
-                    <th className="py-3 px-4 text-right">Total Revenue</th>
-                    <th className="py-3 px-5 text-right">% of New Customers</th>
+                    <th className="py-2.5 px-5">Source</th>
+                    <th className="py-2.5 px-4 text-center">New Customers</th>
+                    <th className="py-2.5 px-4 text-center">Orders (New Customers)</th>
+                    <th className="py-2.5 px-4 text-right">Total Revenue</th>
+                    <th className="py-2.5 px-5 text-right">% of New Customers</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -466,20 +446,20 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                         row.newCustomers > 0 ? 'cursor-pointer group' : ''
                       }`}
                     >
-                      <td className="py-3 px-5 flex items-center gap-2.5 text-slate-800 font-bold">
+                      <td className="py-2 px-5 flex items-center gap-2.5 text-slate-800 font-bold">
                         <SourceIcon source={row.source} size={15} />
                         <span className="group-hover:text-blue-600 transition-colors">{row.source}</span>
                       </td>
-                      <td className="py-3 px-4 text-center font-bold text-slate-700">
+                      <td className="py-2 px-4 text-center font-bold text-slate-700">
                         {row.newCustomers}
                       </td>
-                      <td className="py-3 px-4 text-center font-semibold text-slate-600">
+                      <td className="py-2 px-4 text-center font-semibold text-slate-600">
                         {row.orders}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-slate-800">
-                        ₹{row.revenue.toLocaleString()}
+                      <td className="py-2 px-4 text-right font-bold text-slate-800">
+                        ₹{Math.round(row.revenue).toLocaleString('en-IN')}
                       </td>
-                      <td className="py-3 px-5 text-right font-semibold text-slate-600">
+                      <td className="py-2 px-5 text-right font-semibold text-slate-600">
                         {row.pctOfNew.toFixed(1)}%
                       </td>
                     </tr>
@@ -487,105 +467,38 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-50/90 border-t-2 border-slate-200 text-slate-900 font-black text-xs">
-                    <td className="py-3.5 px-5">Total</td>
-                    <td className="py-3.5 px-4 text-center">{sourceTableTotal.newCustomers}</td>
-                    <td className="py-3.5 px-4 text-center">{sourceTableTotal.orders}</td>
-                    <td className="py-3.5 px-4 text-right">₹{sourceTableTotal.revenue.toLocaleString()}</td>
-                    <td className="py-3.5 px-5 text-right">100%</td>
+                    <td className="py-3 px-5">Total</td>
+                    <td className="py-3 px-4 text-center">{sourceTableTotal.newCustomers}</td>
+                    <td className="py-3 px-4 text-center">{sourceTableTotal.orders}</td>
+                    <td className="py-3 px-4 text-right">₹{Math.round(sourceTableTotal.revenue).toLocaleString('en-IN')}</td>
+                    <td className="py-3 px-5 text-right">100%</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           </div>
-
-          {/* Table 2: All Customers by Type */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
-                All Customers by Type
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Breakdown of total customers and orders
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-slate-50/70 text-slate-500 uppercase tracking-wider text-[10.5px] font-bold border-b border-slate-100">
-                    <th className="py-3 px-5">Customer Type</th>
-                    <th className="py-3 px-4 text-center">Customers</th>
-                    <th className="py-3 px-4 text-center">Orders</th>
-                    <th className="py-3 px-4 text-right">Revenue</th>
-                    <th className="py-3 px-4 text-right">% of Customers</th>
-                    <th className="py-3 px-5 text-right">% of Orders</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {customerTypeRows.map((row) => (
-                    <tr
-                      key={row.type}
-                      onClick={() => handleTypeDrilldown(row.type)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3.5 px-5 flex items-center gap-2.5 text-slate-800 font-bold">
-                        <CustomerTypeIcon type={row.type} size={15} />
-                        <span className="group-hover:text-blue-600 transition-colors">{row.type}</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                        {row.customers}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-semibold text-slate-600">
-                        {row.orders}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-slate-800">
-                        ₹{row.revenue.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-slate-600">
-                        {row.pctCustomers.toFixed(1)}%
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-semibold text-slate-600">
-                        {row.pctOrders.toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-slate-50/90 border-t-2 border-slate-200 text-slate-900 font-black text-xs">
-                    <td className="py-3.5 px-5">Total</td>
-                    <td className="py-3.5 px-4 text-center">{customerTypeTotal.customers}</td>
-                    <td className="py-3.5 px-4 text-center">{customerTypeTotal.orders}</td>
-                    <td className="py-3.5 px-4 text-right">₹{customerTypeTotal.revenue.toLocaleString()}</td>
-                    <td className="py-3.5 px-4 text-right">100%</td>
-                    <td className="py-3.5 px-5 text-right">100%</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
         </div>
 
-        {/* ─── RIGHT COLUMN: CHARTS (5 COLS ON LARGE) ─── */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* ─── RIGHT: Two Donut Cards stacked ─── */}
+        <div className="lg:col-span-5 flex flex-col justify-between gap-5">
           
           {/* Donut Chart 1: New Customers Source Distribution */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex-1 flex flex-col justify-between">
             <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-2">
               New Customers Source Distribution
             </h3>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 flex-1">
               {/* Donut Ring with Center Number */}
-              <div className="relative w-[180px] h-[180px] shrink-0">
+              <div className="relative w-[150px] h-[150px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={customerDonutData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
+                      innerRadius={46}
+                      outerRadius={68}
                       paddingAngle={3}
                       dataKey="value"
                       stroke="none"
@@ -598,24 +511,24 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 </ResponsiveContainer>
                 {/* Center text overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black text-[#0F172A] leading-tight">
+                  <span className="text-xl font-black text-[#0F172A] leading-tight">
                     {sourceTableTotal.newCustomers}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
                     New Customers
                   </span>
                 </div>
               </div>
 
               {/* Legend List on Right */}
-              <div className="flex-1 space-y-2 w-full text-xs">
+              <div className="flex-1 space-y-2 text-xs">
                 {customerDonutData.map((item) => (
                   <div key={item.name} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
-                      <span className="font-bold text-slate-700">{item.name}</span>
+                      <span className="font-bold text-slate-700 truncate">{item.name}</span>
                     </div>
-                    <span className="font-semibold text-slate-500 tabular-nums">
+                    <span className="font-semibold text-slate-500 tabular-nums shrink-0">
                       {item.pct.toFixed(1)}% ({item.value})
                     </span>
                   </div>
@@ -625,22 +538,22 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
           </div>
 
           {/* Donut Chart 2: Orders by Source (New Customers) */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex-1 flex flex-col justify-between">
             <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-2">
               Orders by Source (New Customers)
             </h3>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 flex-1">
               {/* Donut Ring with Center Number */}
-              <div className="relative w-[180px] h-[180px] shrink-0">
+              <div className="relative w-[150px] h-[150px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={orderDonutData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
+                      innerRadius={46}
+                      outerRadius={68}
                       paddingAngle={3}
                       dataKey="value"
                       stroke="none"
@@ -653,24 +566,24 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 </ResponsiveContainer>
                 {/* Center text overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black text-[#0F172A] leading-tight">
+                  <span className="text-xl font-black text-[#0F172A] leading-tight">
                     {sourceTableTotal.orders}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
                     Orders
                   </span>
                 </div>
               </div>
 
               {/* Legend List on Right */}
-              <div className="flex-1 space-y-2 w-full text-xs">
+              <div className="flex-1 space-y-2 text-xs">
                 {orderDonutData.map((item) => (
                   <div key={item.name} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
-                      <span className="font-bold text-slate-700">{item.name}</span>
+                      <span className="font-bold text-slate-700 truncate">{item.name}</span>
                     </div>
-                    <span className="font-semibold text-slate-500 tabular-nums">
+                    <span className="font-semibold text-slate-500 tabular-nums shrink-0">
                       {item.pct.toFixed(1)}% ({item.value})
                     </span>
                   </div>
@@ -679,85 +592,160 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             </div>
           </div>
 
-          {/* Chart 3: Orders Trend (Area Chart) */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">
-                Orders Trend
+        </div>
+
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. LOWER ROW: ALL CUSTOMERS BY TYPE (LEFT) + ORDERS TREND CHART (RIGHT)
+      ────────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        {/* ─── LEFT: Table 2 (All Customers by Type) ─── */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="px-5 py-3.5 border-b border-slate-100">
+              <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
+                All Customers by Type
               </h3>
-              <div className="flex items-center gap-3 text-[11px] font-bold">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
-                  <span className="text-slate-600">New Customers</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-                  <span className="text-slate-600">Existing Customers</span>
-                </div>
-              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Breakdown of total customers and orders
+              </p>
             </div>
 
-            <div className="h-[190px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={trendDays}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
-                    </linearGradient>
-                    <linearGradient id="colorExisting" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={{ stroke: '#E2E8F0' }}
-                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
-                  />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload?.length) return null;
-                      return (
-                        <div className="bg-slate-900 text-white p-2.5 rounded-xl text-xs shadow-xl border border-slate-800">
-                          <p className="font-bold text-slate-300 mb-1">{label}</p>
-                          <p className="text-[#60A5FA]">New Customers: <span className="font-extrabold text-white">{payload[0]?.value}</span></p>
-                          <p className="text-[#34D399]">Existing Customers: <span className="font-extrabold text-white">{payload[1]?.value}</span></p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="New Customers"
-                    stroke="#3B82F6"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorNew)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Existing Customers"
-                    stroke="#10B981"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorExisting)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50/70 text-slate-500 uppercase tracking-wider text-[10.5px] font-bold border-b border-slate-100">
+                    <th className="py-2.5 px-5">Customer Type</th>
+                    <th className="py-2.5 px-4 text-center">Customers</th>
+                    <th className="py-2.5 px-4 text-center">Orders</th>
+                    <th className="py-2.5 px-4 text-right">Revenue</th>
+                    <th className="py-2.5 px-4 text-right">% of Customers</th>
+                    <th className="py-2.5 px-5 text-right">% of Orders</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {customerTypeRows.map((row) => (
+                    <tr
+                      key={row.type}
+                      onClick={() => handleTypeDrilldown(row.type)}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-3 px-5 flex items-center gap-2.5 text-slate-800 font-bold">
+                        <CustomerTypeIcon type={row.type} size={15} />
+                        <span className="group-hover:text-blue-600 transition-colors">{row.type}</span>
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-slate-700">
+                        {row.customers}
+                      </td>
+                      <td className="py-3 px-4 text-center font-semibold text-slate-600">
+                        {row.orders}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-slate-800">
+                        ₹{Math.round(row.revenue).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-600">
+                        {row.pctCustomers.toFixed(1)}%
+                      </td>
+                      <td className="py-3 px-5 text-right font-semibold text-slate-600">
+                        {row.pctOrders.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50/90 border-t-2 border-slate-200 text-slate-900 font-black text-xs">
+                    <td className="py-3 px-5">Total</td>
+                    <td className="py-3 px-4 text-center">{customerTypeTotal.customers}</td>
+                    <td className="py-3 px-4 text-center">{customerTypeTotal.orders}</td>
+                    <td className="py-3 px-4 text-right">₹{Math.round(customerTypeTotal.revenue).toLocaleString('en-IN')}</td>
+                    <td className="py-3 px-4 text-right">100%</td>
+                    <td className="py-3 px-5 text-right">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── RIGHT: Chart 3 (Orders Trend Area Chart) ─── */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">
+              Orders Trend
+            </h3>
+            <div className="flex items-center gap-3 text-[11px] font-bold">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+                <span className="text-slate-600">New Customers</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
+                <span className="text-slate-600">Existing Customers</span>
+              </div>
             </div>
           </div>
 
+          <div className="h-[175px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={trendDays}
+                margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="colorExisting" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={{ stroke: '#E2E8F0' }}
+                  tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="bg-slate-900 text-white p-2.5 rounded-xl text-xs shadow-xl border border-slate-800">
+                        <p className="font-bold text-slate-300 mb-1">{label}</p>
+                        <p className="text-[#60A5FA]">New Customers: <span className="font-extrabold text-white">{payload[0]?.value}</span></p>
+                        <p className="text-[#34D399]">Existing Customers: <span className="font-extrabold text-white">{payload[1]?.value}</span></p>
+                      </div>
+                    );
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="New Customers"
+                  stroke="#3B82F6"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#colorNew)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Existing Customers"
+                  stroke="#10B981"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#colorExisting)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
       </div>

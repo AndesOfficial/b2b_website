@@ -260,7 +260,7 @@ export default function AdminDashboard() {
 
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
         <AdminTopBar
-          title={activeTab === "overview" ? (overviewSubView === "acquisition" ? "Customer Acquisition & Orders" : "Operations & Revenue") : activeTabConfig.title}
+          title={activeTabConfig.title}
           dateFrom={dateFrom}
           setDateFrom={setDateFrom}
           dateTo={dateTo}

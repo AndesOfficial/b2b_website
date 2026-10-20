@@ -396,7 +396,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
       subtext: `${pctRepeatOfOrders.toFixed(1)}% of total orders`,
     },
     totalRevenue: {
-      value: totalRevenue,
+      value: Math.round(totalRevenue),
       changePct: calcChange(totalRevenue, prevRevenue),
       subtext: 'vs previous period',
     },
@@ -427,6 +427,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
 
   const sourceTableRows = Array.from(sourceStatsMap.values()).map((row) => ({
     ...row,
+    revenue: Math.round(row.revenue),
     pctOfNew: newCustomersCount > 0 ? (row.newCustomers / newCustomersCount) * 100 : 0,
   }));
 
@@ -434,7 +435,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
   const sourceTableTotal = {
     newCustomers: newCustomersCount,
     orders: sourceTableRows.reduce((sum, r) => sum + r.orders, 0),
-    revenue: sourceTableRows.reduce((sum, r) => sum + r.revenue, 0),
+    revenue: Math.round(sourceTableRows.reduce((sum, r) => sum + r.revenue, 0)),
     pctOfNew: 100,
   };
 
@@ -454,6 +455,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
 
   const customerTypeRows = Object.values(typeStats).map((row) => ({
     ...row,
+    revenue: Math.round(row.revenue),
     pctCustomers: totalCustomers > 0 ? (row.customers / totalCustomers) * 100 : 0,
     pctOrders: totalOrders > 0 ? (row.orders / totalOrders) * 100 : 0,
   }));
@@ -461,7 +463,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
   const customerTypeTotal = {
     customers: totalCustomers,
     orders: totalOrders,
-    revenue: totalRevenue,
+    revenue: Math.round(totalRevenue),
     pctCustomers: 100,
     pctOrders: 100,
   };

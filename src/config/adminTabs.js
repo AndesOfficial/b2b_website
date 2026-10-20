@@ -5,8 +5,8 @@ import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 export const ADMIN_TAB_CONFIG = {
   overview: {
     key: "overview",
-    title: "Customer Acquisition & Orders",
-    navLabel: "Acquisition & Orders",
+    title: "Overview",
+    navLabel: "Overview",
     navIcon: FiLayout,
     showSidebar: true,
     showHeaderActions: false,
