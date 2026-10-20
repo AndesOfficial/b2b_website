@@ -209,7 +209,7 @@ export default function AdminB2BTab() {
       totalBatches: filteredEntries.length,
       totalRevenue: Math.round(totalRevenue),
       hostel99Revenue: Math.round(h99Dates.size > 0 ? hostel99Revenue : 0),
-      totalKg: Math.round(totalKg * 10) / 10,
+      totalKg: Math.round(totalKg * 100) / 100,
       totalClothes,
       totalStudents,
       verifiedBatches,

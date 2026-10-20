@@ -18,6 +18,7 @@ import { useHostelAuth } from "../../context/HostelAuthContext";
 const DEFAULT_HOSTEL_COLORS = {
   "Aakansha": "#0891B2", 
   "Adarsha": "#7C3AED", 
+  "Archid": "#0D9488",
   "Keerti": "#BE185D", 
   "Meera": "#059669", 
   "Plato": "#F59E0B", 

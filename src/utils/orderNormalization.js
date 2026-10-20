@@ -30,6 +30,10 @@ export function isHostel99Property(property) {
 
 // --- ADDED ALIASES HERE TO FIX CASE SENSITIVITY AND DUPLICATES ---
 export const CANONICAL_PROPERTY_NAMES = {
+  // Archid
+  archid: "Archid",
+  "archid hostel": "Archid",
+
   // Aakansha
   aakansha: "Aakansha",
   akansha: "Aakansha",
@@ -974,8 +978,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     normalized.property = clientName;
     normalized.partnerName = clientName;
     normalized.client = clientName;
-    normalized.category = ORDER_CATEGORIES.LINEN;
-    normalized.type = ORDER_TYPES.LINEN;
+    normalized.category = inferCategoryFromProperty(clientName);
+    normalized.type = getTypeForCategory(normalized.category);
     normalized.source = "manager_b2b";
     let kgVal = Number(rawOrder.kg) || 0;
     if (kgVal <= 0 && Array.isArray(rawOrder.items) && rawOrder.items.length > 0) {
