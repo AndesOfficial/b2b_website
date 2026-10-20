@@ -611,14 +611,17 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     source,
   };
 
-  const pickupRider =
+  const rawRider =
     rawOrder.pickupRiderName ||
     rawOrder.riderName ||
     (typeof rawOrder.rider === "string" ? rawOrder.rider : rawOrder.rider?.name || rawOrder.rider?.riderName) ||
     (typeof rawOrder.assignedTo === "string" ? rawOrder.assignedTo : rawOrder.assignedTo?.name || rawOrder.assignedTo?.riderName) ||
-    rawOrder.deliveryBy ||
-    rawOrder.assignedRiderName ||
+    (typeof rawOrder.deliveryRider === "string" ? rawOrder.deliveryRider : rawOrder.deliveryRider?.name) ||
+    (typeof rawOrder.assignedRider === "string" ? rawOrder.assignedRider : rawOrder.assignedRider?.name) ||
+    (typeof rawOrder.assignedRiderName === "string" ? rawOrder.assignedRiderName : "") ||
     (rawOrder.riderId ? "Assigned Rider" : "");
+
+  const pickupRider = typeof rawRider === "string" ? rawRider.trim() : (rawRider && typeof rawRider === "object" && rawRider.name ? String(rawRider.name).trim() : "");
 
   normalized.riderName = pickupRider;
   normalized.pickupRiderName = pickupRider;
