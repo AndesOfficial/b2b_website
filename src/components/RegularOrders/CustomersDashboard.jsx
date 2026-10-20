@@ -1,7 +1,62 @@
 import { useState, useMemo, useEffect } from 'react';
 import { BiRupee } from 'react-icons/bi';
-import { FiUsers, FiInfo, FiSearch, FiX, FiDatabase, FiCalendar, FiPackage, FiChevronRight, FiChevronDown, FiMapPin, FiClock, FiFileText, FiChevronLeft } from 'react-icons/fi';
+import {
+  FiUsers,
+  FiInfo,
+  FiSearch,
+  FiX,
+  FiDatabase,
+  FiCalendar,
+  FiPackage,
+  FiChevronRight,
+  FiChevronDown,
+  FiMapPin,
+  FiClock,
+  FiFileText,
+  FiChevronLeft,
+  FiSmartphone,
+  FiGlobe,
+  FiHelpCircle,
+} from 'react-icons/fi';
+import {
+  FaWhatsapp,
+  FaGoogle,
+  FaInstagram,
+  FaBullhorn,
+  FaStore,
+} from 'react-icons/fa6';
 import EmptyState from '../Shared/EmptyState';
+import {
+  ACQUISITION_SOURCES,
+  ACQUISITION_SOURCE_LIST,
+  subscribeCustomerSources,
+  saveCustomerAcquisitionSource,
+} from '../../api/customerAcquisitionApi';
+
+function SourceIcon({ source, size = 14 }) {
+  switch (source) {
+    case ACQUISITION_SOURCES.WHATSAPP:
+      return <FaWhatsapp size={size} className="text-[#25D366]" />;
+    case ACQUISITION_SOURCES.APP:
+      return <FiSmartphone size={size} className="text-[#3B82F6]" />;
+    case ACQUISITION_SOURCES.WORD_OF_MOUTH:
+      return <FiUsers size={size} className="text-[#A855F7]" />;
+    case ACQUISITION_SOURCES.GOOGLE_SEARCH:
+      return <FaGoogle size={size} className="text-[#EA4335]" />;
+    case ACQUISITION_SOURCES.GOOGLE_MAPS:
+      return <FiMapPin size={size} className="text-[#10B981]" />;
+    case ACQUISITION_SOURCES.INSTAGRAM:
+      return <FaInstagram size={size} className="text-[#E1306C]" />;
+    case ACQUISITION_SOURCES.WEBSITE:
+      return <FiGlobe size={size} className="text-[#06B6D4]" />;
+    case ACQUISITION_SOURCES.WALK_IN:
+      return <FaStore size={size} className="text-[#F59E0B]" />;
+    case ACQUISITION_SOURCES.PAID_ADS:
+      return <FaBullhorn size={size} className="text-[#EC4899]" />;
+    default:
+      return <FiHelpCircle size={size} className="text-[#94A3B8]" />;
+  }
+}
 
 /* ──────────────────────────────────────────────────────────────────────────────
  * CustomerHistoryModal
@@ -18,8 +73,33 @@ import EmptyState from '../Shared/EmptyState';
  *           inside a table that already has 6+ columns. A modal gives us room
  *           for a proper timeline layout, status badges, and channel info.
  * ────────────────────────────────────────────────────────────────────────────── */
-function CustomerHistoryModal({ user, onClose }) {
+function CustomerHistoryModal({ user, initialSource, onClose, onSourceUpdated }) {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [currentSource, setCurrentSource] = useState(initialSource || user?.acquisitionSource || 'Other / Unknown');
+  const [isSavingSource, setIsSavingSource] = useState(false);
+  const [sourceSavedMessage, setSourceSavedMessage] = useState(false);
+
+  useEffect(() => {
+    if (initialSource) setCurrentSource(initialSource);
+  }, [initialSource]);
+
+  const handleSourceChange = async (e) => {
+    const newSource = e.target.value;
+    setCurrentSource(newSource);
+    setIsSavingSource(true);
+    try {
+      await saveCustomerAcquisitionSource(user.phone || user.id, newSource, {
+        customerName: user.name,
+      });
+      onSourceUpdated?.(user.phone || user.id, newSource);
+      setSourceSavedMessage(true);
+      setTimeout(() => setSourceSavedMessage(false), 2000);
+    } catch (err) {
+      console.error('Failed to update acquisition source:', err);
+    } finally {
+      setIsSavingSource(false);
+    }
+  };
 
   // Sort orders newest → oldest so the most recent activity is always at the top
   const sortedOrders = useMemo(() => {
@@ -84,6 +164,39 @@ function CustomerHistoryModal({ user, onClose }) {
               <span className="text-[12px] font-black text-slate-600">Since {user.firstOrderDate || '—'}</span>
             </div>
           </div>
+
+          {/* Customer Profile Attributes: Type & Acquisition Source */}
+          <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type:</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                user.customerType === 'New'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : user.customerType === 'Reactivated'
+                  ? 'bg-purple-100 text-purple-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                {user.customerType || 'Existing'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Acquisition:</span>
+              <select
+                value={currentSource}
+                onChange={handleSourceChange}
+                disabled={isSavingSource}
+                className="px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 cursor-pointer"
+              >
+                {ACQUISITION_SOURCE_LIST.map((src) => (
+                  <option key={src} value={src}>{src}</option>
+                ))}
+              </select>
+              {sourceSavedMessage && (
+                <span className="text-[10px] font-bold text-emerald-600 animate-fade-in">Saved!</span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Order Timeline — scrollable */}
@@ -114,12 +227,13 @@ function CustomerHistoryModal({ user, onClose }) {
                               <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0 group-hover:bg-blue-600 transition-colors" />
                               <div className="min-w-0">
                                 <p className="text-[13px] font-bold text-slate-700">{order.date || 'No date'}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {order.channel && (
-                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                      {order.channel}
-                                    </span>
-                                  )}
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                    Channel: {order.orderChannel || order.channel || 'App'}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                    Acquisition: {currentSource}
+                                  </span>
                                   {order.status && (
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       order.status === 'Delivered' || order.status === 'Pickup Done'
@@ -232,7 +346,13 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null); // For the history modal
   const [currentPage, setCurrentPage] = useState(1);
+  const [customerSourcesMap, setCustomerSourcesMap] = useState(new Map());
   const itemsPerPage = 50;
+
+  useEffect(() => {
+    const unsub = subscribeCustomerSources(setCustomerSourcesMap);
+    return () => unsub?.();
+  }, []);
 
   const tabs = useMemo(() => [
     { id: 'New',       label: `New Users (${analytics.newUsersCount})` },
@@ -379,23 +499,24 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[950px]">
           <thead className="bg-[#F8FAFC]">
             <tr>
               <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Customer</th>
               <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Contact</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Total Orders</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Revenue</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Last Order</th>
-              {activeSubTab === 'New'  && <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">First Order</th>}
-              {activeSubTab === 'Lost' && <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Days Since</th>}
-              {activeSubTab === 'AllDB' && <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">First Order</th>}
+              <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-4 uppercase tracking-[0.1em]">Customer Type</th>
+              <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-4 uppercase tracking-[0.1em]">Acquisition Source</th>
+              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Total Orders</th>
+              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Revenue</th>
+              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">First Order</th>
+              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Last Order</th>
+              {activeSubTab === 'Lost' && <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Days Since</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {data.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12">
+                <td colSpan="9" className="px-6 py-12">
                   <EmptyState
                     icon={FiUsers}
                     title={searchQuery ? `No results for "${searchQuery}"` : `No ${activeSubTab === 'AllDB' ? '' : activeSubTab} Users Found`}
@@ -411,51 +532,73 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
                   />
                 </td>
               </tr>
-            ) : paginatedData.map((user, i) => (
-              <tr 
-                key={user.id || i} 
-                onClick={() => setSelectedUser(user)}
-                className="hover:bg-blue-50/60 transition-colors group cursor-pointer"
-              >
-                <td className="px-6 py-4">
-                  <p className="text-[14px] font-black text-[#0F172A] tracking-tight group-hover:text-blue-700 transition-colors">{user.name}</p>
-                  {user.address && <p className="text-[10px] text-slate-400 truncate max-w-[200px] mt-0.5">{user.address}</p>}
-                </td>
-                <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{user.phone}</td>
-                {/* ── Frequency badge (visual indicator, row click handles action) ── */}
-                <td className="px-6 py-4 text-right">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-[13px] font-black border border-blue-100 group-hover:bg-blue-100 group-hover:border-blue-200 transition-all">
-                    {user.totalOrders}
-                    <FiChevronRight size={12} className="text-blue-400 group-hover:text-blue-600 transition-colors" />
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-0.5 text-[14px] font-black text-emerald-600 tracking-tight">
-                    <BiRupee size={14} />
-                    <span>{(user.totalRevenue || 0).toLocaleString()}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right text-[12px] font-bold text-slate-500">{user.lastOrderDate}</td>
+            ) : paginatedData.map((user, i) => {
+              const userSource = customerSourcesMap.get(user.phone) || customerSourcesMap.get(user.id) || user.acquisitionSource || 'Other / Unknown';
+              const userType = user.customerType || (user.totalOrders <= 1 ? 'New' : 'Existing');
 
-                {activeSubTab === 'New' && (
-                  <td className="px-6 py-4 text-right text-[12px] font-bold text-slate-500">{user.firstOrderDate}</td>
-                )}
-                {activeSubTab === 'Lost' && (
-                  <td className="px-6 py-4 text-right">
-                    <span className={`px-2 py-1 rounded-md text-[12px] font-bold ${
-                      user.daysSinceLastOrder > 60 ? 'bg-rose-100 text-rose-700' :
-                      user.daysSinceLastOrder > 30 ? 'bg-amber-50 text-amber-700' :
-                      'bg-orange-50 text-orange-700'
+              return (
+                <tr 
+                  key={user.id || i} 
+                  onClick={() => setSelectedUser({ ...user, acquisitionSource: userSource, customerType: userType })}
+                  className="hover:bg-blue-50/60 transition-colors group cursor-pointer"
+                >
+                  <td className="px-6 py-4">
+                    <p className="text-[14px] font-black text-[#0F172A] tracking-tight group-hover:text-blue-700 transition-colors">{user.name}</p>
+                    {user.address && <p className="text-[10px] text-slate-400 truncate max-w-[200px] mt-0.5">{user.address}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{user.phone}</td>
+                  
+                  {/* Customer Type Badge */}
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                      userType === 'New'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : userType === 'Reactivated'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-amber-100 text-amber-800'
                     }`}>
-                      {user.daysSinceLastOrder} days
+                      {userType}
                     </span>
                   </td>
-                )}
-                {activeSubTab === 'AllDB' && (
-                  <td className="px-6 py-4 text-right text-[12px] font-bold text-slate-500">{user.firstOrderDate}</td>
-                )}
-              </tr>
-            ))}
+
+                  {/* Customer Acquisition Source Badge with Brand Icon */}
+                  <td className="px-4 py-4">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      <SourceIcon source={userSource} size={13} />
+                      <span>{userSource}</span>
+                    </span>
+                  </td>
+
+                  {/* Frequency badge (visual indicator, row click handles action) */}
+                  <td className="px-5 py-4 text-right">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-[13px] font-black border border-blue-100 group-hover:bg-blue-100 group-hover:border-blue-200 transition-all">
+                      {user.totalOrders}
+                      <FiChevronRight size={12} className="text-blue-400 group-hover:text-blue-600 transition-colors" />
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <div className="flex items-center justify-end gap-0.5 text-[14px] font-black text-emerald-600 tracking-tight">
+                      <BiRupee size={14} />
+                      <span>{(user.totalRevenue || 0).toLocaleString()}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-right text-[12px] font-bold text-slate-500">{user.firstOrderDate || '—'}</td>
+                  <td className="px-5 py-4 text-right text-[12px] font-bold text-slate-500">{user.lastOrderDate || '—'}</td>
+
+                  {activeSubTab === 'Lost' && (
+                    <td className="px-5 py-4 text-right">
+                      <span className={`px-2 py-1 rounded-md text-[12px] font-bold ${
+                        user.daysSinceLastOrder > 60 ? 'bg-rose-100 text-rose-700' :
+                        user.daysSinceLastOrder > 30 ? 'bg-amber-50 text-amber-700' :
+                        'bg-orange-50 text-orange-700'
+                      }`}>
+                        {user.daysSinceLastOrder} days
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         
@@ -475,7 +618,6 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
               </button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Show pages around current page
                   let pageNum = currentPage;
                   if (totalPages <= 5) pageNum = i + 1;
                   else if (currentPage <= 3) pageNum = i + 1;
@@ -509,9 +651,20 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
         )}
       </div>
 
-      {/* Customer History Modal — rendered when a user's frequency badge is clicked */}
+      {/* Customer History Modal — rendered when a user row or frequency badge is clicked */}
       {selectedUser && (
-        <CustomerHistoryModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+        <CustomerHistoryModal
+          user={selectedUser}
+          initialSource={customerSourcesMap.get(selectedUser.phone) || customerSourcesMap.get(selectedUser.id) || selectedUser.acquisitionSource || 'Other / Unknown'}
+          onClose={() => setSelectedUser(null)}
+          onSourceUpdated={(phone, newSource) => {
+            setCustomerSourcesMap(prev => {
+              const updated = new Map(prev);
+              updated.set(phone, newSource);
+              return updated;
+            });
+          }}
+        />
       )}
     </div>
   );

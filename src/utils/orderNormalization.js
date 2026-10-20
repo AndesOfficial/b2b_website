@@ -3,6 +3,7 @@ import { getCategoryForProperty } from "../data/hostelOrders";
 import { getTodayString } from "./dateUtils";
 import { ITEM_RATE_MAP, STUDENT_RATE_PER_KG, HOSTEL_99_MONTHLY_REVENUE, calculateBatchRevenue, calculateB2bWeight, calculateLinenWeight } from "../config/orderRateCard";
 import { normalizePhone } from "./phoneUtils";
+import { detectAcquisitionSource, normalizeOrderChannel } from "../api/customerAcquisitionApi";
 
 export function getDaysInMonthForDate(dateStr) {
   if (!dateStr || typeof dateStr !== "string") {
@@ -590,6 +591,8 @@ export function normalizeOrder(rawOrder = {}, source = "unknown") {
     customerName: String(rawOrder.customerName || rawOrder.userName || "").trim(),
     customerNumber: normalizePhone(rawOrder.userMobile || rawOrder.customerNumber || rawOrder.userPhone || rawOrder.phoneNumber || rawOrder.customerPhone || ""),
     channel: mapCartSelectionSource(rawOrder.selectionSource || rawOrder.location?.selectionSource || rawOrder.channel || (source === "website" ? "website" : "")),
+    orderChannel: normalizeOrderChannel(rawOrder),
+    acquisitionSource: rawOrder.acquisitionSource || rawOrder.customerAcquisitionSource || detectAcquisitionSource(rawOrder),
     deliveryDate: normalizeSlot(rawOrder.deliveryDate || rawOrder.dropTime || ""),
     pickupDate: normalizeSlot(rawOrder.pickupDate || rawOrder.pickupTime || rawOrder.pickupSlot || rawOrder.scheduledPickupDate || rawOrder.pickup || rawOrder.date || ""),
     service: typeof rawOrder.service === 'string' ? rawOrder.service : "Order",

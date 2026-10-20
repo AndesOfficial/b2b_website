@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { detectAcquisitionSource } from '../api/customerAcquisitionApi';
 
 // Module-level constant — avoids array recreation inside every useMemo invocation
 const ANALYTICS_CHANNELS = ["App", "Auto", "Website", "WhatsApp", "Outlet", "Call", "Student", "Referral"];
@@ -181,6 +182,33 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
           }, 0)
         );
 
+        const earliestOrder = userMeta.orders.reduce((earliest, o) => {
+          if (!earliest) return o;
+          const tO = getOrderDate(o).getTime();
+          const tE = getOrderDate(earliest).getTime();
+          return tO < tE ? o : earliest;
+        }, null);
+
+        let customerType = 'Existing';
+        if (inCurrent && userMeta.firstOrderDate >= from && userMeta.firstOrderDate <= to) {
+          customerType = 'New';
+        } else if (inCurrent && userMeta.orders.length > 1) {
+          const sortedTimestamps = userMeta.orders
+            .map((o) => getOrderDate(o).getTime())
+            .filter((t) => !isNaN(t))
+            .sort((a, b) => a - b);
+          let hasLargeGap = false;
+          for (let i = 1; i < sortedTimestamps.length; i++) {
+            if (sortedTimestamps[i] - sortedTimestamps[i - 1] > 60 * 24 * 60 * 60 * 1000) {
+              hasLargeGap = true;
+              break;
+            }
+          }
+          if (hasLargeGap) customerType = 'Reactivated';
+        }
+
+        const acquisitionSource = earliestOrder?.acquisitionSource || detectAcquisitionSource(earliestOrder);
+
         const userObj = {
             id: uid,
             name: userMeta.orders[0]?.customerName || 'Unknown',
@@ -191,6 +219,8 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
             totalOrders: userMeta.orders.length,
             totalRevenue: userMeta.totalRevenue,
             daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0,
+            customerType,
+            acquisitionSource,
             orders: userMeta.orders, // Raw orders for the Customer History Modal
         };
 
@@ -220,6 +250,15 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
           return t > max ? t : max;
         }, 0)
       );
+      const earliestOrder = userMeta.orders.reduce((earliest, o) => {
+        if (!earliest) return o;
+        const tO = getOrderDate(o).getTime();
+        const tE = getOrderDate(earliest).getTime();
+        return tO < tE ? o : earliest;
+      }, null);
+      const acquisitionSource = earliestOrder?.acquisitionSource || detectAcquisitionSource(earliestOrder);
+      const customerType = userMeta.orders.length <= 1 ? 'New' : 'Existing';
+
       return {
         id: uid,
         name: userMeta.orders[0]?.customerName || 'Unknown',
@@ -230,6 +269,8 @@ export function useRegularAnalytics(orders, dateFrom, dateTo) {
         totalOrders: userMeta.orders.length,
         totalRevenue: userMeta.totalRevenue,
         daysSinceLastOrder: !isNaN(lastOrderDate) ? Math.floor((to.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24)) : 0,
+        customerType,
+        acquisitionSource,
         orders: userMeta.orders,
       };
     });

@@ -365,6 +365,26 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
               <p className="font-bold text-slate-700">{formatTimeSlot(order.pickupDate || order.date) || "—"}</p>
             </div>
           </div>
+
+          {/* Tracking: Customer Acquisition Source vs Order Channel */}
+          <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Order Channel</p>
+              <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span>{order.orderChannel || order.channel || "App"}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Where this order was placed</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Acquisition Source</p>
+              <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>{order.acquisitionSource || "Other / Unknown"}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Where customer discovered us</p>
+            </div>
+          </div>
         </div>
 
         {/* Service Breakdown */}

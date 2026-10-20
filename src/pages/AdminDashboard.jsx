@@ -5,6 +5,7 @@ import AdminSidebar from "../components/Layout/AdminSidebar";
 import AdminTopBar from "../components/Layout/AdminTopBar";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import OpsRevenueDashboard from "../components/Overview/OpsRevenueDashboard";
+import CustomerAcquisitionDashboard from "../components/Overview/CustomerAcquisitionDashboard";
 import AdminIssuesTab from "../components/Issues/AdminIssuesTab";
 import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
 import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
@@ -60,6 +61,7 @@ export default function AdminDashboard() {
   const [dateTo, setDateTo] = useState(() => getTodayString());
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
+  const [overviewSubView, setOverviewSubView] = useState("acquisition");
 
   useEffect(() => {
     if (location.state?.initialTab) {
@@ -167,7 +169,43 @@ export default function AdminDashboard() {
   // A single registry keeps tab rendering in one place instead of scattering conditionals.
   const activeTabPanel = useMemo(() => {
     const panels = {
-      overview: <OpsRevenueDashboard orders={baseOrders} />,
+      overview: (
+        <div className="space-y-4">
+          {/* Subtle switcher between Acquisition Dashboard and Operations Ledger */}
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+            <div className="inline-flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setOverviewSubView("acquisition")}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  overviewSubView === "acquisition"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Customer Acquisition & Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => setOverviewSubView("ops")}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  overviewSubView === "ops"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Operations & Revenue Breakdown
+              </button>
+            </div>
+          </div>
+
+          {overviewSubView === "acquisition" ? (
+            <CustomerAcquisitionDashboard orders={baseOrders} />
+          ) : (
+            <OpsRevenueDashboard orders={baseOrders} />
+          )}
+        </div>
+      ),
       regular: null, // Handled by dedicated /admin/regular-orders route
       issues: (
         <AdminIssuesTab
@@ -196,6 +234,7 @@ export default function AdminDashboard() {
     handleDeleteData,
     handleEditIssue,
     orders,
+    overviewSubView,
     screenStats,
     searchStats,
     totalUsers,
@@ -221,7 +260,7 @@ export default function AdminDashboard() {
 
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
         <AdminTopBar
-          title={activeTabConfig.title}
+          title={activeTab === "overview" ? (overviewSubView === "acquisition" ? "Customer Acquisition & Orders" : "Operations & Revenue") : activeTabConfig.title}
           dateFrom={dateFrom}
           setDateFrom={setDateFrom}
           dateTo={dateTo}
