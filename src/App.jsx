@@ -15,6 +15,7 @@ import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
 import AdminDailyReport from "./pages/AdminDailyReport";
 import AdminSalaries from "./pages/AdminSalaries";
 import AdminServices from "./pages/AdminServices";
+import AdminCampaigns from "./pages/AdminCampaigns";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import NotFound from "./pages/NotFound";
 import HostelOrderForm from "./pages/HostelOrderForm";
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
           <Route path="/admin/daily-report" element={<AdminRoute><AdminDailyReport /></AdminRoute>} />
           <Route path="/admin/services" element={<AdminRoute><AdminServices /></AdminRoute>} />
+          <Route path="/admin/campaigns" element={<AdminRoute><AdminCampaigns /></AdminRoute>} />
 
           {/* Manager Portal */}
           <Route path="/manager" element={<ManagerDashboard />} />

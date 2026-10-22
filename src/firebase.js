@@ -24,6 +24,7 @@ import {
     signOut as fbSignOut,
 } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAMfx_4IkggT1x6wd0OF6qZ06DAqsUtgtU",
@@ -43,6 +44,8 @@ export const db = initializeFirestore(app, {
 });
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+// Callables live in us-central1 (customer-repo function/index.ts).
+export const functions = getFunctions(app, "us-central1");
 
 const ALLOWED_EMAILS = [
     'andesnow1604@gmail.com',

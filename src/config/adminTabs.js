@@ -1,4 +1,4 @@
-import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPackage, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiCreditCard, FiDollarSign, FiFileText, FiGift, FiInbox, FiLayout, FiPackage, FiPieChart, FiTag, FiUsers } from "react-icons/fi";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
@@ -89,6 +89,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "Service Catalog",
     navLabel: "Services",
     navIcon: FiTag,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  campaigns: {
+    key: "campaigns",
+    title: "Promo Campaigns",
+    navLabel: "Campaigns",
+    navIcon: FiGift,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

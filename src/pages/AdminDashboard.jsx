@@ -63,10 +63,15 @@ export default function AdminDashboard() {
   const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
+    // Other admin pages send unknown tabs here; campaigns has its own page.
+    if (location.state?.initialTab === "campaigns") {
+      navigate("/admin/campaigns", { replace: true });
+      return;
+    }
     if (location.state?.initialTab) {
       setActiveTab(location.state.initialTab);
     }
-  }, [location.state?.initialTab]);
+  }, [location.state?.initialTab, navigate]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -147,6 +152,11 @@ export default function AdminDashboard() {
     if (tab === "services") {
       setIsMobileMenuOpen(false);
       navigate("/admin/services");
+      return;
+    }
+    if (tab === "campaigns") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/campaigns");
       return;
     }
 
