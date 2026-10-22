@@ -1,12 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiMenu, FiUpload, FiUsers, FiSave, FiCheck, FiAlertCircle, FiX, FiDatabase, FiEdit2 } from "react-icons/fi";
+import {
+  FiMenu,
+  FiUpload,
+  FiUsers,
+  FiSave,
+  FiCheck,
+  FiAlertCircle,
+  FiX,
+  FiDatabase,
+  FiEdit2,
+  FiPlus,
+  FiTrash2,
+  FiActivity,
+  FiCalendar,
+  FiArrowRight,
+  FiTarget,
+} from "react-icons/fi";
 import readXlsxFile from "read-excel-file/browser";
 import { collection, getDocs, writeBatch, doc, getDoc, setDoc, Timestamp, query, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { db, auth } from "../firebase";
+import {
+  saveMetaAdsDailyReport,
+  deleteMetaAdsDailyReport,
+  subscribeMetaAdsDailyReports,
+} from "../api/customerAcquisitionApi";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const COLLECTION        = "meta_ads_leads";
@@ -84,12 +105,27 @@ export default function AdminMetaAdsLeads() {
   const [isMobileMenuOpen,   setIsMobileMenuOpen]     = useState(false);
   const [previewData,        setPreviewData]           = useState([]);    // parsed from excel
   const [savedData,          setSavedData]             = useState([]);    // loaded from firebase
-  const [activeView,         setActiveView]            = useState("saved"); // "preview" | "saved"
+  const [dailyReports,       setDailyReports]          = useState([]);    // daily summary reports
+  const [activeView,         setActiveView]            = useState("daily"); // "daily" | "saved" | "preview"
   const [isUploading,        setIsUploading]           = useState(false);
   const [isSaving,           setIsSaving]              = useState(false);
   const [isLoadingDb,        setIsLoadingDb]           = useState(true);
   const [toast,              setToast]                 = useState(null);   // { type, message }
   const [skippedCount,       setSkippedCount]          = useState(0);
+
+  // Daily entry modal state
+  const [isAddModalOpen,     setIsAddModalOpen]        = useState(false);
+  const [editingDate,        setEditingDate]           = useState(null);
+  const [formData,           setFormData]              = useState({
+    date: "2026-10-20",
+    totalLeads: "",
+    conversions: "",
+    potential: "",
+    osa: "",
+    noResponse: "",
+    remarks: "",
+  });
+  const [isSavingDaily,      setIsSavingDaily]         = useState(false);
 
   // CPC state
   const [cpc,         setCpc]         = useState(null);   // stored value from Firestore
@@ -133,6 +169,125 @@ export default function AdminMetaAdsLeads() {
     });
     return () => unsubAuth();
   }, []);
+
+  // ── Load daily Meta Ads summary reports from Firestore ────────────────
+  useEffect(() => {
+    const unsub = subscribeMetaAdsDailyReports(
+      (reports) => setDailyReports(reports),
+      (err) => console.error("Failed to load daily Meta Ads reports:", err)
+    );
+    return () => unsub?.();
+  }, []);
+
+  // ── Daily KPI stats computed from dailyReports ────────────────────────
+  const dailyKpiStats = useMemo(() => {
+    let totalLeads = 0;
+    let conversions = 0;
+    let potential = 0;
+    let osa = 0;
+    let noResponse = 0;
+
+    dailyReports.forEach((r) => {
+      totalLeads += Number(r.totalLeads) || 0;
+      conversions += Number(r.conversions) || 0;
+      potential += Number(r.potential) || 0;
+      osa += Number(r.osa) || 0;
+      noResponse += Number(r.noResponse) || 0;
+    });
+
+    const conversionRate = totalLeads > 0 ? Math.round((conversions / totalLeads) * 1000) / 10 : 0;
+    const potentialRate = totalLeads > 0 ? Math.round((potential / totalLeads) * 1000) / 10 : 0;
+    const osaRate = totalLeads > 0 ? Math.round((osa / totalLeads) * 1000) / 10 : 0;
+    const noResponseRate = totalLeads > 0 ? Math.round((noResponse / totalLeads) * 1000) / 10 : 0;
+
+    return {
+      totalLeads,
+      conversions,
+      potential,
+      osa,
+      noResponse,
+      conversionRate,
+      potentialRate,
+      osaRate,
+      noResponseRate,
+      daysCount: dailyReports.length,
+    };
+  }, [dailyReports]);
+
+  // ── Handlers for Adding / Editing Daily Meta Leads ─────────────────────
+  const handleOpenAddModal = (existing = null) => {
+    if (existing) {
+      setEditingDate(existing.date);
+      setFormData({
+        date: existing.date,
+        totalLeads: String(existing.totalLeads ?? ""),
+        conversions: String(existing.conversions ?? ""),
+        potential: String(existing.potential ?? ""),
+        osa: String(existing.osa ?? ""),
+        noResponse: String(existing.noResponse ?? ""),
+        remarks: existing.remarks || "",
+      });
+    } else {
+      setEditingDate(null);
+      setFormData({
+        date: "2026-10-20",
+        totalLeads: "",
+        conversions: "",
+        potential: "",
+        osa: "",
+        noResponse: "",
+        remarks: "",
+      });
+    }
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveDailyReport = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!formData.date) {
+      showToast("error", "Please select a date.");
+      return;
+    }
+    const total = Number(formData.totalLeads) || 0;
+    if (total <= 0) {
+      showToast("error", "Total leads must be greater than 0.");
+      return;
+    }
+
+    setIsSavingDaily(true);
+    try {
+      const user = auth.currentUser;
+      await saveMetaAdsDailyReport({
+        date: formData.date,
+        totalLeads: total,
+        conversions: Number(formData.conversions) || 0,
+        potential: Number(formData.potential) || 0,
+        osa: Number(formData.osa) || 0,
+        noResponse: Number(formData.noResponse) || 0,
+        remarks: formData.remarks,
+        userEmail: user?.email || client?.email || "ceo@andes.co.in",
+      });
+
+      showToast("success", `Meta leads for ${formData.date} saved successfully!`);
+      setIsAddModalOpen(false);
+    } catch (err) {
+      console.error("Save daily report error:", err);
+      showToast("error", "Failed to save daily report. Please try again.");
+    } finally {
+      setIsSavingDaily(false);
+    }
+  };
+
+  const handleDeleteDailyReport = async (date) => {
+    if (!window.confirm(`Are you sure you want to delete Meta leads entry for ${date}?`)) return;
+    try {
+      await deleteMetaAdsDailyReport(date);
+      showToast("success", `Deleted record for ${date}.`);
+    } catch (err) {
+      console.error("Delete report error:", err);
+      showToast("error", "Failed to delete record.");
+    }
+  };
 
   // ── Save CPC to Firestore ───────────────────────────────────────────────
   const handleSaveCpc = async () => {
@@ -422,6 +577,18 @@ export default function AdminMetaAdsLeads() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Add Daily Leads button */}
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddModal()}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+                >
+                  <FiPlus size={16} />
+                  Add Daily Leads
+                </button>
+              )}
+
               {/* Upload Excel */}
               {!isViewer && (
                 <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
@@ -458,16 +625,36 @@ export default function AdminMetaAdsLeads() {
           {/* ── Sub-tabs ── */}
           <div className="flex items-center gap-1 border-t border-slate-100 bg-white px-4 py-2 lg:px-8">
             <button
+              onClick={() => setActiveView("daily")}
+              aria-label="View daily performance & analytics"
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+                activeView === "daily"
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              <FiActivity size={14} />
+              Daily Performance & Analytics
+              {dailyReports.length > 0 && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
+                  activeView === "daily" ? "bg-white/20 text-white" : "bg-blue-100 text-blue-700"
+                }`}>
+                  {dailyReports.length}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setActiveView("saved")}
               aria-label="View saved database leads"
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
                 activeView === "saved"
                   ? "bg-blue-600 text-white shadow"
                   : "text-slate-500 hover:bg-slate-100"
               }`}
             >
               <FiDatabase size={14} />
-              Saved in DB
+              Saved Contacts (DB)
               {savedData.length > 0 && (
                 <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
                   activeView === "saved" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
@@ -484,7 +671,7 @@ export default function AdminMetaAdsLeads() {
                 activeView === "preview"
                   ? "bg-amber-500 text-white shadow"
                   : previewData.length > 0
-                    ? "text-slate-500 hover:bg-slate-100"
+                    ? "text-slate-500 hover:bg-slate-100 cursor-pointer"
                     : "cursor-not-allowed text-slate-300"
               }`}
             >
@@ -519,8 +706,310 @@ export default function AdminMetaAdsLeads() {
         {/* ── Main Content ── */}
         <div className="flex flex-1 flex-col p-4 lg:p-8">
 
-          {/* ── KPI Cards — shown only in saved view ── */}
-          {activeView === "saved" && !isLoadingDb && (
+          {/* ══════════════════════════════════════════════════════════════
+              VIEW 1: DAILY PERFORMANCE & ANALYTICS
+             ══════════════════════════════════════════════════════════════ */}
+          {activeView === "daily" && (
+            <div className="flex flex-col gap-6">
+
+              {/* ── Daily KPI Cards ── */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+
+                {/* Total Leads */}
+                <div className="flex flex-col justify-between rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-600 to-indigo-600 p-4 sm:p-5 shadow-sm shadow-blue-200">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-blue-200">Total Leads</p>
+                    <FiActivity className="text-blue-200" size={16} />
+                  </div>
+                  <p className="mt-3 text-3xl sm:text-4xl font-black text-white leading-none">
+                    {dailyKpiStats.totalLeads.toLocaleString()}
+                  </p>
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-semibold text-blue-200">
+                    {dailyKpiStats.daysCount} logged day{dailyKpiStats.daysCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                {/* Conversions */}
+                <div className="flex flex-col justify-between rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Conversions</p>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                      {dailyKpiStats.conversionRate}%
+                    </span>
+                  </div>
+                  <p className="mt-3 text-3xl sm:text-4xl font-black text-emerald-950 leading-none">
+                    {dailyKpiStats.conversions.toLocaleString()}
+                  </p>
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-bold text-emerald-700">
+                    Closed Deals
+                  </p>
+                </div>
+
+                {/* Potential */}
+                <div className="flex flex-col justify-between rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-blue-700">Potential</p>
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-800">
+                      {dailyKpiStats.potentialRate}%
+                    </span>
+                  </div>
+                  <p className="mt-3 text-3xl sm:text-4xl font-black text-blue-950 leading-none">
+                    {dailyKpiStats.potential.toLocaleString()}
+                  </p>
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-bold text-blue-700">
+                    Warm Pipeline
+                  </p>
+                </div>
+
+                {/* OSA */}
+                <div className="flex flex-col justify-between rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">OSA</p>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                      {dailyKpiStats.osaRate}%
+                    </span>
+                  </div>
+                  <p className="mt-3 text-3xl sm:text-4xl font-black text-amber-950 leading-none">
+                    {dailyKpiStats.osa.toLocaleString()}
+                  </p>
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-bold text-amber-700">
+                    Out of Service Area
+                  </p>
+                </div>
+
+                {/* No Response */}
+                <div className="flex flex-col justify-between rounded-2xl border border-rose-200 bg-rose-50/70 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-rose-700">No Response</p>
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-800">
+                      {dailyKpiStats.noResponseRate}%
+                    </span>
+                  </div>
+                  <p className="mt-3 text-3xl sm:text-4xl font-black text-rose-950 leading-none">
+                    {dailyKpiStats.noResponse.toLocaleString()}
+                  </p>
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-bold text-rose-700">
+                    Unreachable
+                  </p>
+                </div>
+
+                {/* Cost Per Click — editable card */}
+                <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm relative group">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Cost Per Click</p>
+                    {!isEditingCpc && (
+                      <button
+                        onClick={() => { setIsEditingCpc(true); setCpcInput(cpc != null ? String(cpc) : ""); }}
+                        title="Edit CPC"
+                        aria-label="Edit Cost Per Click"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                      >
+                        <FiEdit2 size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingCpc ? (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className="text-slate-400 font-black text-base">₹</span>
+                      <input
+                        autoFocus
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={cpcInput}
+                        onChange={e => setCpcInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") handleSaveCpc(); if (e.key === "Escape") setIsEditingCpc(false); }}
+                        className="w-20 border-b-2 border-blue-500 bg-transparent text-xl font-black text-slate-900 focus:outline-none"
+                        placeholder="0.00"
+                      />
+                      <button
+                        onClick={handleSaveCpc}
+                        disabled={isSavingCpc}
+                        aria-label="Save CPC value"
+                        className="rounded bg-blue-600 p-1 text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        <FiCheck size={12} />
+                      </button>
+                      <button
+                        onClick={() => setIsEditingCpc(false)}
+                        aria-label="Cancel editing CPC"
+                        className="p-1 text-slate-400 hover:text-slate-600"
+                      >
+                        <FiX size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-3xl sm:text-4xl font-black text-slate-900 leading-none">
+                      {cpc != null ? `₹${Number(cpc).toFixed(2)}` : <span className="text-slate-300 text-xl">Not set</span>}
+                    </p>
+                  )}
+
+                  <p className="mt-2 text-[10px] sm:text-[11px] font-semibold text-slate-400">
+                    {cpc != null ? "Hover to edit CPC" : "Click ✏ to set"}
+                  </p>
+                </div>
+
+              </div>
+
+              {/* ── Daily Breakdown Table ── */}
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Daily Leads & Conversion Records</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Log daily performance metrics to feed real-time analytics across Overview and Acquisition dashboards.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenAddModal()}
+                    className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 transition"
+                  >
+                    <FiPlus size={14} />
+                    Add Daily Leads
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Date</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Total Leads</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Conversions</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Potential</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">OSA</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">No Response</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Conv. %</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Remarks</th>
+                        <th className="px-5 py-3.5 text-left text-xs font-black uppercase tracking-wider text-slate-500">Logged By</th>
+                        <th className="px-5 py-3.5 text-right text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {dailyReports.length > 0 ? (
+                        dailyReports.map((report) => {
+                          const dateObj = new Date(report.date + "T00:00:00");
+                          const formattedDate = isNaN(dateObj)
+                            ? report.date
+                            : dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                          const dayName = isNaN(dateObj)
+                            ? ""
+                            : dateObj.toLocaleDateString("en-GB", { weekday: "short" });
+
+                          return (
+                            <tr key={report.id || report.date} className="transition-colors hover:bg-slate-50/80">
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 font-bold text-xs">
+                                    <FiCalendar size={14} />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-slate-900">{formattedDate}</p>
+                                    <p className="text-[11px] font-semibold text-slate-400">{dayName} ({report.date})</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-black text-slate-900">
+                                  {report.totalLeads}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="inline-flex items-center rounded-full bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 text-xs font-black text-emerald-800">
+                                  {report.conversions || 0}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="inline-flex items-center rounded-full bg-blue-100 border border-blue-200 px-2.5 py-0.5 text-xs font-black text-blue-800">
+                                  {report.potential || 0}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-xs font-black text-amber-800">
+                                  {report.osa || 0}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="inline-flex items-center rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-xs font-black text-rose-800">
+                                  {report.noResponse || 0}
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5">
+                                <span className="text-xs font-black text-emerald-700">
+                                  {report.conversionRate != null ? `${report.conversionRate}%` : "0%"}
+                                </span>
+                              </td>
+                              <td className="max-w-xs truncate px-5 py-3.5 text-xs font-medium text-slate-600" title={report.remarks}>
+                                {report.remarks || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5 text-xs text-slate-400">
+                                {report.uploadedBy || "ceo@andes.co.in"}
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => handleOpenAddModal(report)}
+                                    title="Edit this entry"
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                                  >
+                                    <FiEdit2 size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDailyReport(report.date)}
+                                    title="Delete this entry"
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  >
+                                    <FiTrash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="10" className="px-6 py-16 text-center">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                                <FiCalendar size={26} />
+                              </div>
+                              <p className="text-base font-bold text-slate-800">No daily Meta Ads entries logged yet</p>
+                              <p className="text-xs text-slate-400 max-w-sm">
+                                Track daily lead metrics and outcome funnels by adding an entry.
+                              </p>
+                              <button
+                                onClick={() => handleOpenAddModal()}
+                                className="mt-2 flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white hover:bg-blue-700"
+                              >
+                                <FiPlus size={14} />
+                                Add First Entry
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {dailyReports.length > 0 && (
+                  <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 flex items-center justify-between text-xs text-slate-500 font-semibold">
+                    <span>{dailyReports.length} recorded date{dailyReports.length !== 1 ? "s" : ""}</span>
+                    <span>Total leads across records: <strong className="text-slate-900">{dailyKpiStats.totalLeads}</strong></span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════════
+              VIEW 2 & 3: SAVED CONTACTS OR PREVIEW UPLOAD
+             ══════════════════════════════════════════════════════════════ */}
+          {(activeView === "saved" || activeView === "preview") && (
+            <>
+              {/* ── KPI Cards — shown only in saved view ── */}
+              {activeView === "saved" && !isLoadingDb && (
             <div className="mb-6 flex flex-col sm:flex-row gap-4">
 
               {/* Total Impressions */}
@@ -729,7 +1218,198 @@ export default function AdminMetaAdsLeads() {
               </div>
             )}
           </div>
+            </>
+          )}
+
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════
+            ADD / EDIT DAILY LEADS MODAL
+           ══════════════════════════════════════════════════════════════ */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    {editingDate ? `Edit Meta Leads (${editingDate})` : "Add Daily Meta Leads"}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Record total leads, conversions, and disposition for this date.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveDailyReport} className="mt-5 space-y-4">
+                {/* Date */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Total Leads */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Total Leads <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="e.g. 20"
+                    value={formData.totalLeads}
+                    onChange={(e) => setFormData(prev => ({ ...prev, totalLeads: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Breakdown Grid */}
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-600 mb-3">
+                    Outcome Breakdown
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-emerald-800 mb-1">
+                        Conversions (Closed Deals)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={formData.conversions}
+                        onChange={(e) => setFormData(prev => ({ ...prev, conversions: e.target.value }))}
+                        className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-900 focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-blue-800 mb-1">
+                        Potential (Warm Leads)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={formData.potential}
+                        onChange={(e) => setFormData(prev => ({ ...prev, potential: e.target.value }))}
+                        className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-900 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-800 mb-1">
+                        OSA (Out of Service Area)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={formData.osa}
+                        onChange={(e) => setFormData(prev => ({ ...prev, osa: e.target.value }))}
+                        className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-900 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-800 mb-1">
+                        No Response
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={formData.noResponse}
+                        onChange={(e) => setFormData(prev => ({ ...prev, noResponse: e.target.value }))}
+                        className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-900 focus:border-rose-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sum helper check */}
+                  {(() => {
+                    const sum = (Number(formData.conversions) || 0) +
+                      (Number(formData.potential) || 0) +
+                      (Number(formData.osa) || 0) +
+                      (Number(formData.noResponse) || 0);
+                    const total = Number(formData.totalLeads) || 0;
+                    if (total > 0) {
+                      if (sum === total) {
+                        return (
+                          <p className="mt-3 text-xs font-semibold text-emerald-700 flex items-center gap-1.5">
+                            <FiCheck className="shrink-0" />
+                            Sum matches Total Leads ({sum} / {total})
+                          </p>
+                        );
+                      }
+                      return (
+                        <p className="mt-3 text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                          <FiAlertCircle className="shrink-0" />
+                          Sum of breakdown ({sum}) is {sum > total ? `${sum - total} above` : `${total - sum} below`} Total Leads ({total})
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
+                {/* Remarks */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Remarks (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2 converted from morning batch, high response"
+                    value={formData.remarks}
+                    onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingDaily}
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition disabled:opacity-50"
+                  >
+                    {isSavingDaily ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <FiSave size={15} />
+                        Save Entry
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

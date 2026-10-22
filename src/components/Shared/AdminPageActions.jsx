@@ -5,7 +5,7 @@ const ACTION_BUTTON_BASE_CLASS = "inline-flex items-center gap-2 text-sm font-se
 
 export default function AdminPageActions({ activeTab, onGenerateInvoice, onLogOrder }) {
   return (
-    <div className="flex justify-end mb-4 animate-fade-in gap-3">
+    <div className="flex flex-wrap items-center justify-end mb-4 animate-fade-in gap-3">
       {activeTab === "overview" && <OrderAcceptanceToggle />}
       
       {/* Shared actions live in one place so the tab shell stays declarative. */}

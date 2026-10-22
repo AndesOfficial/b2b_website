@@ -65,9 +65,13 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (location.state?.initialTab) {
+      if (location.state.initialTab === "coupons") {
+        navigate("/admin/coupons", { replace: true });
+        return;
+      }
       setActiveTab(location.state.initialTab);
     }
-  }, [location.state?.initialTab]);
+  }, [location.state?.initialTab, navigate]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -153,6 +157,11 @@ export default function AdminDashboard() {
     if (tab === "services") {
       setIsMobileMenuOpen(false);
       navigate("/admin/services");
+      return;
+    }
+    if (tab === "coupons") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/coupons");
       return;
     }
 

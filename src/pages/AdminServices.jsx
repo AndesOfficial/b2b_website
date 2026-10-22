@@ -79,6 +79,7 @@ export default function AdminServices() {
     if (tab === "calculator") { navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
+    if (tab === "coupons") { navigate("/admin/coupons"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 

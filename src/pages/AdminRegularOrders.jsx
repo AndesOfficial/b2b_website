@@ -51,6 +51,7 @@ export default function AdminRegularOrders() {
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     if (tab === "services") { navigate("/admin/services"); return; }
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
+    if (tab === "coupons") { navigate("/admin/coupons"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 

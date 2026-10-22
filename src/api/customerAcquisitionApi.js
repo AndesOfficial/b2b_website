@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, deleteDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { normalizePhone } from '../utils/phoneUtils';
 
@@ -202,6 +202,130 @@ export function subscribeCustomerSources(onUpdate, onError) {
 }
 
 /**
+ * Subscribes to daily Meta Ads lead reports from Firestore.
+ */
+export function subscribeMetaAdsDailyReports(onUpdate, onError) {
+  try {
+    return onSnapshot(
+      collection(db, 'meta_ads_daily'),
+      (snapshot) => {
+        const reports = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+        reports.sort((a, b) => String(b.date || b.id).localeCompare(String(a.date || a.id)));
+        onUpdate(reports);
+      },
+      async (error) => {
+        console.warn('meta_ads_daily subscription warning, attempting fallback:', error?.message);
+        try {
+          const docSnap = await getDoc(doc(db, 'meta_ads_settings', 'daily_summary'));
+          if (docSnap.exists()) {
+            const data = docSnap.data() || {};
+            const map = data.reports || {};
+            const list = Object.entries(map).map(([k, v]) => ({ id: k, ...v }));
+            list.sort((a, b) => String(b.date || b.id).localeCompare(String(a.date || a.id)));
+            onUpdate(list);
+          } else {
+            onUpdate([]);
+          }
+        } catch (fallbackErr) {
+          onError?.(fallbackErr);
+        }
+      }
+    );
+  } catch (err) {
+    console.error('subscribeMetaAdsDailyReports error:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Saves or updates a daily Meta Ads lead report in Firestore.
+ */
+export async function saveMetaAdsDailyReport({
+  date,
+  totalLeads = 0,
+  conversions = 0,
+  potential = 0,
+  osa = 0,
+  noResponse = 0,
+  remarks = '',
+  userEmail = 'ceo@andes.co.in',
+}) {
+  if (!date) throw new Error('Date is required (YYYY-MM-DD)');
+  const leads = Number(totalLeads) || 0;
+  const conv = Number(conversions) || 0;
+  const pot = Number(potential) || 0;
+  const o = Number(osa) || 0;
+  const noResp = Number(noResponse) || 0;
+
+  const convRate = leads > 0 ? Math.round((conv / leads) * 1000) / 10 : 0;
+  const potRate = leads > 0 ? Math.round((pot / leads) * 1000) / 10 : 0;
+  const osaRate = leads > 0 ? Math.round((o / leads) * 1000) / 10 : 0;
+  const noRespRate = leads > 0 ? Math.round((noResp / leads) * 1000) / 10 : 0;
+
+  const payload = {
+    date,
+    totalLeads: leads,
+    conversions: conv,
+    potential: pot,
+    osa: o,
+    noResponse: noResp,
+    conversionRate: convRate,
+    potentialRate: potRate,
+    osaRate: osaRate,
+    noResponseRate: noRespRate,
+    remarks: String(remarks || '').trim(),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  };
+
+  try {
+    await setDoc(doc(db, 'meta_ads_daily', date), payload, { merge: true });
+  } catch (err) {
+    console.warn('Direct meta_ads_daily write warning:', err?.message);
+  }
+
+  try {
+    await setDoc(
+      doc(db, 'meta_ads_settings', 'daily_summary'),
+      {
+        [`reports.${date}`]: {
+          ...payload,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('meta_ads_settings write warning:', err?.message);
+  }
+
+  return payload;
+}
+
+/**
+ * Deletes a daily Meta Ads lead report from Firestore.
+ */
+export async function deleteMetaAdsDailyReport(date) {
+  if (!date) return;
+  try {
+    await deleteDoc(doc(db, 'meta_ads_daily', date));
+  } catch (err) {
+    console.warn('meta_ads_daily deleteDoc warning:', err?.message);
+  }
+  try {
+    await setDoc(
+      doc(db, 'meta_ads_settings', 'daily_summary'),
+      {
+        [`reports.${date}`]: deleteField(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn('daily_summary deleteField warning:', err?.message);
+  }
+}
+
+/**
  * Helper to parse a date into standard YYYY-MM-DD
  */
 function toDayString(rawDate) {
@@ -229,9 +353,43 @@ function toDayString(rawDate) {
  * Computes KPIs, source performance table, customer type breakdown,
  * donut distributions, and daily orders trend chart.
  */
-export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = new Map(), dateFrom, dateTo }) {
+export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = new Map(), metaAdsReports = [], dateFrom, dateTo }) {
   const fromDay = dateFrom || '2026-10-01';
-  const toDay = dateTo || '2026-10-18';
+  const toDay = dateTo || '2026-10-21';
+
+  // Process Meta Ads Daily Reports for this period
+  const metaReportsInPeriod = (metaAdsReports || []).filter((r) => {
+    const d = r.date || r.id;
+    return d >= fromDay && d <= toDay;
+  });
+
+  let metaTotalLeads = 0;
+  let metaConversions = 0;
+  let metaPotential = 0;
+  let metaOsa = 0;
+  let metaNoResponse = 0;
+
+  metaReportsInPeriod.forEach((r) => {
+    metaTotalLeads += Number(r.totalLeads) || 0;
+    metaConversions += Number(r.conversions) || 0;
+    metaPotential += Number(r.potential) || 0;
+    metaOsa += Number(r.osa) || 0;
+    metaNoResponse += Number(r.noResponse) || 0;
+  });
+
+  const metaAdsSummary = {
+    totalLeads: metaTotalLeads,
+    conversions: metaConversions,
+    potential: metaPotential,
+    osa: metaOsa,
+    noResponse: metaNoResponse,
+    conversionRate: metaTotalLeads > 0 ? Math.round((metaConversions / metaTotalLeads) * 1000) / 10 : 0,
+    potentialRate: metaTotalLeads > 0 ? Math.round((metaPotential / metaTotalLeads) * 1000) / 10 : 0,
+    osaRate: metaTotalLeads > 0 ? Math.round((metaOsa / metaTotalLeads) * 1000) / 10 : 0,
+    noResponseRate: metaTotalLeads > 0 ? Math.round((metaNoResponse / metaTotalLeads) * 1000) / 10 : 0,
+    activeDays: metaReportsInPeriod.length,
+    reports: metaReportsInPeriod,
+  };
 
   // Calculate previous period for comparison
   const fromDate = new Date(`${fromDay}T00:00:00`);
@@ -425,15 +583,33 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
     }
   });
 
+  // If there are recorded Meta Ads conversions for this period, ensure Paid Advertising row reflects them
+  if (metaConversions > 0) {
+    const paidRow = sourceStatsMap.get(ACQUISITION_SOURCES.PAID_ADS);
+    if (paidRow) {
+      if (paidRow.newCustomers === 0) {
+        paidRow.newCustomers = metaConversions;
+        paidRow.orders = metaConversions;
+      } else {
+        paidRow.newCustomers = Math.max(paidRow.newCustomers, metaConversions);
+      }
+    }
+  }
+
+  const effectiveNewCustomers = Math.max(
+    newCustomersCount,
+    Array.from(sourceStatsMap.values()).reduce((sum, r) => sum + r.newCustomers, 0)
+  );
+
   const sourceTableRows = Array.from(sourceStatsMap.values()).map((row) => ({
     ...row,
     revenue: Math.round(row.revenue),
-    pctOfNew: newCustomersCount > 0 ? (row.newCustomers / newCustomersCount) * 100 : 0,
+    pctOfNew: effectiveNewCustomers > 0 ? (row.newCustomers / effectiveNewCustomers) * 100 : 0,
   }));
 
   // Summary row for source table
   const sourceTableTotal = {
-    newCustomers: newCustomersCount,
+    newCustomers: effectiveNewCustomers,
     orders: sourceTableRows.reduce((sum, r) => sum + r.orders, 0),
     revenue: Math.round(sourceTableRows.reduce((sum, r) => sum + r.revenue, 0)),
     pctOfNew: 100,
@@ -537,5 +713,6 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
     trendDays,
     activeCustomersInPeriod,
     currentPeriodOrders,
+    metaAdsSummary,
   };
 }
