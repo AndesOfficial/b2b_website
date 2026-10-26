@@ -12,6 +12,8 @@ import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
 import InvoiceGeneratorModal from "../components/Shared/InvoiceGeneratorModal";
 import AdminAddOrderModal from "../components/Shared/AdminAddOrderModal";
 import AdminPageActions from "../components/Shared/AdminPageActions";
+import OrderAcceptanceToggle from "../components/Shared/OrderAcceptanceToggle";
+import { FiFileText } from "react-icons/fi";
 import AdminDashboardKpis from "../components/Overview/AdminDashboardKpis";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { getAdminTabConfig } from "../config/adminTabs";
@@ -180,8 +182,8 @@ export default function AdminDashboard() {
     const panels = {
       overview: (
         <div className="space-y-4">
-          {/* Subtle switcher between Acquisition Dashboard and Operations Ledger */}
-          <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+          {/* Overview Sub-view Switcher & Operational Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
             <div className="inline-flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
               <button
                 type="button"
@@ -205,6 +207,21 @@ export default function AdminDashboard() {
               >
                 Operations & Revenue Breakdown
               </button>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              {!isViewer && <OrderAcceptanceToggle />}
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceModal(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl transition-all shadow-sm hover:shadow cursor-pointer"
+                  title="Generate Invoice from orders"
+                >
+                  <FiFileText size={15} />
+                  <span>Generate Invoice</span>
+                </button>
+              )}
             </div>
           </div>
 
