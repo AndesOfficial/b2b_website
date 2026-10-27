@@ -15,6 +15,7 @@ import AdminOrderModal from "../Shared/AdminOrderModal";
 import { ORDER_STATUSES } from "../../constants/orders";
 import { useOverviewMetrics } from "../../hooks/useOverviewMetrics";
 import ExpandedOverviewLayout from "./ExpandedOverviewLayout";
+import VerifiedMetricsPanel from "./VerifiedMetricsPanel";
 import { getTodayString, formatDateString } from "../../utils/dateUtils";
 
 // ── Constants ────────────────────────────────────────────────────
@@ -678,6 +679,8 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
           )}
         </>
       )}
+      {dateFrom && dateTo && dateFrom <= dateTo && <VerifiedMetricsPanel dateFrom={dateFrom} dateTo={dateTo} />}
+
       <ExpandedOverviewLayout orders={orders} />
 
       {/* P0 HERO: Revenue Sources with Period Toggle + Sparklines + Trends + Drill-Down */}

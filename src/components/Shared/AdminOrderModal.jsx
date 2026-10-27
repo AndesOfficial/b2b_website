@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { FiX, FiEdit2, FiCheck, FiLoader, FiDownload } from "react-icons/fi";
 import { BiRupee } from "react-icons/bi";
 import { doc, setDoc } from "firebase/firestore";
+import { CANCELLATION_REASONS } from "../../constants/cancellationReasons";
 import { db } from "../../firebase";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { useHostelAuth } from "../../context/HostelAuthContext";
@@ -22,7 +23,9 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
     amount: 0,
     weight: 0,
     studentCount: 0,
-    items: 0
+    items: 0,
+    cancelReasonCode: "",
+    cancelNote: "",
   });
 
   const isB2COrder = order
@@ -40,7 +43,9 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         amount: order.amount ?? order.totalCost ?? 0,
         weight: order.weight ?? order.clothesWeightKg ?? 0,
         studentCount: order.studentCount || 0,
-        items: order.items ?? order.clothesCount ?? 0
+        items: order.items ?? order.clothesCount ?? 0,
+        cancelReasonCode: "",
+        cancelNote: "",
       });
       setIsEditing(false); // Always start in "View" mode
     }
@@ -113,6 +118,21 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         pricingUpdates = recalculateB2COrderTotal(order, editForm.weight, editForm.amount);
       }
 
+      const isNewCancel = /cancel/i.test(editForm.status) && !/cancel/i.test(String(order.status || ""));
+      if (isNewCancel && (!editForm.cancelReasonCode || (editForm.cancelReasonCode === "other" && !editForm.cancelNote.trim()))) {
+        alert("Pick a cancellation reason (and describe it for Other).");
+        setIsSubmitting(false);
+        return;
+      }
+      const cancelFields = isNewCancel
+        ? {
+            cancellationReasonCode: editForm.cancelReasonCode,
+            cancellationReason: editForm.cancelNote.trim() || CANCELLATION_REASONS[editForm.cancelReasonCode],
+            cancellationNote: editForm.cancelNote.trim() || null,
+            cancelledBy: "admin",
+          }
+        : {};
+
       const updatedPayload = {
         ...order,
         status: editForm.status,
@@ -122,6 +142,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         items: Number(editForm.items),
         updatedAt: new Date().toISOString(),
         ...pricingUpdates,
+        ...cancelFields,
       };
 
       if (targetCollection === "hostels_orders" || order.source === "hostels") {
@@ -211,6 +232,26 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                 </select>
               ) : (
                 getStatusBadge(order.status)
+              )}
+              {isEditing && /cancel/i.test(editForm.status) && !/cancel/i.test(String(order.status || "")) && (
+                <>
+                  <select
+                    value={editForm.cancelReasonCode}
+                    onChange={(e) => setEditForm({ ...editForm, cancelReasonCode: e.target.value })}
+                    className="text-[11px] font-bold rounded-lg px-2 py-1 border border-rose-300 outline-none"
+                  >
+                    <option value="">Reason…</option>
+                    {Object.entries(CANCELLATION_REASONS).map(([code, label]) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={editForm.cancelNote}
+                    onChange={(e) => setEditForm({ ...editForm, cancelNote: e.target.value })}
+                    placeholder={editForm.cancelReasonCode === "other" ? "What happened (required)" : "Note (optional)"}
+                    className="text-[11px] rounded-lg px-2 py-1 border border-slate-300 outline-none"
+                  />
+                </>
               )}
             </div>
           </div>
