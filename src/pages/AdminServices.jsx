@@ -4,6 +4,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { FiMenu, FiMove, FiPlus, FiSearch, FiTag } from "react-icons/fi";
 import { db } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
+import PremiumCarouselManager from "../components/Services/PremiumCarouselManager";
 import ServiceEditor from "../components/Services/ServiceEditor";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { useHostelAuth } from "../context/HostelAuthContext";
@@ -38,6 +39,7 @@ export default function AdminServices() {
   const [statusFilter, setStatusFilter] = useState("active");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
+  const [carouselOpen, setCarouselOpen] = useState(false);
   const [dragId, setDragId] = useState(null);
   const [actionError, setActionError] = useState("");
 
@@ -162,6 +164,7 @@ export default function AdminServices() {
         setIsMobileOpen={setIsMobileMenuOpen}
       />
 
+      {carouselOpen && <PremiumCarouselManager readOnly={isViewer} onClose={() => setCarouselOpen(false)} />}
       <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur shadow-sm">
           <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
@@ -182,6 +185,13 @@ export default function AdminServices() {
                 </h1>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setCarouselOpen(true)}
+              className="ml-auto rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Premium carousel
+            </button>
             {!isViewer && (
               <button
                 type="button"
