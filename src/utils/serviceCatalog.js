@@ -7,6 +7,7 @@ import {
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
+import { compressImage } from "./compressImage";
 
 // Writes to the service catalog (`prices`). Every write also appends a
 // `prices_audit` record in the same batch. Services are never deleted —
@@ -239,9 +240,14 @@ export async function resolveCatalogFlag(flagId) {
 }
 
 /** Uploads a service image and returns its public download URL. */
-export async function uploadServiceImage(file, serviceKey) {
+export async function uploadServiceImage(original, serviceKey) {
+  const file = await compressImage(original);
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `service_images/${slug(serviceKey) || "service"}-${Date.now()}.${ext}`;
-  const snap = await uploadBytes(ref(storage, path), file, { contentType: file.type });
+  const snap = await uploadBytes(ref(storage, path), file, {
+    contentType: file.type,
+    // Filenames are timestamped, so an uploaded image never changes.
+    cacheControl: "public, max-age=31536000, immutable",
+  });
   return getDownloadURL(snap.ref);
 }

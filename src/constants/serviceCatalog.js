@@ -7,6 +7,7 @@ export const SERVICE_CATEGORIES = [
   { value: "household", label: "Household" },
   { value: "shoes", label: "Footwear" },
   { value: "bags", label: "Bags" },
+  { value: "premium", label: "Premium Laundry (72 hours)" },
 ];
 
 // active: everywhere · hidden: riders only · archived: nowhere.
