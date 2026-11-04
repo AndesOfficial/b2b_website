@@ -11,6 +11,8 @@ import {
 import { BiRupee } from "react-icons/bi";
 import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { useHostelOrders } from "../../context/HostelAuthContext";
+import { EXPENSE_CATEGORIES, findDuplicateExpenses } from "../../metrics";
+import { logAudit } from "../../api/auditLog";
 
 /* ─── constants ─── */
 const CATEGORIES = [
@@ -40,7 +42,8 @@ const CAT_COLORS = {
 };
 
 const emptyForm = {
-  amount: "", payee: "", payer: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid"
+  amount: "", payee: "", payer: "", description: "", category: "", date: "", file: null, breakdown: [], type: "Paid",
+  incurredDate: "", paidDate: "", nature: "", invoiceNo: "", location: "", approver: "", campaignId: "",
 };
 
 /* ─── Component ─── */
@@ -226,6 +229,13 @@ export default function AdminExpensesTab() {
       date: exp.date || "",
       breakdown: exp.breakdown || [],
       type: exp.type || "Paid",
+      incurredDate: exp.incurredDate || exp.date || "",
+      paidDate: exp.paidDate ?? (exp.type === "Payable" ? "" : exp.date || ""),
+      nature: exp.nature || "",
+      invoiceNo: exp.invoiceNo || "",
+      location: exp.location || "",
+      approver: exp.approver || "",
+      campaignId: exp.campaignId || "",
       file: null,
     });
     setErrors({});
@@ -239,7 +249,8 @@ export default function AdminExpensesTab() {
     if (!form.payer.trim()) e.payer = "Payer is required";
     if (!form.description.trim()) e.description = "Description is required";
     if (!form.category) e.category = "Select a category";
-    if (!form.date) e.date = "Date is required";
+    if (!form.incurredDate) e.date = "Incurred date is required";
+    if (form.type === "Paid" && !form.paidDate) e.date = "Paid date is required";
 
     if (form.breakdown && form.breakdown.length > 0) {
       let sum = 0;
@@ -274,19 +285,38 @@ export default function AdminExpensesTab() {
         payer: form.payer.trim(),
         description: form.description.trim(),
         category: form.category,
-        date: form.date,
+        // `date` stays for older screens: the day the cost belongs to.
+        date: form.incurredDate,
+        incurredDate: form.incurredDate,
+        paidDate: form.type === "Paid" ? form.paidDate : null,
+        nature: form.nature || EXPENSE_CATEGORIES[form.category] || "fixed",
+        vendor: form.payee.trim(),
+        invoiceNo: form.invoiceNo.trim(),
+        location: form.location.trim(),
+        approver: form.approver.trim(),
+        campaignId: form.category === "Marketing" ? form.campaignId.trim() || null : null,
         type: form.type,
         breakdown: form.breakdown || [],
         ...(receiptUrl ? { receiptUrl } : {}),
         updatedAt: Timestamp.now(),
       };
 
+      const dupes = findDuplicateExpenses({ ...payload, id: editingId }, expenses);
+      if (dupes.length && !window.confirm(
+        `This looks like ${dupes.length} expense(s) already recorded:\n` +
+        dupes.map((d) => `• ₹${d.amount} to ${d.vendor} on ${d.incurredDate}${d.invoiceNo ? ` (invoice ${d.invoiceNo})` : ""}`).join("\n") +
+        "\n\nSave anyway?")) {
+        return;
+      }
+
       if (editingId) {
         await updateDoc(doc(db, "b2b_expenses", editingId), payload);
+        logAudit("expense.update", { collection: "b2b_expenses", id: editingId }, { before: expenses.find((x) => x.id === editingId), after: payload });
         showToast("Expense updated!");
       } else {
         payload.createdAt = Timestamp.now();
-        await addDoc(collection(db, "b2b_expenses"), payload);
+        const created = await addDoc(collection(db, "b2b_expenses"), payload);
+        logAudit("expense.create", { collection: "b2b_expenses", id: created.id }, { after: payload });
         showToast("Expense recorded!");
       }
 
@@ -299,12 +329,13 @@ export default function AdminExpensesTab() {
     } finally {
       setSubmitting(false);
     }
-  }, [form, editingId]);
+  }, [form, editingId, expenses]);
 
   const handleDelete = async (exp) => {
     if (!window.confirm(`Delete payment of ₹${exp.amount?.toLocaleString()} to "${exp.payee}" paid by "${exp.payer || '—'}"?`)) return;
     try {
       await deleteDoc(doc(db, "b2b_expenses", exp.id));
+      logAudit("expense.delete", { collection: "b2b_expenses", id: exp.id }, { before: exp });
       showToast("Expense deleted");
     } catch (err) {
       console.error("Delete error:", err);
@@ -387,7 +418,7 @@ export default function AdminExpensesTab() {
               <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
                 className="bg-transparent border-none text-[12px] font-black text-slate-700 focus:ring-0 cursor-pointer pr-8 whitespace-nowrap">
                 <option value="All">All Categories</option>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {[...new Set([...Object.keys(EXPENSE_CATEGORIES), ...CATEGORIES])].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <button
@@ -677,19 +708,56 @@ export default function AdminExpensesTab() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Effective Date</label>
-                    <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Incurred Date (cost belongs to) *</label>
+                    <input type="date" value={form.incurredDate} onChange={(e) => setForm({ ...form, incurredDate: e.target.value })}
                       className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
                   </div>
+                  {form.type === "Paid" && (
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Paid Date (money left) *</label>
+                      <input type="date" value={form.paidDate} onChange={(e) => setForm({ ...form, paidDate: e.target.value })}
+                        className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
+                    </div>
+                  )}
+                  {errors.date && <p className="sm:col-span-2 text-[10px] font-bold text-red-500 uppercase tracking-wider">{errors.date}</p>}
 
                   <div>
                     <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Expense Category</label>
-                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-black text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none appearance-none">
+                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value, nature: EXPENSE_CATEGORIES[e.target.value] || form.nature })}
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none font-black appearance-none">
                       <option value="">Select Class</option>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {Object.keys(EXPENSE_CATEGORIES).map((c) => <option key={c} value={c}>{c}</option>)}
+                      {form.category && !EXPENSE_CATEGORIES[form.category] && <option value={form.category}>{form.category} (old)</option>}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Nature</label>
+                    <select value={form.nature || EXPENSE_CATEGORIES[form.category] || ""} onChange={(e) => setForm({ ...form, nature: e.target.value })}
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none font-black appearance-none">
+                      <option value="">—</option>
+                      <option value="fixed">Fixed (rent, salaries…)</option>
+                      <option value="variable">Variable (grows with orders)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Vendor Invoice No.</label>
+                    <input type="text" value={form.invoiceNo} onChange={(e) => setForm({ ...form, invoiceNo: e.target.value })} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" placeholder="Optional" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Location</label>
+                    <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" placeholder="e.g. Koramangala store" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Approved By</label>
+                    <input type="text" value={form.approver} onChange={(e) => setForm({ ...form, approver: e.target.value })} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" placeholder="Name" />
+                  </div>
+                  {form.category === "Marketing" && (
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Campaign / Source</label>
+                      <input type="text" value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" placeholder="e.g. meta_oct_koramangala" />
+                    </div>
+                  )}
                 </div>
 
                 <div>

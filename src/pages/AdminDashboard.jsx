@@ -8,6 +8,9 @@ import OpsRevenueDashboard from "../components/Overview/OpsRevenueDashboard";
 import CustomerAcquisitionDashboard from "../components/Overview/CustomerAcquisitionDashboard";
 import AdminIssuesTab from "../components/Issues/AdminIssuesTab";
 import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
+import AdminFinanceTab from "../components/Finance/AdminFinanceTab";
+import AdminDashboardTab from "../components/Dashboard/AdminDashboardTab";
+import { canEdit, canSeeTab, seesMoney } from "../config/roles";
 import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
 import InvoiceGeneratorModal from "../components/Shared/InvoiceGeneratorModal";
 import AdminAddOrderModal from "../components/Shared/AdminAddOrderModal";
@@ -58,7 +61,7 @@ export default function AdminDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAddOrder, setShowAddOrder] = useState(false);
-  const [activeTab, setActiveTab] = useState(() => location.state?.initialTab || "overview");
+  const [activeTab, setActiveTab] = useState(() => location.state?.initialTab || "dashboard");
   const [dateFrom, setDateFrom] = useState(() => getMonthStartString());
   const [dateTo, setDateTo] = useState(() => getTodayString());
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -242,6 +245,8 @@ export default function AdminDashboard() {
         />
       ),
       expenses: null, // Handled by dedicated /admin/expenses route
+      dashboard: <AdminDashboardTab dateFrom={dateFrom} dateTo={dateTo} showMoney={seesMoney(client?.role)} canAct={canEdit(client?.role)} />,
+      finance: <AdminFinanceTab dateFrom={dateFrom} dateTo={dateTo} isViewer={!canEdit(client?.role)} isAdmin={client?.role === "admin"} />,
       analytics: (
         <AdminAnalyticsTab
           orders={orders}
@@ -259,6 +264,8 @@ export default function AdminDashboard() {
       ),
     };
 
+    // A tab this role can't open (e.g. ops on Finance) falls back to the Dashboard.
+    if (!canSeeTab(client?.role, activeTab)) return panels.dashboard;
     return panels[activeTab] || null;
   }, [
     activeTab,
@@ -273,7 +280,8 @@ export default function AdminDashboard() {
     screenStats,
     searchStats,
     totalUsers,
-    isViewer
+    isViewer,
+    client?.role
   ]);
 
   if (loading) return <LoadingSpinner fullscreen />;

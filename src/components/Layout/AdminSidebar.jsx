@@ -1,10 +1,14 @@
 import { FiChevronLeft, FiLogOut, FiMenu } from "react-icons/fi";
 import BrandLogo from "../Shared/BrandLogo";
 import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
+import { canSeeTab } from "../../config/roles";
+import { useHostelAuth } from "../../context/HostelAuthContext";
 
 const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center text-[13.5px] font-medium transition-all duration-200 group relative";
 
 export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, user, onLogout, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
+  const { client } = useHostelAuth();
+  const tabs = ADMIN_SIDEBAR_TABS.filter((t) => canSeeTab(client?.role, t.key));
   return (
     <>
       {isMobileOpen && (
@@ -60,7 +64,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
         )}
 
         <nav className="flex-1 mt-4 space-y-1 px-3 overflow-y-auto scrollbar-hide">
-          {ADMIN_SIDEBAR_TABS.map((item) => {
+          {tabs.map((item) => {
             const badge = 0;
 
             return (

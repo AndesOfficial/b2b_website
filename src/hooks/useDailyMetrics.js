@@ -9,7 +9,7 @@ import { eachDay, kpisFromTotals, mergeTotals } from "../metrics";
  * order. Days the server has not computed yet are listed in `missingDays`.
  */
 export function useDailyMetrics(from, to) {
-  const [state, setState] = useState({ loading: true, error: null, kpis: null, missingDays: [], computedAt: null });
+  const [state, setState] = useState({ loading: true, error: null, kpis: null, totals: null, missingDays: [], computedAt: null });
 
   const load = useCallback(async () => {
     if (!from || !to || from > to) return;
@@ -19,10 +19,12 @@ export function useDailyMetrics(from, to) {
       const docs = snap.docs.map((d) => d.data());
       const have = new Set(docs.map((d) => d.day));
       const computed = docs.map((d) => d.computedAt?.toDate?.()).filter(Boolean);
+      const totals = mergeTotals(docs);
       setState({
         loading: false,
         error: null,
-        kpis: kpisFromTotals(mergeTotals(docs)),
+        kpis: kpisFromTotals(totals),
+        totals,
         missingDays: eachDay(from, to).filter((d) => !have.has(d)),
         // The oldest day's refresh time: every figure is at least this fresh.
         computedAt: computed.length ? new Date(Math.min(...computed.map((d) => d.getTime()))) : null,

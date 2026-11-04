@@ -347,6 +347,9 @@ export default function AdminClientsTab({ managers, onSaveManager, onDeleteManag
                   >
                     <option value="client">client</option>
                     <option value="investor">investor</option>
+                    <option value="admin_viewer">admin_viewer (all tabs, read-only)</option>
+                    <option value="finance">finance (money tabs)</option>
+                    <option value="ops">ops (orders, no money)</option>
                   </select>
                 </div>
 

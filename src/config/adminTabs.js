@@ -3,6 +3,16 @@ import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
 export const ADMIN_TAB_CONFIG = {
+  dashboard: {
+    key: "dashboard",
+    title: "Dashboard",
+    navLabel: "Dashboard",
+    navIcon: FiPieChart,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
   overview: {
     key: "overview",
     title: "Overview",
@@ -59,6 +69,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "ANDES Expenses",
     navLabel: "Expenses",
     navIcon: FaIndianRupeeSign,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  finance: {
+    key: "finance",
+    title: "Finance",
+    navLabel: "Finance",
+    navIcon: FiCreditCard,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

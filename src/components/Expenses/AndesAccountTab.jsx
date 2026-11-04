@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { logAudit } from "../../api/auditLog";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import {
@@ -263,10 +264,12 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
 
       if (editingId) {
         await updateDoc(doc(db, "b2b_expenses", editingId), payload);
+        logAudit("expense.update", { collection: "b2b_expenses", id: editingId }, { after: payload });
         showToastMsg("Entry updated!");
       } else {
         payload.createdAt = Timestamp.now();
-        await addDoc(collection(db, "b2b_expenses"), payload);
+        const created = await addDoc(collection(db, "b2b_expenses"), payload);
+        logAudit("expense.create", { collection: "b2b_expenses", id: created.id }, { after: payload });
         showToastMsg("Entry recorded!");
       }
 
@@ -285,6 +288,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     if (!window.confirm(`Delete ₹${entry.amount?.toLocaleString()} entry for "${entry.payee}"?`)) return;
     try {
       await deleteDoc(doc(db, "b2b_expenses", entry.id));
+      logAudit("expense.delete", { collection: "b2b_expenses", id: entry.id }, { before: entry });
       if (entry.invoiceUrl) safeDeleteByUrl(entry.invoiceUrl);
       if (entry.debitBreakdown) {
         entry.debitBreakdown.forEach(b => {

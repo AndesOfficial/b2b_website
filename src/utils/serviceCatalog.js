@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
+import { compressImage } from "./compressImage";
 import { unitOf } from "../constants/serviceCatalog";
 
 // Writes to the service catalog (`prices`). Every write also appends a
@@ -105,6 +106,19 @@ export function validateService(form, allServices) {
       String(s.category || "").trim().toLowerCase() === String(form.category || "").trim().toLowerCase(),
   );
   if (clash) errors.push(`Another service in this category is already called "${name}".`);
+  // The apps look services up by name, so a Premium name must be unique
+  // across every category, and Premium is always sold per piece.
+  const isPremium = String(form.category || "").trim().toLowerCase() === "premium";
+  const lower = name.toLowerCase();
+  const nameClash = allServices.find(
+    (s) => s.id !== form.id &&
+      serviceStatusOf(s) !== "archived" &&
+      String(s.serviceName || "").trim().toLowerCase() === lower &&
+      (isPremium || String(s.category || "").trim().toLowerCase() === "premium"),
+  );
+  if (nameClash && !clash) errors.push(`"${name}" is already used by a ${nameClash.category || "general"} service. Premium names must be unique.`);
+  if (isPremium && name && unitOf(name) === "kg") errors.push(`Premium is sold per piece, but "${name}" would be billed per kg. Please rename it.`);
+  if (isPremium && !(Number(form.rateByPiece) > 0)) errors.push("Set a per-piece price for this Premium service.");
   for (const key of NUMBER_FIELDS) {
     const v = form[key];
     if (v !== "" && v !== null && v !== undefined && (Number.isNaN(Number(v)) || Number(v) < 0)) {
@@ -229,9 +243,14 @@ export async function reorderServices(orderedServices) {
 }
 
 /** Uploads a service image and returns its public download URL. */
-export async function uploadServiceImage(file, serviceKey) {
+export async function uploadServiceImage(original, serviceKey) {
+  const file = await compressImage(original);
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `service_images/${slug(serviceKey) || "service"}-${Date.now()}.${ext}`;
-  const snap = await uploadBytes(ref(storage, path), file, { contentType: file.type });
+  const snap = await uploadBytes(ref(storage, path), file, {
+    contentType: file.type,
+    // Filenames are timestamped, so an uploaded image never changes.
+    cacheControl: "public, max-age=31536000, immutable",
+  });
   return getDownloadURL(snap.ref);
 }

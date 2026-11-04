@@ -15,6 +15,7 @@ import { isNegativeNumberInput } from "../../utils/numberInputUtils";
 import { ORDER_CATEGORIES, ORDER_TYPES } from "../../constants/orders";
 import { normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../../utils/orderNormalization";
 import signatureImage from "../../assets/signature.jpeg";
+import { recordInvoice } from "../../api/financeApi";
 
 // Group Definitions matching Andes operations
 const HOSTEL_GROUPS = {
@@ -792,6 +793,16 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, orders = [] }) 
       // Save PDF to user's device
       const sanitizedName = (clientName || "Client").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30);
       doc.save(`${invoiceNo}_${sanitizedName}.pdf`);
+      // Receivables: every generated invoice is owed until a payment is recorded.
+      try {
+        await recordInvoice({
+          invoiceNo: invoiceNo.trim(), client: clientName.trim(), periodFrom: startDate, periodTo: endDate,
+          amount: Math.round(grandTotal * 100) / 100, issuedDate: invoiceDate, dueDate,
+        });
+      } catch (e) {
+        console.error("recordInvoice:", e);
+        alert(`The PDF was saved, but invoice ${invoiceNo} could not be recorded in Receivables: ${e.message}`);
+      }
       onClose();
     } catch (err) {
       console.error("Failed to generate PDF:", err);

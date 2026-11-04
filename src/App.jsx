@@ -33,16 +33,16 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/b2b-orders" element={<AdminRoute><AdminB2BOrders /></AdminRoute>} />
-          <Route path="/admin/regular-orders" element={<AdminRoute><AdminRegularOrders /></AdminRoute>} />
-          <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
-          <Route path="/admin/salaries" element={<AdminRoute><AdminSalaries /></AdminRoute>} />
-          <Route path="/admin/investors" element={<AdminRoute><InvestorDashboard /></AdminRoute>} />
-          <Route path="/admin/calculator" element={<AdminRoute><Calculator /></AdminRoute>} />
-          <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
-          <Route path="/admin/daily-report" element={<AdminRoute><AdminDailyReport /></AdminRoute>} />
-          <Route path="/admin/services" element={<AdminRoute><AdminServices /></AdminRoute>} />
-          <Route path="/admin/coupons" element={<AdminRoute><AdminCouponsOffers /></AdminRoute>} />
+          <Route path="/admin/b2b-orders" element={<AdminRoute tab="b2b"><AdminB2BOrders /></AdminRoute>} />
+          <Route path="/admin/regular-orders" element={<AdminRoute tab="regular"><AdminRegularOrders /></AdminRoute>} />
+          <Route path="/admin/expenses" element={<AdminRoute tab="expenses"><AdminExpenses /></AdminRoute>} />
+          <Route path="/admin/salaries" element={<AdminRoute tab="salaries"><AdminSalaries /></AdminRoute>} />
+          <Route path="/admin/investors" element={<AdminRoute tab="investors"><InvestorDashboard /></AdminRoute>} />
+          <Route path="/admin/calculator" element={<AdminRoute tab="calculator"><Calculator /></AdminRoute>} />
+          <Route path="/admin/meta-leads" element={<AdminRoute tab="metaleads"><AdminMetaAdsLeads /></AdminRoute>} />
+          <Route path="/admin/daily-report" element={<AdminRoute tab="dailyReport"><AdminDailyReport /></AdminRoute>} />
+          <Route path="/admin/services" element={<AdminRoute tab="services"><AdminServices /></AdminRoute>} />
+          <Route path="/admin/coupons" element={<AdminRoute tab="coupons"><AdminCouponsOffers /></AdminRoute>} />
 
           {/* Client Portal */}
           <Route path="/client/dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />

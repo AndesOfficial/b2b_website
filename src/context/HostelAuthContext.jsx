@@ -6,6 +6,7 @@ import { ORDER_CATEGORIES, ORDER_TYPES, ORDER_STATUSES } from "../constants/orde
 import { normalizeOrder, normalizePropertyName, CANONICAL_PROPERTY_NAMES } from "../utils/orderNormalization";
 import { cleanFirestoreData } from "../utils/cleanFirestoreData";
 import { isHostel99Client, calculateBatchRevenue } from "../config/orderRateCard";
+import { isAdminRole } from "../config/roles";
 import { B2C_OCTOBER_2026_ORDERS } from "../data/b2cVerifiedLedger";
 
 const HostelAuthContext = createContext(null);
@@ -32,7 +33,7 @@ export function HostelAuthProvider({ children }) {
     const saved = sessionStorage.getItem("hostelClient");
     if (!saved) return false;
     const role = JSON.parse(saved).role;
-    return role === "admin" || role === "admin_viewer";
+    return isAdminRole(role);
   });
 
   const [firestoreEdits, setFirestoreEdits] = useState([]);
@@ -100,17 +101,17 @@ export function HostelAuthProvider({ children }) {
           };
 
           setClient(clientData);
-          setIsAdmin(resolvedRole === "admin" || resolvedRole === "admin_viewer");
+          setIsAdmin(isAdminRole(resolvedRole));
           sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
 
           const allowed = allowedProperties.filter(Boolean);
-          setProfileNeedsSetup(resolvedRole !== "admin" && resolvedRole !== "admin_viewer" && allowed.length === 0);
+          setProfileNeedsSetup(!isAdminRole(resolvedRole) && allowed.length === 0);
         } else {
           console.warn("User profile not found in b2b_managers collection.");
           setProfileNeedsSetup(true);
         }
 
-        if (resolvedRole !== "admin" && resolvedRole !== "admin_viewer") {
+        if (!isAdminRole(resolvedRole)) {
           setWebsiteOrders([]);
           setCartOrders([]);
         }
@@ -165,7 +166,7 @@ export function HostelAuthProvider({ children }) {
       };
 
       const setupCollectionListener = (collectionName, normalizeType, setOrdersFn) => {
-        if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
+        if (isAdminRole(resolvedRole)) {
           let q = query(collection(db, collectionName), limit(5000));
 
           const unsub = onSnapshot(
@@ -274,7 +275,7 @@ export function HostelAuthProvider({ children }) {
       setupCollectionListener("complaint", "complaint", setHostelComplaints);
       setupCollectionListener("manager_issues", "manager_issues", setManagerIssues);
 
-      if (resolvedRole === "admin" || resolvedRole === "admin_viewer") {
+      if (isAdminRole(resolvedRole)) {
         setWebsiteOrders([]);
         
         const unsubCart = onSnapshot(
@@ -543,7 +544,7 @@ export function HostelAuthProvider({ children }) {
 
   const orders = useMemo(() => {
     if (!client) return [];
-    if (client.role === "admin" || client.role === "admin_viewer") return allOrdersMerged;
+    if (isAdminRole(client.role)) return allOrdersMerged;
 
     const allowedProperties = client.properties || client.partnernames || [];
     const normalizedAllowed = allowedProperties
@@ -633,7 +634,7 @@ export function HostelAuthProvider({ children }) {
       };
 
       setClient(clientData);
-      setIsAdmin(userData.role === "admin" || userData.role === "admin_viewer");
+      setIsAdmin(isAdminRole(userData.role));
       sessionStorage.setItem("hostelClient", JSON.stringify(clientData));
 
       return { success: true, role: userData.role, client: clientData };
@@ -671,7 +672,7 @@ export function HostelAuthProvider({ children }) {
       properties: partnernames,
     };
     setClient(normalizedClient);
-    setIsAdmin(normalizedClient.role === "admin" || normalizedClient.role === "admin_viewer");
+    setIsAdmin(isAdminRole(normalizedClient.role));
     sessionStorage.setItem("hostelClient", JSON.stringify(normalizedClient));
   }, []);
 

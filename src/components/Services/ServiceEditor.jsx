@@ -168,7 +168,8 @@ export default function ServiceEditor({ service, allServices, readOnly, onClose,
   const autoDiscount = Number(sellRate) > 0
     ? discountLabel(sellRate, form.originalRateByPiece)
     : discountLabel(form.rateByKg, form.originalRateByKg);
-  const instantUnit = instantUnitOf(form.serviceName);
+  // Premium is never sold as Instant.
+  const instantUnit = form.category === "premium" ? null : instantUnitOf(form.serviceName);
   const autoInstantDiscount = Number(form.instantRateByPiece) > 0
     ? discountLabel(form.instantRateByPiece, form.originalInstantRateByPiece)
     : discountLabel(form.instantRateByKg, form.originalInstantRateByKg);
