@@ -210,18 +210,18 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
           <table className="w-full min-w-full">
             <thead className="bg-[#F8FAFC] sticky top-0 z-10">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em]">Customer</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em]">Service</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em] whitespace-nowrap">KG / PCS</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Amount</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Payment</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Placed On</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Pickup</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">Status</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-3 py-3.5 uppercase tracking-[0.08em]">TAT</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em]">Customer</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em]">Service</th>
+                <th className="text-right text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em] whitespace-nowrap">KG / PCS</th>
+                <th className="text-right text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Amount</th>
+                <th className="text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Payment</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Placed On</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Pickup</th>
+                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
+                <th className="text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Status</th>
+                <th className="hidden 2xl:table-cell text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">TAT</th>
                 {!isViewer && (
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#F8FAFC] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
+                  <th className="text-right text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#F8FAFC] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
                 )}
               </tr>
             </thead>
@@ -245,17 +245,17 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                     }`}
                   >
                     {/* Customer */}
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-3">
                       <p className="text-[13px] font-black text-[#0F172A] tracking-tight">{order.customerName || "Anonymous"}</p>
                       <p className="text-[11px] font-medium text-slate-400">{order.customerNumber || "no contact"}</p>
                       {order.address && (
-                        <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[160px]">{order.address}</p>
+                        <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[130px]">{order.address}</p>
                       )}
                     </td>
                     {/* Service — compact: title + "+N more" badge + channel badge */}
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-bold text-slate-700 whitespace-nowrap">{getServiceLabel(order.service)}</p>
+                        <p className="text-[13px] font-bold text-slate-700">{getServiceLabel(order.service)}</p>
                         {order.serviceBreakdown?.length > 1 && (
                           <button
                             onClick={(e) => toggleExpandOrder(order.id, e)}
@@ -270,12 +270,12 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       </div>
                     </td>
                     {/* Stats */}
-                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
                       <p className="text-[13px] font-black text-slate-800">{order.weight?.toFixed(1) || "0.0"} <span className="text-[10px] text-slate-400">kg</span></p>
                       <p className="text-[11px] font-bold text-slate-400">{order.items || "—"} pcs</p>
                     </td>
                     {/* Amount */}
-                    <td className="px-3 py-3 text-right">
+                    <td className="px-2 py-3 text-right">
                       <div className="flex items-center justify-end gap-0.5 text-[14px] font-black text-blue-600 tracking-tight">
                         <BiRupee size={13} className="mb-0.5" />
                         <span>{order.amount?.toLocaleString()}</span>
@@ -288,7 +288,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                       )}
                     </td>
                     {/* Payment: Cash vs Online + Rider confirmation */}
-                    <td className="px-3 py-3 text-center whitespace-nowrap">
+                    <td className="px-2 py-3 text-center">
                       {order.isCashPayment ? (
                         <div className="flex flex-col items-center">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
@@ -319,28 +319,28 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                     {(() => {
                       const placed = getFormattedCreatedDate(order);
                       return (
-                        <td className="px-3 py-3 whitespace-nowrap">
+                        <td className="px-2 py-3">
                           <p className="text-[12px] font-black text-slate-700">{placed.dateStr}</p>
                           {placed.timeStr && <p className="text-[10px] font-medium text-slate-400">{placed.timeStr}</p>}
                         </td>
                       );
                     })()}
-                    <td className="px-3 py-3 whitespace-nowrap">
+                    <td className="px-2 py-3">
                       <p className="text-[12px] font-bold text-slate-700">{formatTimeSlot(order.pickupDate || order.date) || "—"}</p>
                       <p className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5" title="Pickup Rider">
                         <span>🚴</span>
                         <span>{order.pickupRiderName || order.riderName || "Not assigned"}</span>
                       </p>
                     </td>
-                    <td className="px-3 py-3 text-[12px] font-bold text-slate-500 whitespace-nowrap">{formatTimeSlot(order.deliveryDate) || "Pending"}</td>
+                    <td className="px-2 py-3 text-[12px] font-bold text-slate-500">{formatTimeSlot(order.deliveryDate) || "Pending"}</td>
                     {/* Status */}
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-2 py-3 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border whitespace-nowrap ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-500 border-gray-200"}`}>
                         {order.status}
                       </span>
                     </td>
                     {/* TAT */}
-                    <td className="px-3 py-3 text-center">
+                    <td className="hidden 2xl:table-cell px-2 py-3 text-center">
                       <span className="text-[12px] font-bold text-slate-500 whitespace-nowrap">
                         {calculateTAT(order.createdAtRaw, order.updatedAtRaw)}
                       </span>

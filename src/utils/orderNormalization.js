@@ -359,12 +359,18 @@ function buildCartServiceBreakdown(rawOrder) {
   Object.entries(services).forEach(([key, value]) => {
     const name = normalizeCartServiceName(key);
     const detail = perKgDetails[key] || perKgDetails[name] || {};
+    const confirmed = normalizeNumber(detail.subtotal ?? detail.amount ?? 0);
+    // Not weighed/confirmed yet: show the price the app estimated when the order was placed.
+    const estimate = confirmed > 0 ? 0 : normalizeNumber(rawOrder.serviceItemCosts?.[key] ?? rawOrder.serviceItemCosts?.[name]);
+    const rate = normalizeNumber(rawOrder.serviceRates?.[key] ?? rawOrder.serviceRates?.[name]);
     breakdownMap.set(key, {
       id: key,
       name,
       quantity: normalizeNumber(value),
       weight: normalizeNumber(detail.weight),
-      amount: normalizeNumber(detail.subtotal ?? detail.amount ?? 0),
+      amount: confirmed > 0 ? confirmed : estimate,
+      ...(rate > 0 ? { unitRate: rate } : {}),
+      ...(confirmed <= 0 && estimate > 0 ? { estimated: true } : {}),
     });
   });
 
@@ -391,6 +397,7 @@ function buildCartServiceBreakdown(rawOrder) {
     if (breakdownMap.has(name)) {
        const existing = breakdownMap.get(name);
        existing.quantity += normalizeNumber(item.quantity);
+       if (existing.estimated) { existing.amount = 0; delete existing.estimated; }
        existing.amount += normalizeNumber(item.subtotal);
     } else {
        breakdownMap.set(name, {
@@ -410,6 +417,7 @@ function buildCartServiceBreakdown(rawOrder) {
        const existing = breakdownMap.get(name);
        existing.quantity += normalizeNumber(item.quantity);
        existing.weight += normalizeNumber(item.weight);
+       if (existing.estimated) { existing.amount = 0; delete existing.estimated; }
        existing.amount += normalizeNumber(item.subtotal);
     } else {
        breakdownMap.set(name, {

@@ -71,6 +71,14 @@ export default function AdminDashboard() {
         navigate("/admin/coupons", { replace: true });
         return;
       }
+      if (location.state.initialTab === "dataExport") {
+        navigate("/admin/data-export", { replace: true });
+        return;
+      }
+      if (location.state.initialTab === "wallets") {
+        navigate("/admin/wallets", { replace: true });
+        return;
+      }
       setActiveTab(location.state.initialTab);
     }
   }, [location.state?.initialTab, navigate]);
@@ -164,6 +172,16 @@ export default function AdminDashboard() {
     if (tab === "coupons") {
       setIsMobileMenuOpen(false);
       navigate("/admin/coupons");
+      return;
+    }
+    if (tab === "dataExport") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/data-export");
+      return;
+    }
+    if (tab === "wallets") {
+      setIsMobileMenuOpen(false);
+      navigate("/admin/wallets");
       return;
     }
 

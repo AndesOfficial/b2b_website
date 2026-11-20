@@ -11,6 +11,7 @@ import { generateSingleInvoicePDF } from "../../utils/pdfGenerator";
 import { formatTimeSlot, humanizeServiceLabel } from "../../utils/formatUtils";
 import { recalculateB2COrderTotal } from "../../utils/orderPricing";
 import { cleanFirestoreData } from "../../utils/cleanFirestoreData";
+import { fillFromCatalog, loadLivePrices } from "../../utils/livePrices";
 
 export default function AdminOrderModal({ isOpen, onClose, order }) {
   const { client } = useHostelAuth();
@@ -51,11 +52,24 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
     }
   }, [order, isOpen]);
 
+  // Current catalog (`prices`) so unbilled service lines show their rate instead of ₹0
+  const [livePrices, setLivePrices] = useState(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    loadLivePrices().then((p) => { if (alive) setLivePrices(p); }).catch((e) => console.error("prices:", e));
+    return () => { alive = false; };
+  }, [isOpen]);
+  const pricedOrder = useMemo(
+    () => (order && isB2COrder ? fillFromCatalog(order, livePrices) : order),
+    [order, isB2COrder, livePrices],
+  );
+
   // Dynamic pricing preview recalculated whenever weight changes in edit mode
   const pricingPreview = useMemo(() => {
-    if (!order) return null;
-    return recalculateB2COrderTotal(order, editForm.weight);
-  }, [order, editForm.weight]);
+    if (!pricedOrder) return null;
+    return recalculateB2COrderTotal(pricedOrder, editForm.weight);
+  }, [pricedOrder, editForm.weight]);
 
   if (!isOpen || !order) return null;
 
@@ -71,7 +85,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
     if (isNegativeNumberInput(newWeightVal)) return;
 
     if (isB2COrder) {
-      const recomputed = recalculateB2COrderTotal(order, newWeightVal);
+      const recomputed = recalculateB2COrderTotal(pricedOrder, newWeightVal);
       setEditForm((prev) => ({
         ...prev,
         weight: newWeightVal,
@@ -115,7 +129,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
 
       let pricingUpdates = {};
       if (isB2COrder || targetCollection === "cartdetails") {
-        pricingUpdates = recalculateB2COrderTotal(order, editForm.weight, editForm.amount);
+        pricingUpdates = recalculateB2COrderTotal(pricedOrder, editForm.weight, editForm.amount);
       }
 
       const isNewCancel = /cancel/i.test(editForm.status) && !/cancel/i.test(String(order.status || ""));
@@ -429,7 +443,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         </div>
 
         {/* Service Breakdown */}
-        {((isEditing ? pricingPreview?.serviceBreakdown : order.serviceBreakdown)?.length > 0 || (isB2COrder && Number(editForm.weight) > 0)) && (
+        {((isEditing ? pricingPreview?.serviceBreakdown : pricedOrder.serviceBreakdown)?.length > 0 || (isB2COrder && Number(editForm.weight) > 0)) && (
           <div className="p-6 space-y-3 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Service Breakdown</span>
@@ -442,7 +456,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
             <div className="space-y-2">
               {(isEditing && pricingPreview?.serviceBreakdown?.length > 0
                 ? pricingPreview.serviceBreakdown
-                : (order.serviceBreakdown || [])
+                : (pricedOrder.serviceBreakdown || [])
               ).map((item, idx) => (
                 <div key={`${item.name}-${item.quantity}-${item.amount}-${idx}`} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl border border-slate-100">
                   <div>
@@ -450,7 +464,8 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                     <p className="text-[11px] text-slate-500">
                       {item.quantity ? `${item.quantity} pcs` : "—"}
                       {item.weight !== undefined && Number(item.weight) > 0 ? ` • ${Number(item.weight).toFixed(1)} kg` : ""}
-                      {item.rate ? ` (@ ₹${item.rate}/kg)` : ""}
+                      {item.rate ? ` (@ ₹${item.rate}/kg)` : item.unitRate ? ` (@ ₹${item.unitRate}/pc)` : ""}
+                      {item.estimated ? " • estimate" : ""}
                     </p>
                   </div>
                   {item.amount !== undefined ? (

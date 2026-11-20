@@ -73,6 +73,8 @@ export default function AdminServices() {
   const handleSidebarTabChange = useCallback((tab) => {
     setIsMobileMenuOpen(false);
     if (tab === "services") return;
+    if (tab === "wallets") { navigate("/admin/wallets"); return; }
+    if (tab === "dataExport") { navigate("/admin/data-export"); return; }
     if (tab === "b2b") { navigate("/admin/b2b-orders"); return; }
     if (tab === "regular") { navigate("/admin/regular-orders"); return; }
     if (tab === "investors") { navigate("/admin/investors"); return; }

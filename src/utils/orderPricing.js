@@ -178,9 +178,10 @@ export function recalculateB2COrderTotal(order = {}, newWeightRaw = 0, manualAmo
       };
     } else {
       // Piece-based service
-      const itemAmount = Number(item.amount || 0);
+      // Not billed yet: fall back to the app's rate x pieces so the line is never a bare ₹0.
+      const itemAmount = Number(item.amount || 0) || Math.round(Number(item.unitRate || 0) * Number(item.quantity || 0));
       pieceCost += itemAmount;
-      return { ...item, name };
+      return { ...item, name, amount: itemAmount };
     }
   });
 

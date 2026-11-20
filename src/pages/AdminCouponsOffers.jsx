@@ -40,6 +40,8 @@ import { db } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { useHostelAuth } from "../context/HostelAuthContext";
+import HomeScreenManager from "../components/Offers/HomeScreenManager";
+import CashbackSettings from "../components/Offers/CashbackSettings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDisplayDate(val) {
@@ -224,6 +226,8 @@ export default function AdminCouponsOffers() {
       setIsMobileMenuOpen(false);
       if (tab === "coupons") return;
       if (tab === "services") { navigate("/admin/services"); return; }
+      if (tab === "wallets") { navigate("/admin/wallets"); return; }
+      if (tab === "dataExport") { navigate("/admin/data-export"); return; }
       if (tab === "b2b") { navigate("/admin/b2b-orders"); return; }
       if (tab === "regular") { navigate("/admin/regular-orders"); return; }
       if (tab === "investors") { navigate("/admin/investors"); return; }
@@ -511,6 +515,19 @@ export default function AdminCouponsOffers() {
 
               <button
                 type="button"
+                onClick={() => setActiveTab("home")}
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  activeTab === "home"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <FiEye size={15} />
+                <span>Home Screen Banners</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab("orders")}
                 className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   activeTab === "orders"
@@ -769,6 +786,34 @@ export default function AdminCouponsOffers() {
                 </p>
               </div>
 
+              <CashbackSettings isViewer={isViewer} showToast={showToast} />
+
+              {promoForm && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start justify-between gap-4">
+                  <div className="text-xs text-amber-900 space-y-1">
+                    <div className="font-bold text-sm">Offers campaign switch — keep this ON</div>
+                    <p>
+                      Each offer below has its own switch. If this main switch is turned OFF, the customer app ignores
+                      all of them and falls back to its built-in defaults, where the ₹30 Dry Clean offer is ON. To
+                      switch an offer off, use that offer&apos;s own switch.
+                    </p>
+                    <p className="text-amber-700">
+                      The laundry, dry cleaning and footwear cards below are no longer used by the current app.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      disabled={isViewer}
+                      checked={Boolean(promoForm.enabled)}
+                      onChange={(e) => setPromoForm((prev) => ({ ...prev, enabled: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              )}
+
               {!promoForm ? (
                 <DashboardSkeleton />
               ) : (
@@ -1007,6 +1052,70 @@ export default function AdminCouponsOffers() {
                     </div>
                   </div>
 
+                  {/* 3b. ₹30 Dry Clean one-time offer (promotion.dryClean30) */}
+                  <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
+                          ₹30
+                        </span>
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-sm">₹30 Dry Clean Offer</h4>
+                          <span className="text-[11px] text-slate-400">One-time: 1 kurta, 1 shirt &amp; 1 pant at ₹30 each</span>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          disabled={isViewer}
+                          checked={Boolean(promoForm.dryClean30?.enabled)}
+                          onChange={(e) =>
+                            setPromoForm((prev) => ({
+                              ...prev,
+                              dryClean30: { ...prev.dryClean30, enabled: e.target.checked },
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="block font-medium text-slate-600 mb-1">Price per item (₹)</label>
+                        <input
+                          type="number"
+                          disabled={isViewer}
+                          value={promoForm.dryClean30?.promotionalUnitPrice ?? ""}
+                          onChange={(e) =>
+                            setPromoForm((prev) => ({
+                              ...prev,
+                              dryClean30: { ...prev.dryClean30, promotionalUnitPrice: Number(e.target.value) },
+                            }))
+                          }
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-medium text-slate-600 mb-1">Rest of cart must reach (₹)</label>
+                        <input
+                          type="number"
+                          disabled={isViewer}
+                          value={promoForm.dryClean30?.otherItemsMinValue ?? ""}
+                          placeholder="199"
+                          onChange={(e) =>
+                            setPromoForm((prev) => ({
+                              ...prev,
+                              dryClean30: { ...prev.dryClean30, otherItemsMinValue: Number(e.target.value) },
+                            }))
+                          }
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 4. New User Promotion */}
                   <div className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 space-y-4">
                     <div className="flex items-center justify-between">
@@ -1101,6 +1210,9 @@ export default function AdminCouponsOffers() {
               )}
             </div>
           )}
+
+          {/* TAB: HOME SCREEN BANNERS & OFFER CARDS */}
+          {activeTab === "home" && <HomeScreenManager isViewer={isViewer} showToast={showToast} />}
 
           {/* TAB 3: COUPON ORDERS LOG */}
           {activeTab === "orders" && (
@@ -1337,9 +1449,29 @@ function CouponEditorModal({ coupon, isOpen, onClose, onSuccess }) {
         showOnHome: Boolean(formData.showOnHome),
         maxUsesPerUser: formData.maxUsesPerUser ? Number(formData.maxUsesPerUser) : null,
         maxTotalUses: formData.maxTotalUses ? Number(formData.maxTotalUses) : null,
-        validUntil: formData.validUntil ? formData.validUntil : null,
+        // A real timestamp (end of that day, India time) so the app's Home
+        // strip hides the coupon once it expires, not just checkout.
+        validUntil: formData.validUntil
+          ? Timestamp.fromDate(new Date(`${formData.validUntil}T23:59:59+05:30`))
+          : null,
         updatedAt: Timestamp.now(),
       };
+
+      // The Home coupon strip reads these two. Without them a flat coupon
+      // shows as "0% OFF". Only filled in when missing so a hand-written
+      // label is never overwritten.
+      if (isNew || !coupon?.label) {
+        if (formData.discountType === "percentage") {
+          docData.labelTop = "GET";
+          docData.label = `${discountPercentage}% OFF`;
+        } else if (formData.discountType === "flat") {
+          docData.labelTop = "FLAT";
+          docData.label = `₹${flatDiscount} OFF`;
+        } else {
+          docData.labelTop = "FREE";
+          docData.label = "DELIVERY";
+        }
+      }
 
       if (isNew) {
         docData.createdAt = Timestamp.now();

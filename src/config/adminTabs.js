@@ -1,4 +1,5 @@
 import { FiAlertCircle, FiBriefcase, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers, FiPercent } from "react-icons/fi";
+import { MdOutlineAccountBalanceWallet, MdOutlineFileDownload } from "react-icons/md";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
 // Centralized tab metadata keeps the sidebar, page title, and layout rules in sync.
@@ -109,6 +110,26 @@ export const ADMIN_TAB_CONFIG = {
     title: "Coupons & Offers",
     navLabel: "Coupons & Offers",
     navIcon: FiPercent,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  wallets: {
+    key: "wallets",
+    title: "Customer Wallets",
+    navLabel: "Wallets",
+    navIcon: MdOutlineAccountBalanceWallet,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  dataExport: {
+    key: "dataExport",
+    title: "Data Export",
+    navLabel: "Data Export",
+    navIcon: MdOutlineFileDownload,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

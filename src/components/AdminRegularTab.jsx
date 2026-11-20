@@ -7,6 +7,7 @@ import OverviewDashboard from "./RegularOrders/OverviewDashboard";
 import CustomersDashboard from "./RegularOrders/CustomersDashboard";
 import AnalyticsDashboard from "./RegularOrders/AnalyticsDashboard";
 import ExportReports from "./RegularOrders/ExportReports";
+import CartDetailsExport from "./RegularOrders/CartDetailsExport";
 import TransactionsLogDashboard from "./RegularOrders/TransactionsLogDashboard";
 import RegularOrderFormModal from "./RegularOrders/RegularOrderFormModal";
 
@@ -85,6 +86,7 @@ export default function AdminRegularTab({ orders, registeredUserIds, onAddOrder,
             setDateTo={setLocalDateTo}
             compact
           />
+          <CartDetailsExport defaultFrom={localDateFrom} defaultTo={localDateTo} />
           <ExportReports analytics={analytics} />
         </div>
       </div>

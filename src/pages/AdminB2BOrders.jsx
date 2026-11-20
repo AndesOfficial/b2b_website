@@ -33,6 +33,8 @@ export default function AdminB2BOrders() {
     if (tab === "calculator") { navigate("/admin/calculator"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     if (tab === "services") { navigate("/admin/services"); return; }
+    if (tab === "wallets") { navigate("/admin/wallets"); return; }
+    if (tab === "dataExport") { navigate("/admin/data-export"); return; }
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);

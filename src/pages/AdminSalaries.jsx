@@ -68,6 +68,8 @@ export default function AdminSalaries() {
     if (tab === "metaleads") { navigate("/admin/meta-leads"); return; }
     if (tab === "dailyReport") { navigate("/admin/daily-report"); return; }
     if (tab === "services") { navigate("/admin/services"); return; }
+    if (tab === "wallets") { navigate("/admin/wallets"); return; }
+    if (tab === "dataExport") { navigate("/admin/data-export"); return; }
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
 
