@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot, query, limit, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, limit, orderBy, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
   FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiDownload,
@@ -34,6 +34,7 @@ export default function AdminB2BTab() {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   // Filters
@@ -387,6 +388,13 @@ export default function AdminB2BTab() {
           </div>
 
           <button
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <FiPlus size={14} /> Add B2B entry
+          </button>
+
+          <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
           >
@@ -719,6 +727,19 @@ export default function AdminB2BTab() {
         </div>
       )}
 
+      {/* ADD B2B ENTRY MODAL (single date or a date range) */}
+      {showAdd && (
+        <B2BAddModal
+          clients={uniqueClients}
+          defaultDate={dateTo || getTodayStr()}
+          onClose={() => setShowAdd(false)}
+          onSuccess={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(""), 5000);
+          }}
+        />
+      )}
+
       {/* 5. EDIT B2B ENTRY MODAL */}
       {editingEntry && (
         <B2BEditModal
@@ -730,6 +751,190 @@ export default function AdminB2BTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+const b2bSlug = (s) =>
+  String(s || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+
+/** Every date from `from` to `to` (inclusive, YYYY-MM-DD). */
+const datesInRange = (from, to) => {
+  const out = [];
+  const end = new Date(`${to}T00:00:00Z`);
+  for (let d = new Date(`${from}T00:00:00Z`); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+};
+
+const MAX_RANGE_DAYS = 62;
+
+/**
+ * Adds a B2B batch for one date, or the same batch for every date in a range.
+ * Ids match the manager dashboard (date__client__batch), so a day that is
+ * already entered is skipped, never overwritten.
+ */
+function B2BAddModal({ clients, defaultDate, onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    client: "", batchNo: "1", kg: "", clothes: "", students: "", note: "", status: "pending",
+    isRange: false, from: defaultDate, to: defaultDate, skipSundays: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const dates = useMemo(() => {
+    if (!form.isRange) return form.from ? [form.from] : [];
+    if (!form.from || !form.to || form.to < form.from) return [];
+    const all = datesInRange(form.from, form.to);
+    return form.skipSundays ? all.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() !== 0) : all;
+  }, [form.isRange, form.from, form.to, form.skipSundays]);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError("");
+    const client = form.client.trim();
+    if (!client) return setError("Enter the client name.");
+    if (dates.length === 0) return setError("Pick a valid date range (From must be on or before To).");
+    if (dates.length > MAX_RANGE_DAYS) return setError(`A range can cover at most ${MAX_RANGE_DAYS} days.`);
+    if (dates.length > 1 && !window.confirm(`Add ${dates.length} entries for ${client} (${dates[0]} to ${dates[dates.length - 1]})?`)) return;
+
+    setSaving(true);
+    try {
+      const batchNo = String(form.batchNo || "1").trim();
+      let added = 0;
+      const skipped = [];
+      for (const date of dates) {
+        const ref = doc(db, "managerB2bEntries", `${date}__${b2bSlug(client)}__${b2bSlug(batchNo)}`);
+        if ((await getDoc(ref)).exists()) { skipped.push(date); continue; }
+        const payload = {
+          date, client, batchNo,
+          kg: Number(form.kg) || 0,
+          clothes: Number(form.clothes) || 0,
+          students: Number(form.students) || 0,
+          status: form.status,
+          note: form.note.trim(),
+          photoUrl: "",
+          items: [],
+        };
+        const revenue = calculateBatchRevenue(payload, 1);
+        await setDoc(ref, {
+          ...payload,
+          calculatedRevenue: revenue,
+          amount: revenue,
+          source: "b2b",
+          createdAt: serverTimestamp(),
+          createdBy: "admin",
+          updatedAt: serverTimestamp(),
+          updatedBy: "admin",
+        });
+        added += 1;
+      }
+      onSuccess(`Added ${added} B2B entr${added === 1 ? "y" : "ies"}${skipped.length ? `; skipped ${skipped.length} already entered (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? "…" : ""})` : ""}.`);
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to add entry.");
+      setSaving(false);
+    }
+  };
+
+  const inputCls = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500";
+  const labelCls = "block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] my-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Add B2B entry</h2>
+            <p className="text-xs text-slate-500 font-semibold">One date, or the same batch for every date in a range</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors">
+            <FiX size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          {error && <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl font-bold">{error}</div>}
+
+          <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer">
+            <input type="checkbox" checked={form.isRange} onChange={(e) => set({ isRange: e.target.checked, to: form.to < form.from ? form.from : form.to })} />
+            Add for a date range
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>{form.isRange ? "From" : "Date"}</label>
+              <input type="date" value={form.from} onChange={(e) => set({ from: e.target.value, to: form.to < e.target.value ? e.target.value : form.to })} className={inputCls} required />
+            </div>
+            {form.isRange && (
+              <div>
+                <label className={labelCls}>To</label>
+                <input type="date" value={form.to} min={form.from} onChange={(e) => set({ to: e.target.value })} className={inputCls} required />
+              </div>
+            )}
+          </div>
+
+          {form.isRange && (
+            <label className="flex items-center gap-2 font-semibold text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={form.skipSundays} onChange={(e) => set({ skipSundays: e.target.checked })} />
+              Skip Sundays
+            </label>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Client</label>
+              <input list="b2b-add-clients" type="text" value={form.client} onChange={(e) => set({ client: e.target.value })} className={inputCls} required />
+              <datalist id="b2b-add-clients">{clients.map((c) => <option key={c} value={c} />)}</datalist>
+            </div>
+            <div>
+              <label className={labelCls}>Batch No.</label>
+              <input type="text" value={form.batchNo} onChange={(e) => set({ batchNo: e.target.value })} className={inputCls} required />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={labelCls}>Weight (kg)</label>
+              <input type="number" min="0" step="0.01" value={form.kg} onChange={(e) => set({ kg: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Clothes</label>
+              <input type="number" min="0" value={form.clothes} onChange={(e) => set({ clothes: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Students</label>
+              <input type="number" min="0" value={form.students} onChange={(e) => set({ students: e.target.value })} className={inputCls} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Status</label>
+              <select value={form.status} onChange={(e) => set({ status: e.target.value })} className={inputCls}>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Note</label>
+              <input type="text" value={form.note} onChange={(e) => set({ note: e.target.value })} className={inputCls} />
+            </div>
+          </div>
+
+          <p className="text-slate-500 font-semibold">
+            {dates.length > 0
+              ? `Will add ${dates.length} entr${dates.length === 1 ? "y" : "ies"}${dates.length > 1 ? ` (${dates[0]} to ${dates[dates.length - 1]})` : ` for ${dates[0]}`}. Days already entered for this client and batch are skipped.`
+              : "Pick a date."}
+          </p>
+
+          <button type="submit" disabled={saving} className="w-full py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 disabled:opacity-60">
+            {saving ? "Saving…" : "Add entries"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
