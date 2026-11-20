@@ -17,6 +17,7 @@ import AdminDailyReport from "./pages/AdminDailyReport";
 import AdminSalaries from "./pages/AdminSalaries";
 import AdminServices from "./pages/AdminServices";
 import AdminCouponsOffers from "./pages/AdminCouponsOffers";
+import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminWallets from "./pages/AdminWallets";
 import AdminDataExport from "./pages/AdminDataExport";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
           <Route path="/admin/daily-report" element={<AdminRoute><AdminDailyReport /></AdminRoute>} />
           <Route path="/admin/services" element={<AdminRoute><AdminServices /></AdminRoute>} />
+          <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
           <Route path="/admin/coupons" element={<AdminRoute><AdminCouponsOffers /></AdminRoute>} />
           <Route path="/admin/wallets" element={<AdminRoute><AdminWallets /></AdminRoute>} />
           <Route path="/admin/data-export" element={<AdminRoute><AdminDataExport /></AdminRoute>} />

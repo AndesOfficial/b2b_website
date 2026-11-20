@@ -1,4 +1,4 @@
-import { FiAlertCircle, FiBriefcase, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers, FiPercent } from "react-icons/fi";
+import { FiAlertCircle, FiBriefcase, FiCreditCard, FiDollarSign, FiFileText, FiInbox, FiLayout, FiPieChart, FiTag, FiUsers, FiPercent, FiRepeat } from "react-icons/fi";
 import { MdOutlineAccountBalanceWallet, MdOutlineFileDownload } from "react-icons/md";
 import { FaIndianRupeeSign, FaCalculator } from "react-icons/fa6";
 
@@ -110,6 +110,16 @@ export const ADMIN_TAB_CONFIG = {
     title: "Coupons & Offers",
     navLabel: "Coupons & Offers",
     navIcon: FiPercent,
+    showSidebar: true,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  subscriptions: {
+    key: "subscriptions",
+    title: "Subscriptions",
+    navLabel: "Subscriptions",
+    navIcon: FiRepeat,
     showSidebar: true,
     showHeaderActions: false,
     showKpis: false,

@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiLogOut, FiMenu } from "react-icons/fi";
 import BrandLogo from "../Shared/BrandLogo";
 import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
@@ -5,6 +6,7 @@ import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
 const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center text-[13.5px] font-medium transition-all duration-200 group relative";
 
 export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, user, onLogout, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
+  const navigate = useNavigate();
   return (
     <>
       {isMobileOpen && (
@@ -66,7 +68,15 @@ export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, use
             return (
               <button
                 key={item.key}
-                onClick={() => setActiveTab(item.key)}
+                onClick={() => {
+                  // This page routes itself, so no other page's tab handler needs to know it.
+                  if (item.key === "subscriptions") {
+                    setIsMobileOpen?.(false);
+                    navigate("/admin/subscriptions");
+                    return;
+                  }
+                  setActiveTab(item.key);
+                }}
                 title={isCollapsed ? item.navLabel : ""}
                 className={`${SIDEBAR_ITEM_BASE_CLASS} ${isCollapsed ? "justify-center py-3.5 rounded-xl mx-1" : "justify-between px-4 py-3 rounded-xl"} ${
                   activeTab === item.key

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { doc, onSnapshot, setDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, Timestamp, writeBatch } from "firebase/firestore";
 import { FiSave } from "react-icons/fi";
-import { db } from "../../firebase";
+import { auth, db } from "../../firebase";
+
+// Same limits as firestore.rules and the rider cashback function: one typo
+// must not pay out real money.
+export const CASHBACK_MAX_PERCENT = 20;
+export const CASHBACK_MAX_CAP = 500;
 
 // store_settings/config.cashback = { enabled, percent, minOrder, cap }.
 // Read by the rider cloud function when an order is delivered (the credit) and
@@ -42,13 +47,20 @@ export default function CashbackSettings({ isViewer, showToast }) {
   const save = async () => {
     setError("");
     if (![pct, min, cap].every((n) => Number.isFinite(n) && n >= 0)) return setError("Enter numbers of 0 or more.");
-    if (pct > 100) return setError("Percent can't be more than 100.");
+    if (pct > CASHBACK_MAX_PERCENT) return setError(`Cashback can't be more than ${CASHBACK_MAX_PERCENT}%.`);
+    if (cap > CASHBACK_MAX_CAP) return setError(`The most per order can't be more than ₹${CASHBACK_MAX_CAP}.`);
+    if (form.enabled && cap === 0) return setError("A ₹0 limit gives no cashback. Switch cashback off instead.");
+    const after = { enabled: Boolean(form.enabled), percent: pct, minOrder: min, cap };
+    if (!window.confirm(`Save cashback: ${after.enabled ? `${pct}% up to ₹${cap} on orders from ₹${min}` : "OFF"}? Deliveries use it straight away.`)) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, "store_settings", "config"), {
-        cashback: { enabled: Boolean(form.enabled), percent: pct, minOrder: min, cap },
-        updatedAt: Timestamp.now(),
-      }, { merge: true });
+      const batch = writeBatch(db);
+      batch.set(doc(db, "store_settings", "config"), { cashback: after, updatedAt: Timestamp.now() }, { merge: true });
+      batch.set(doc(collection(db, "admin_settings_audit")), {
+        kind: "cashback", target: "store_settings/config", before: saved, after,
+        by: auth.currentUser?.email || null, byUid: auth.currentUser?.uid || null, at: Timestamp.now(),
+      });
+      await batch.commit();
       showToast("success", "Cashback rules saved. New deliveries use them straight away.");
     } catch (e) {
       setError(e.message);
@@ -75,7 +87,7 @@ export default function CashbackSettings({ isViewer, showToast }) {
       <div className="grid grid-cols-3 gap-3 text-xs">
         <div>
           <label className="block font-medium text-slate-600 mb-1">Cashback (%)</label>
-          <input type="number" min="0" max="100" disabled={isViewer} value={form.percent}
+          <input type="number" min="0" max={CASHBACK_MAX_PERCENT} disabled={isViewer} value={form.percent}
             onChange={(e) => set("percent", e.target.value)} className={input} />
         </div>
         <div>
@@ -85,7 +97,7 @@ export default function CashbackSettings({ isViewer, showToast }) {
         </div>
         <div>
           <label className="block font-medium text-slate-600 mb-1">Most per order (₹)</label>
-          <input type="number" min="0" disabled={isViewer} value={form.cap}
+          <input type="number" min="0" max={CASHBACK_MAX_CAP} disabled={isViewer} value={form.cap}
             onChange={(e) => set("cap", e.target.value)} className={input} />
         </div>
       </div>
