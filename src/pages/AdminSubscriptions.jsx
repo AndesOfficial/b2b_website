@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, doc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
 import { FiEdit2, FiMenu, FiPlus, FiRepeat, FiX } from "react-icons/fi";
 import { auth, db } from "../firebase";
@@ -301,6 +302,20 @@ export default function AdminSubscriptions() {
   const { client, logout, isViewer } = useHostelAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  // Leaving this page from the sidebar: tabs with their own page go there,
+  // the rest open on the main dashboard (same as the Wallets page).
+  const onSidebar = useCallback((tab) => {
+    setIsMobileMenuOpen(false);
+    const routes = {
+      services: "/admin/services", b2b: "/admin/b2b-orders", regular: "/admin/regular-orders", investors: "/admin/investors",
+      expenses: "/admin/expenses", salaries: "/admin/salaries", calculator: "/admin/calculator", dailyReport: "/admin/daily-report",
+      metaleads: "/admin/meta-leads", coupons: "/admin/coupons", dataExport: "/admin/data-export", wallets: "/admin/wallets",
+    };
+    if (tab === "subscriptions") return;
+    if (routes[tab]) { navigate(routes[tab]); return; }
+    navigate("/admin", { state: { initialTab: tab } });
+  }, [navigate]);
   const [plans, setPlans] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -348,7 +363,7 @@ export default function AdminSubscriptions() {
   return (
     <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
-        activeTab="subscriptions" setActiveTab={() => setIsMobileMenuOpen(false)} user={client} onLogout={logout}
+        activeTab="subscriptions" setActiveTab={onSidebar} user={client} onLogout={logout}
         isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed}
         isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen}
       />
