@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, deleteField, doc, limit, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { FiClock, FiEdit2, FiMenu, FiPlus, FiRepeat, FiTrash2, FiX } from "react-icons/fi";
 import { auth, db, functions } from "../firebase";
@@ -309,6 +309,82 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
   );
 }
 
+/**
+ * Master switch for selling subscriptions: store_settings/config
+ * subscriptions_enabled, the field the user app reads. Off hides the Subscribe
+ * screen's buy button and the Profile tile for customers without a plan;
+ * customers with an active plan keep it and can still book pickups.
+ * The app also honours subscriptions_paused_until (a timed pause), so the
+ * state shown here matches what the app does.
+ */
+function SubscriptionsMasterSwitch({ isViewer }) {
+  const [cfg, setCfg] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => onSnapshot(doc(db, "store_settings", "config"), (snap) => {
+    const d = snap.data() || {};
+    const until = d.subscriptions_paused_until?.toDate ? d.subscriptions_paused_until.toDate() : null;
+    setCfg({ enabled: d.subscriptions_enabled === true, until });
+  }, (e) => setError(e.message)), []);
+
+  if (!cfg) return error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null;
+
+  const pauseOver = !cfg.enabled && cfg.until && cfg.until <= new Date();
+  const on = cfg.enabled || pauseOver;
+  const status = on
+    ? "On: customers can see and buy plans."
+    : cfg.until
+      ? `Paused until ${cfg.until.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}. It turns back on by itself then.`
+      : "Off: customers can't see or buy plans. Customers who already have a plan keep it.";
+
+  const flip = async () => {
+    const next = !on;
+    if (!window.confirm(next
+      ? "Turn subscriptions ON? Customers on the latest app can see and buy plans straight away."
+      : "Turn subscriptions OFF? The Subscribe screen and Profile tile disappear for customers without a plan. Customers who already have one keep it and can still book pickups.")) return;
+    setSaving(true); setError("");
+    try {
+      const batch = writeBatch(db);
+      // Clearing the pause date makes the switch the only thing that decides.
+      batch.set(doc(db, "store_settings", "config"),
+        { subscriptions_enabled: next, subscriptions_paused_until: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
+      batch.set(doc(collection(db, "admin_settings_audit")), {
+        kind: "subscriptions_switch", target: "store_settings/config", action: next ? "turn_on" : "turn_off",
+        before: { subscriptions_enabled: cfg.enabled, subscriptions_paused_until: cfg.until ? cfg.until.toISOString() : null },
+        after: { subscriptions_enabled: next, subscriptions_paused_until: null },
+        by: auth.currentUser?.email || null, byUid: auth.currentUser?.uid || null, at: serverTimestamp(),
+      });
+      await batch.commit();
+    } catch (e) {
+      setError(e?.code === "permission-denied"
+        ? "Your account can't change store settings. Only the owner accounts can turn subscriptions on or off."
+        : e?.message || "Couldn't save.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 shadow-sm ${on ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-white"}`}>
+      <div className="min-w-0">
+        <h2 className="text-base font-extrabold text-slate-900">Subscriptions in the app</h2>
+        <p className="text-sm text-slate-600">{status}</p>
+        {error && <p className="mt-1 text-sm font-semibold text-red-700">{error}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className={`text-sm font-bold ${on ? "text-emerald-700" : "text-slate-500"}`}>{on ? "On" : "Off"}</span>
+        <button
+          type="button" role="switch" aria-checked={on} aria-label={on ? "Turn subscriptions off" : "Turn subscriptions on"}
+          disabled={isViewer || saving} onClick={flip}
+          className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${on ? "bg-emerald-500" : "bg-slate-300"}`}
+        >
+          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-7" : "translate-x-0.5"}`} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Who / why / who told you / approver, then the approver's WhatsApp code. */
 function DeleteModal({ plan, defaultName, onClose }) {
   const [step, setStep] = useState("details"); // details → code → done
@@ -546,6 +622,7 @@ export default function AdminSubscriptions() {
         </header>
 
         <div className="space-y-4 p-4 lg:p-8">
+          <SubscriptionsMasterSwitch isViewer={isViewer} />
           {loadError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">Could not load plans: {loadError}</p>}
           {actionError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{actionError}</p>}
           {plans && plans.length === 0 && !loadError && (
