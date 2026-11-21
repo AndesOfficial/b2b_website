@@ -1,15 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
-import { FiEdit2, FiMenu, FiPlus, FiRepeat, FiX } from "react-icons/fi";
-import { auth, db } from "../firebase";
+import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { FiClock, FiEdit2, FiMenu, FiPlus, FiRepeat, FiTrash2, FiX } from "react-icons/fi";
+import { auth, db, functions } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // Plans the user app offers (`subscription_plans`). The app reads active plans;
 // the activateSubscription function checks the amount paid against `price`.
-// Plans are never deleted: the on/off switch hides a plan from the app (active: false),
-// and payments already made for it still activate.
+// The on/off switch hides a plan from the app (active: false), and payments
+// already made for it still activate. Delete goes through the server
+// (requestPlanDeletionOtp, then confirmPlanDeletion): an approver from the
+// owner's list gets a WhatsApp code, the plan is marked deleted (kept so
+// in-flight payments still activate) and subscription_plan_deletions keeps
+// who, why, who told them, who approved and the full plan.
+
+const callFn = (name, data) => httpsCallable(functions, name)(data).then((r) => r.data);
+const tsText = (t) => {
+  const d = t?.toDate ? t.toDate() : null;
+  return d ? d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—";
+};
 
 // Same limits as firestore.rules and activateSubscription.
 const MIN_PRICE = 49;
@@ -298,6 +309,133 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
   );
 }
 
+/** Who / why / who told you / approver, then the approver's WhatsApp code. */
+function DeleteModal({ plan, defaultName, onClose }) {
+  const [step, setStep] = useState("details"); // details → code → done
+  const [approvers, setApprovers] = useState(null);
+  const [form, setForm] = useState({ deletedByName: defaultName || "", reason: "", authorizedBy: "", approverIndex: "" });
+  const [request, setRequest] = useState(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const name = plan.label || `${plan.kg} kg plan`;
+
+  useEffect(() => {
+    callFn("getPlanDeletionApprovers", {})
+      .then((r) => setApprovers(r.approvers || []))
+      .catch((e) => { setApprovers([]); setError(e?.message || "Couldn't load approvers."); });
+  }, []);
+
+  const sendCode = async () => {
+    if (form.deletedByName.trim().length < 2) return setError("Enter your name.");
+    if (form.reason.trim().length < 5) return setError("Enter why this plan is being deleted.");
+    if (form.authorizedBy.trim().length < 2) return setError("Enter who told you to delete it.");
+    if (form.approverIndex === "") return setError("Pick who should approve this.");
+    setBusy(true); setError("");
+    try {
+      const r = await callFn("requestPlanDeletionOtp", {
+        planId: plan.id, deletedByName: form.deletedByName, reason: form.reason,
+        authorizedBy: form.authorizedBy, approverIndex: Number(form.approverIndex),
+      });
+      setRequest(r); setStep("code");
+    } catch (e) { setError(e?.message || "Couldn't send the code."); }
+    finally { setBusy(false); }
+  };
+
+  const confirm = async () => {
+    if (!/^\d{6}$/.test(code.trim())) return setError("Enter the 6-digit code.");
+    setBusy(true); setError("");
+    try {
+      const r = await callFn("confirmPlanDeletion", { requestId: request.requestId, code: code.trim() });
+      setResult(r); setStep("done");
+    } catch (e) { setError(e?.message || "Couldn't delete the plan."); }
+    finally { setBusy(false); }
+  };
+
+  const input = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-red-400 focus:outline-none";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900">Delete plan</h2>
+            <p className="text-sm text-slate-500">{name} · {fmt(plan.price)} · {plan.id}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><FiX size={18} /></button>
+        </div>
+
+        {step === "details" && (
+          <div className="mt-4 space-y-3">
+            <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              The plan leaves this page and the app for good and can't be turned back on. Customers who already have it keep it until it runs out.
+            </p>
+            <label className="block text-xs font-bold text-slate-600">Your name
+              <input className={input} value={form.deletedByName} onChange={set("deletedByName")} maxLength={80} />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">Why are you deleting it?
+              <textarea className={input} rows={3} value={form.reason} onChange={set("reason")} maxLength={500} />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">Who told you to delete it?
+              <input className={input} value={form.authorizedBy} onChange={set("authorizedBy")} maxLength={80} />
+            </label>
+            <label className="block text-xs font-bold text-slate-600">Send the approval code to
+              <select className={input} value={form.approverIndex} onChange={set("approverIndex")} disabled={!approvers}>
+                <option value="">{approvers === null ? "Loading…" : approvers.length ? "Pick an approver" : "No approvers set up"}</option>
+                {(approvers || []).map((a) => <option key={a.index} value={a.index}>{a.name} ({a.phone})</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {step === "code" && (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-slate-700">
+              A 6-digit code was sent on WhatsApp to <b>{request.approverName}</b> ({request.approverPhone}). Ask them for it. It works for 10 minutes.
+            </p>
+            <input className={`${input} text-center text-lg tracking-[0.4em]`} inputMode="numeric" maxLength={6}
+              value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="••••••" autoFocus />
+          </div>
+        )}
+
+        {step === "done" && (
+          <div className="mt-4 space-y-2 text-sm text-slate-700">
+            <p className="font-bold text-emerald-700">"{name}" is deleted.</p>
+            {result?.activeSubscribers > 0 && (
+              <p>{result.activeSubscribers} customer{result.activeSubscribers === 1 ? " has" : "s have"} this plan and keep{result.activeSubscribers === 1 ? "s" : ""} it until it runs out.</p>
+            )}
+            <p className="text-xs text-slate-500">It's recorded in Deletion history below.</p>
+          </div>
+        )}
+
+        {error && <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm font-semibold text-red-700">{error}</p>}
+
+        <div className="mt-5 flex justify-end gap-2">
+          {step !== "done" && (
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
+          )}
+          {step === "details" && (
+            <button type="button" onClick={sendCode} disabled={busy || !approvers?.length}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
+              {busy ? "Sending…" : "Send code"}
+            </button>
+          )}
+          {step === "code" && (
+            <button type="button" onClick={confirm} disabled={busy}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">
+              {busy ? "Deleting…" : "Delete plan"}
+            </button>
+          )}
+          {step === "done" && (
+            <button type="button" onClick={onClose} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">Close</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSubscriptions() {
   const { client, logout, isViewer } = useHostelAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -321,6 +459,15 @@ export default function AdminSubscriptions() {
   const [actionError, setActionError] = useState("");
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
   const [busyId, setBusyId] = useState(null); // plan whose on/off switch is saving
+  const [deleting, setDeleting] = useState(null); // plan in the delete dialog
+  const [history, setHistory] = useState(null);
+  const [historyError, setHistoryError] = useState("");
+
+  useEffect(() => onSnapshot(
+    query(collection(db, "subscription_plan_deletions"), orderBy("deletedAt", "desc"), limit(50)),
+    (snap) => setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => setHistoryError(err.message),
+  ), []);
 
   useEffect(() => {
     const onResize = () => {
@@ -339,7 +486,8 @@ export default function AdminSubscriptions() {
     (err) => setLoadError(err.message),
   ), []);
 
-  const sorted = useMemo(() => [...(plans || [])].sort(
+  // Deleted plans stay in Firestore (for in-flight payments) but not on this page.
+  const sorted = useMemo(() => (plans || []).filter((p) => p.deleted !== true).sort(
     (a, b) => (Number(a.sortOrder) || 999) - (Number(b.sortOrder) || 999) || Number(a.kg) - Number(b.kg)), [plans]);
   const nextOrder = sorted.reduce((m, p) => Math.max(m, Number(p.sortOrder) || 0), 0) + 1;
   const isActive = (p) => p.active !== false && p.isActive !== false;
@@ -369,6 +517,9 @@ export default function AdminSubscriptions() {
       />
       {editing !== undefined && (
         <PlanModal plan={editing} nextOrder={nextOrder} onClose={() => setEditing(undefined)} onSaved={() => setEditing(undefined)} />
+      )}
+      {deleting && (
+        <DeleteModal plan={deleting} defaultName={client?.name || auth.currentUser?.displayName || ""} onClose={() => setDeleting(null)} />
       )}
       <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur">
@@ -447,12 +598,61 @@ export default function AdminSubscriptions() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
                         <FiEdit2 size={13} /> Edit
                       </button>
+                      <button type="button" onClick={() => setDeleting(p)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
+                        <FiTrash2 size={13} /> Delete
+                      </button>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
+              <FiClock size={16} className="text-slate-400" /> Deletion history
+            </h2>
+            {historyError && <p className="mt-2 text-sm text-red-700">Could not load history: {historyError}</p>}
+            {history && history.length === 0 && <p className="mt-2 text-sm text-slate-500">No plans have been deleted.</p>}
+            {history && history.length > 0 && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead className="text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th className="py-2 pr-3">When</th><th className="py-2 pr-3">Plan</th><th className="py-2 pr-3">Deleted by</th>
+                      <th className="py-2 pr-3">Why</th><th className="py-2 pr-3">Told by</th><th className="py-2 pr-3">Approved by</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 align-top">
+                    {history.map((h) => (
+                      <tr key={h.id}>
+                        <td className="py-2 pr-3 whitespace-nowrap text-slate-600">{tsText(h.deletedAt)}</td>
+                        <td className="py-2 pr-3">
+                          <p className="font-bold text-slate-900">{h.planLabel}</p>
+                          <p className="text-xs text-slate-500">
+                            {h.price != null ? fmt(h.price) : "—"} · {h.plan ? planIncludes(h.plan).join(" + ") : ""}
+                            {h.plan?.validityDays ? ` · ${h.plan.validityDays} days` : ""}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {h.planId} · was {h.wasActive ? "on" : "off"}
+                            {h.activeSubscribers != null ? ` · ${h.activeSubscribers} active customer${h.activeSubscribers === 1 ? "" : "s"}` : ""}
+                          </p>
+                        </td>
+                        <td className="py-2 pr-3">
+                          <p className="font-semibold text-slate-800">{h.deletedByName}</p>
+                          <p className="text-xs text-slate-500">{h.deletedByEmail || h.deletedByUid}</p>
+                        </td>
+                        <td className="py-2 pr-3 text-slate-700 whitespace-pre-wrap">{h.reason}</td>
+                        <td className="py-2 pr-3 text-slate-700">{h.authorizedBy}</td>
+                        <td className="py-2 pr-3 text-slate-700">{h.approverName} <span className="text-xs text-slate-400">({h.approverPhone})</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>
