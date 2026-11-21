@@ -1,20 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot, serverTimestamp, writeBatch } from "firebase/firestore";
-import { FiEdit2, FiEye, FiEyeOff, FiMenu, FiPlus, FiRepeat, FiX } from "react-icons/fi";
+import { FiEdit2, FiMenu, FiPlus, FiRepeat, FiX } from "react-icons/fi";
 import { auth, db } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // Plans the user app offers (`subscription_plans`). The app reads active plans;
 // the activateSubscription function checks the amount paid against `price`.
-// Plans are never deleted: "Remove" hides a plan from the app (active: false),
+// Plans are never deleted: the on/off switch hides a plan from the app (active: false),
 // and payments already made for it still activate.
 
 // Same limits as firestore.rules and activateSubscription.
+const MIN_PRICE = 49;
 const MIN_PRICE_PER_KG = 30;
+const MIN_PRICE_PER_PIECE = 5;
 const MAX_KG = 100;
+const MAX_PIECES = 200;
 
-const PLAN_FIELDS = ["label", "subtitle", "kg", "price", "originalPrice", "validityDays", "badge", "sortOrder", "active"];
+export const PLAN_KINDS = [
+  { value: "kg", label: "Kg services", hint: "Laundry by weight" },
+  { value: "piece", label: "Piece services", hint: "Iron, dry cleaning, shoes" },
+  { value: "both", label: "Both", hint: "Kg + pieces in one plan" },
+];
+export const KG_SERVICES = [
+  { value: "wash_iron", label: "Wash & Iron" },
+  { value: "wash_fold", label: "Wash & Fold" },
+];
+export const PIECE_SERVICES = [
+  { value: "iron", label: "Iron", unit: "pieces" },
+  { value: "dry_cleaning", label: "Dry Cleaning", unit: "pieces" },
+  { value: "shoe_cleaning", label: "Shoe Cleaning", unit: "pairs" },
+];
+const KG_LABEL = Object.fromEntries(KG_SERVICES.map((s) => [s.value, s.label]));
+
+const PLAN_FIELDS = ["label", "subtitle", "kind", "kg", "kgService", "pieces", "pickups", "maxKgPerPickup", "turnaroundHours",
+  "highlights", "price", "originalPrice", "validityDays", "badge", "sortOrder", "active"];
 const pick = (p) => (p ? Object.fromEntries(PLAN_FIELDS.filter((k) => p[k] !== undefined).map((k) => [k, p[k]])) : null);
 
 /** Audit record written in the same batch as the plan change. */
@@ -29,52 +49,132 @@ function auditEntry(planId, action, before, after) {
 const slug = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const num = (v) => (v === "" || v == null ? NaN : Number(v));
 const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
-const perKg = (p) => {
-  const kg = Number(p.kg), price = Number(p.price);
-  return kg > 0 && price > 0 ? `₹${(price / kg).toFixed(2).replace(/\.?0+$/, "")}/kg` : "—";
+const kindOf = (p) => (["kg", "piece", "both"].includes(p?.kind) ? p.kind : "kg");
+
+/** "10 kg Wash & Iron", "20 Iron pieces + 2 Dry Cleaning": what the plan includes. */
+export function planIncludes(p) {
+  const kind = kindOf(p);
+  const parts = [];
+  if (kind !== "piece" && Number(p.kg) > 0) parts.push(`${p.kg} kg ${KG_LABEL[p.kgService] || "Wash & Iron"}`);
+  if (kind !== "kg") {
+    for (const s of PIECE_SERVICES) {
+      const n = Number(p.pieces?.[s.value]) || 0;
+      if (n > 0) parts.push(`${n} ${s.label} ${n === 1 ? s.unit.replace(/s$/, "") : s.unit}`);
+    }
+  }
+  return parts;
+}
+
+/** "2 pickups a week", or "Unlimited pickups". */
+export function pickupText(p) {
+  const n = Number(p?.pickups?.count) || 0;
+  if (!n) return "Unlimited pickups";
+  return `${n} pickup${n === 1 ? "" : "s"} a ${p.pickups.per === "week" ? "week" : "month"}`;
+}
+
+/** The rules every customer is shown, worked out from the plan's own fields. */
+export function planRules(p) {
+  const days = Number(p.validityDays) || 30;
+  const rules = [
+    `Valid for ${days} days from the day you buy it.`,
+    `${pickupText(p)}${Number(p?.pickups?.count) ? ` (${p.pickups.per === "week" ? "Monday to Sunday" : "calendar month"}).` : "."}`,
+  ];
+  if (Number(p.maxKgPerPickup) > 0) rules.push(`Up to ${p.maxKgPerPickup} kg per pickup.`);
+  if (Number(p.turnaroundHours) > 0) rules.push(`Clothes back within ${p.turnaroundHours} hours of pickup.`);
+  rules.push("Anything beyond the plan, or a service it doesn't include, is billed at the normal price.");
+  rules.push("Instant (express) and Premium services aren't included.");
+  rules.push("Unused kg, pieces and pickups don't carry over to the next plan.");
+  return rules;
+}
+
+const minPriceFor = (kind, kg, pieces) => {
+  const totalPieces = kind === "kg" ? 0 : Object.values(pieces).reduce((s, n) => s + (Number(n) || 0), 0);
+  return Math.max(MIN_PRICE, MIN_PRICE_PER_KG * (kind === "piece" ? 0 : kg) + MIN_PRICE_PER_PIECE * totalPieces);
 };
 
-const EMPTY = { label: "", subtitle: "Wash & Iron", kg: "", price: "", originalPrice: "", validityDays: "30", badge: "", sortOrder: "", active: true };
+const EMPTY = {
+  label: "", subtitle: "", kind: "kg", kg: "", kgService: "wash_iron",
+  pieces: { iron: "", dry_cleaning: "", shoe_cleaning: "" },
+  pickupCount: "", pickupPer: "month", maxKgPerPickup: "", turnaroundHours: "", highlights: "",
+  price: "", originalPrice: "", validityDays: "30", badge: "", sortOrder: "", active: true,
+};
 
 function PlanModal({ plan, nextOrder, onClose, onSaved }) {
   const isNew = !plan;
   const [form, setForm] = useState(() => plan
     ? {
-        label: plan.label ?? "", subtitle: plan.subtitle ?? "", kg: plan.kg ?? "", price: plan.price ?? "",
-        originalPrice: plan.originalPrice ?? "", validityDays: plan.validityDays ?? 30, badge: plan.badge ?? "",
-        sortOrder: plan.sortOrder ?? "", active: plan.active !== false && plan.isActive !== false,
+        label: plan.label ?? "", subtitle: plan.subtitle ?? "", kind: kindOf(plan),
+        kg: plan.kg ?? "", kgService: plan.kgService === "wash_fold" ? "wash_fold" : "wash_iron",
+        pieces: Object.fromEntries(PIECE_SERVICES.map((s) => [s.value, plan.pieces?.[s.value] ?? ""])),
+        pickupCount: plan.pickups?.count ?? "", pickupPer: plan.pickups?.per === "week" ? "week" : "month",
+        maxKgPerPickup: plan.maxKgPerPickup ?? "", turnaroundHours: plan.turnaroundHours ?? "",
+        highlights: Array.isArray(plan.highlights) ? plan.highlights.join("\n") : "",
+        price: plan.price ?? "", originalPrice: plan.originalPrice ?? "", validityDays: plan.validityDays ?? 30,
+        badge: plan.badge ?? "", sortOrder: plan.sortOrder ?? "", active: plan.active !== false && plan.isActive !== false,
       }
     : { ...EMPTY, sortOrder: String(nextOrder) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  const setPiece = (k) => (e) => setForm((f) => ({ ...f, pieces: { ...f.pieces, [k]: e.target.value } }));
+
+  const kind = form.kind;
+  const usesKg = kind !== "piece";
+  const usesPieces = kind !== "kg";
+  const piecesNum = Object.fromEntries(PIECE_SERVICES.map((s) => [s.value, usesPieces ? Math.floor(Number(form.pieces[s.value]) || 0) : 0]));
+  const kgNum = usesKg ? num(form.kg) : 0;
+  const floor = minPriceFor(kind, Number(kgNum) || 0, piecesNum);
+  const preview = {
+    kind, kg: kgNum, kgService: form.kgService, pieces: piecesNum,
+    pickups: Number(form.pickupCount) > 0 ? { count: Number(form.pickupCount), per: form.pickupPer } : null,
+    maxKgPerPickup: num(form.maxKgPerPickup), turnaroundHours: num(form.turnaroundHours), validityDays: num(form.validityDays),
+  };
 
   const save = async () => {
-    const kg = num(form.kg), price = num(form.price), validityDays = num(form.validityDays);
-    const original = num(form.originalPrice);
-    if (!(kg > 0)) return setError("Enter the kg included in the plan.");
+    const price = num(form.price), validityDays = num(form.validityDays), original = num(form.originalPrice);
+    const pickupCount = form.pickupCount === "" ? 0 : num(form.pickupCount);
+    const maxKg = form.maxKgPerPickup === "" ? null : num(form.maxKgPerPickup);
+    const turnaround = form.turnaroundHours === "" ? null : num(form.turnaroundHours);
+    const highlights = String(form.highlights).split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 6).map((s) => s.slice(0, 80));
+    const totalPieces = Object.values(piecesNum).reduce((s, n) => s + n, 0);
+
+    if (usesKg && !(kgNum > 0)) return setError("Enter the kg included in the plan.");
+    if (usesKg && kgNum > MAX_KG) return setError(`A plan can include at most ${MAX_KG} kg.`);
+    if (usesPieces && totalPieces === 0) return setError("Enter how many pieces of at least one piece service the plan includes.");
+    if (Object.values(piecesNum).some((n) => n < 0 || n > MAX_PIECES)) return setError(`Each piece service can include 0 to ${MAX_PIECES} pieces.`);
+    if (!(validityDays >= 1 && validityDays <= 365)) return setError("Validity must be 1 to 365 days.");
+    if (!(pickupCount >= 0 && pickupCount <= 60 && Number.isInteger(pickupCount))) return setError("Pickups must be a whole number from 0 (no limit) to 60.");
+    if (maxKg !== null && !(maxKg > 0 && maxKg <= 100)) return setError("Max kg per pickup must be between 1 and 100, or empty.");
+    if (turnaround !== null && !(turnaround >= 6 && turnaround <= 240)) return setError("Turnaround must be 6 to 240 hours, or empty.");
     if (!(price > 0)) return setError("Enter a price above 0.");
-    if (!(validityDays >= 1)) return setError("Validity must be at least 1 day.");
+    if (price < floor) return setError(`Price must be at least ₹${floor} for what this plan includes.`);
     if (!isNaN(original) && original < price) return setError("Original price can't be lower than the price (leave it empty for no strike-through).");
-    if (kg > MAX_KG) return setError(`A plan can include at most ${MAX_KG} kg.`);
-    if (validityDays > 365) return setError("Validity can be at most 365 days.");
-    if (price < MIN_PRICE_PER_KG * kg) return setError(`Price must be at least ₹${MIN_PRICE_PER_KG}/kg (₹${MIN_PRICE_PER_KG * kg} for ${kg} kg).`);
     if (!isNew && Number(plan.price) > 0 && price < Number(plan.price) * 0.7 &&
       !window.confirm(`This cuts the price from ₹${plan.price} to ₹${price} (more than 30% off). Customers pay the new price straight away. Continue?`)) return;
+
     setSaving(true);
     setError("");
     try {
+      const includes = planIncludes({ ...preview, kg: kgNum });
       const data = {
-        label: String(form.label).trim() || `${kg} kg Plan`,
-        subtitle: String(form.subtitle).trim() || "Wash & Iron",
-        kg, price, validityDays: Math.round(validityDays),
+        label: String(form.label).trim() || includes[0] || "Subscription plan",
+        subtitle: String(form.subtitle).trim() || includes.join(" + "),
+        kind,
+        kg: usesKg ? kgNum : 0,
+        kgService: form.kgService,
+        pieces: piecesNum,
+        pickups: pickupCount > 0 ? { count: pickupCount, per: form.pickupPer } : null,
+        maxKgPerPickup: usesKg ? maxKg : null,
+        turnaroundHours: turnaround,
+        highlights,
+        price, validityDays: Math.round(validityDays),
         originalPrice: isNaN(original) ? price : original,
         badge: String(form.badge).trim(),
         sortOrder: isNaN(num(form.sortOrder)) ? nextOrder : num(form.sortOrder),
         active: !!form.active,
         updatedAt: serverTimestamp(),
       };
-      const id = isNew ? `plan_${slug(data.label) || `${kg}kg`}_${Date.now().toString(36)}` : plan.id;
+      const id = isNew ? `plan_${slug(data.label) || kind}_${Date.now().toString(36)}` : plan.id;
       const batch = writeBatch(db);
       if (isNew) batch.set(doc(db, "subscription_plans", id), { ...data, createdAt: serverTimestamp() });
       else batch.update(doc(db, "subscription_plans", id), data);
@@ -83,7 +183,7 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
       onSaved();
     } catch (err) {
       setError(err?.code === "permission-denied"
-        ? "Your account isn't allowed to edit plans. Ask an Andes admin for the admin role, then log out and back in."
+        ? "Couldn't save: either your account isn't an admin, or the plan breaks a limit (price floor, kg or piece counts)."
         : err?.message || "Could not save the plan.");
       setSaving(false);
     }
@@ -91,29 +191,99 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
 
   const field = "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500";
   const lab = "mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500";
+  const section = "mt-5 border-t border-slate-100 pt-4";
+  const chip = (on) => `rounded-xl border px-3 py-2 text-left text-sm ${on ? "border-blue-500 bg-blue-50 text-blue-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`;
+  const includes = planIncludes(preview);
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-extrabold text-slate-900">{isNew ? "New subscription plan" : "Edit plan"}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><FiX size={20} /></button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><label className={lab}>Plan name</label><input className={field} value={form.label} onChange={set("label")} placeholder="e.g. 10 kg Plan" /></div>
-          <div className="col-span-2"><label className={lab}>Subtitle</label><input className={field} value={form.subtitle} onChange={set("subtitle")} placeholder="Wash & Iron" /></div>
-          <div><label className={lab}>Kg included</label><input className={field} type="number" min="0" step="0.5" value={form.kg} onChange={set("kg")} /></div>
-          <div><label className={lab}>Validity (days)</label><input className={field} type="number" min="1" value={form.validityDays} onChange={set("validityDays")} /></div>
-          <div><label className={lab}>Price (₹)</label><input className={field} type="number" min="0" value={form.price} onChange={set("price")} /></div>
+
+        <label className={lab}>What the plan covers</label>
+        <div className="grid grid-cols-3 gap-2">
+          {PLAN_KINDS.map((k) => (
+            <button key={k.value} type="button" className={chip(kind === k.value)} onClick={() => setForm((f) => ({ ...f, kind: k.value }))}>
+              <span className="block font-bold">{k.label}</span>
+              <span className="block text-[11px] opacity-70">{k.hint}</span>
+            </button>
+          ))}
+        </div>
+
+        {usesKg && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className={lab}>Kg service</label>
+              <div className="grid grid-cols-2 gap-2">
+                {KG_SERVICES.map((s) => (
+                  <button key={s.value} type="button" className={chip(form.kgService === s.value)} onClick={() => setForm((f) => ({ ...f, kgService: s.value }))}>
+                    <span className="font-bold">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div><label className={lab}>Kg included</label><input className={field} type="number" min="0" step="0.5" value={form.kg} onChange={set("kg")} /></div>
+            <div><label className={lab}>Max kg per pickup</label><input className={field} type="number" min="0" step="0.5" value={form.maxKgPerPickup} onChange={set("maxKgPerPickup")} placeholder="no limit" /></div>
+          </div>
+        )}
+
+        {usesPieces && (
+          <div className="mt-4">
+            <label className={lab}>Pieces included per service (0 = not included)</label>
+            <div className="grid grid-cols-3 gap-3">
+              {PIECE_SERVICES.map((s) => (
+                <div key={s.value}>
+                  <span className="mb-1 block text-xs font-semibold text-slate-600">{s.label} ({s.unit})</span>
+                  <input className={field} type="number" min="0" max={MAX_PIECES} step="1" value={form.pieces[s.value]} onChange={setPiece(s.value)} placeholder="0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={section}>
+          <label className={lab}>Pickups</label>
+          <div className="grid grid-cols-3 gap-3">
+            <input className={field} type="number" min="0" max="60" step="1" value={form.pickupCount} onChange={set("pickupCount")} placeholder="0 = unlimited" />
+            <select className={field} value={form.pickupPer} onChange={set("pickupPer")}>
+              <option value="week">per week</option>
+              <option value="month">per month</option>
+            </select>
+            <input className={field} type="number" min="6" max="240" step="1" value={form.turnaroundHours} onChange={set("turnaroundHours")} placeholder="Turnaround (hours)" />
+          </div>
+        </div>
+
+        <div className={`${section} grid grid-cols-2 gap-3`}>
+          <div className="col-span-2"><label className={lab}>Plan name</label><input className={field} value={form.label} onChange={set("label")} placeholder={includes[0] || "e.g. 10 kg Plan"} /></div>
+          <div className="col-span-2"><label className={lab}>Subtitle</label><input className={field} value={form.subtitle} onChange={set("subtitle")} placeholder={includes.join(" + ") || "Wash & Iron"} /></div>
+          <div><label className={lab}>Price (₹)</label><input className={field} type="number" min="0" value={form.price} onChange={set("price")} /><span className="mt-1 block text-[11px] text-slate-400">At least ₹{floor}</span></div>
           <div><label className={lab}>Original price (₹)</label><input className={field} type="number" min="0" value={form.originalPrice} onChange={set("originalPrice")} placeholder="optional" /></div>
+          <div><label className={lab}>Validity (days)</label><input className={field} type="number" min="1" max="365" value={form.validityDays} onChange={set("validityDays")} /></div>
           <div><label className={lab}>Badge</label><input className={field} value={form.badge} onChange={set("badge")} placeholder="e.g. Best value" /></div>
           <div><label className={lab}>Sort order</label><input className={field} type="number" value={form.sortOrder} onChange={set("sortOrder")} /></div>
+          <div className="col-span-2">
+            <label className={lab}>Extra highlights (one per line, up to 6)</label>
+            <textarea className={field} rows={3} value={form.highlights} onChange={set("highlights")} placeholder={"Free pickup and delivery\nPriority handling"} />
+          </div>
         </div>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">What customers will see</p>
+          <p className="font-bold text-slate-900">Includes: {includes.join(" + ") || "—"}</p>
+          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-slate-600">
+            {String(form.highlights).split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 6).map((h) => <li key={`h-${h}`}>{h}</li>)}
+            {planRules(preview).map((r) => <li key={r}>{r}</li>)}
+          </ul>
+        </div>
+
         <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
           <input type="checkbox" checked={form.active} onChange={set("active")} /> Shown in the app
         </label>
         <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-          Customers on older app versions still show the built-in prices. A price below the built-in one is accepted; a <b>higher</b> price
-          makes activation fail for those users, so raise prices only once the new app is out.
+          The current app only knows kg plans: it shows piece and "both" plans properly after the next app update. Raising the price of
+          one of the 3 built-in plans makes payment activation fail on older apps, so raise those only once the new app is out.
         </p>
         {error && <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
@@ -135,6 +305,7 @@ export default function AdminSubscriptions() {
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
+  const [busyId, setBusyId] = useState(null); // plan whose on/off switch is saving
 
   useEffect(() => {
     const onResize = () => {
@@ -160,16 +331,18 @@ export default function AdminSubscriptions() {
 
   const toggle = async (p) => {
     const hiding = isActive(p);
-    if (hiding && !window.confirm(`Remove "${p.label || p.kg + " kg"}" from the app? Customers will no longer see it. Payments already made still activate.`)) return;
+    if (hiding && !window.confirm(`Turn off "${p.label || p.kg + " kg"}"? Customers will no longer see it in the app. Payments already made still activate.`)) return;
     setActionError("");
+    setBusyId(p.id);
     try {
       const batch = writeBatch(db);
       batch.update(doc(db, "subscription_plans", p.id), { active: !hiding, updatedAt: serverTimestamp() });
       batch.set(doc(collection(db, "admin_settings_audit")),
-        auditEntry(p.id, hiding ? "remove" : "restore", p, { ...pick(p), active: !hiding }));
+        auditEntry(p.id, hiding ? "turn_off" : "turn_on", p, { ...pick(p), active: !hiding }));
       await batch.commit();
     }
     catch (err) { setActionError(err?.message || "Could not update the plan."); }
+    finally { setBusyId(null); }
   };
 
   return (
@@ -226,15 +399,31 @@ export default function AdminSubscriptions() {
                       <h3 className="text-base font-extrabold text-slate-900">{p.label || `${p.kg} kg Plan`}</h3>
                       <p className="text-xs text-slate-500">{p.subtitle || "Wash & Iron"}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      {active ? "Live" : "Removed"}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={`text-xs font-bold ${active ? "text-emerald-700" : "text-slate-500"}`}>
+                        {active ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button" role="switch" aria-checked={active}
+                        aria-label={`${active ? "Turn off" : "Turn on"} ${p.label || `${p.kg} kg plan`}`}
+                        disabled={isViewer || busyId === p.id}
+                        onClick={() => toggle(p)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active ? "bg-emerald-500" : "bg-slate-300"}`}
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${active ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="text-2xl font-black text-slate-900">{fmt(p.price)}</span>
                     {discounted && <span className="text-sm text-slate-400 line-through">{fmt(p.originalPrice)}</span>}
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">{p.kg} kg · {p.validityDays || 30} days · {perKg(p)}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-700">{planIncludes(p).join(" + ") || "—"}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {p.validityDays || 30} days · {pickupText(p)}
+                    {Number(p.maxKgPerPickup) > 0 ? ` · max ${p.maxKgPerPickup} kg/pickup` : ""}
+                    {Number(p.turnaroundHours) > 0 ? ` · ${p.turnaroundHours}h turnaround` : ""}
+                  </p>
                   {p.badge ? <p className="mt-2 inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700">{p.badge}</p> : null}
                   <p className="mt-2 text-[11px] text-slate-400">Order {p.sortOrder ?? "—"} · {p.id}</p>
                   {!isViewer && (
@@ -242,10 +431,6 @@ export default function AdminSubscriptions() {
                       <button type="button" onClick={() => setEditing(p)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
                         <FiEdit2 size={13} /> Edit
-                      </button>
-                      <button type="button" onClick={() => toggle(p)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
-                        {active ? <><FiEyeOff size={13} /> Remove</> : <><FiEye size={13} /> Restore</>}
                       </button>
                     </div>
                   )}
