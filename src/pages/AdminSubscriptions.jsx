@@ -5,6 +5,7 @@ import { httpsCallable } from "firebase/functions";
 import { FiClock, FiEdit2, FiMenu, FiPlus, FiRepeat, FiTrash2, FiX } from "react-icons/fi";
 import { auth, db, functions } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
+import StallCodesPanel from "../components/Services/StallCodesPanel";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // Plans the user app offers (`subscription_plans`). The app reads active plans;
@@ -623,6 +624,7 @@ export default function AdminSubscriptions() {
 
         <div className="space-y-4 p-4 lg:p-8">
           <SubscriptionsMasterSwitch isViewer={isViewer} />
+          <StallCodesPanel isViewer={isViewer} />
           {loadError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">Could not load plans: {loadError}</p>}
           {actionError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{actionError}</p>}
           {plans && plans.length === 0 && !loadError && (
