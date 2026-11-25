@@ -29,7 +29,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, user, onLogout, 
         style={{ fontFamily: "DM Sans, sans-serif" }}
       >
         <div className="px-6 pb-5 pt-6">
-          <img src="/andes-logo.png" alt="Andes" className="block h-11 w-11" />
+          <img src="/andes-logo.png" alt="Andes" className="block h-10 w-10" />
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
