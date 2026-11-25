@@ -582,7 +582,7 @@ export default function AdminSubscriptions() {
   const isSocietySection = section === "society";
   const coll = isSocietySection ? "society_plans" : "subscription_plans";
   // Deleted plans stay in Firestore (for in-flight payments) but not on this page.
-  const byOrder = (list) => (list || []).filter((p) => p.deleted !== true).sort(
+  const byOrder = (list) => (list || []).filter((p) => p.deleted !== true && !p.movedTo).sort(
     (a, b) => (Number(a.sortOrder) || 999) - (Number(b.sortOrder) || 999) || Number(a.kg) - Number(b.kg));
   const regularSorted = useMemo(() => byOrder(plans), [plans]);
   const societySorted = useMemo(() => byOrder(societyPlans), [societyPlans]);
@@ -604,6 +604,36 @@ export default function AdminSubscriptions() {
     }
     catch (err) { setActionError(err?.message || "Could not update the plan."); }
     finally { setBusyId(null); }
+  };
+
+  // Moves a plan to the other section: a copy goes into the other collection
+  // (society plans need a soc_ id, which is how the server tells them apart)
+  // and the original is switched off and hidden. Customers who already hold
+  // the plan keep it, and payments already started for it still activate.
+  const movePlan = async (p) => {
+    const toSociety = !isSocietySection;
+    const dest = toSociety ? "society_plans" : "subscription_plans";
+    const name = p.label || `${p.kg} kg plan`;
+    const msg = toSociety
+      ? `Move "${name}" to Society plans? Only customers who signed up with a stall code (and haven't bought a plan) will see it. Regular customers will no longer see it, and any coupon set on it stops working.`
+      : `Move "${name}" to Regular plans? Every regular customer will see it, and society customers see it when they renew.`;
+    if (!window.confirm(msg)) return;
+    setActionError("");
+    setBusyId(p.id);
+    try {
+      const newId = `${toSociety ? "soc" : "plan"}_${slug(p.label || "") || kindOf(p)}_${Date.now().toString(36)}`;
+      const copy = { ...pick(p), movedFrom: p.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+      const batch = writeBatch(db);
+      batch.set(doc(db, dest, newId), copy);
+      batch.update(doc(db, coll, p.id), { active: false, movedTo: newId, updatedAt: serverTimestamp() });
+      batch.set(doc(collection(db, "admin_settings_audit")), auditEntry(p.id, `move_to_${toSociety ? "society" : "regular"}`, p, { ...pick(p), movedTo: newId }, coll));
+      await batch.commit();
+      setSection(toSociety ? "society" : "regular");
+    } catch (err) {
+      setActionError(err?.code === "permission-denied"
+        ? "Couldn't move the plan: your account isn't an admin, or the plan breaks a limit."
+        : err?.message || "Could not move the plan.");
+    } finally { setBusyId(null); }
   };
 
   return (
@@ -712,6 +742,10 @@ export default function AdminSubscriptions() {
                       <button type="button" onClick={() => setEditing(p)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
                         <FiEdit2 size={13} /> Edit
+                      </button>
+                      <button type="button" onClick={() => movePlan(p)} disabled={busyId === p.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                        <FiRepeat size={13} /> {isSocietySection ? "Move to Regular" : "Move to Society"}
                       </button>
                       {!isSocietySection && (
                         <button type="button" onClick={() => setDeleting(p)}
