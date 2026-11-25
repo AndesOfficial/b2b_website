@@ -7,6 +7,8 @@ import { auth, db, functions } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import StallCodesPanel from "../components/Services/StallCodesPanel";
 import SubscriptionCouponsPanel from "../components/Services/SubscriptionCouponsPanel";
+import SubscriptionHeroImage from "../components/Services/SubscriptionHeroImage";
+import { uploadServiceImage } from "../utils/serviceCatalog";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // Plans the user app offers (`subscription_plans`). The app reads active plans;
@@ -48,7 +50,7 @@ export const PIECE_SERVICES = [
 const KG_LABEL = Object.fromEntries(KG_SERVICES.map((s) => [s.value, s.label]));
 
 const PLAN_FIELDS = ["label", "subtitle", "kind", "kg", "kgService", "pieces", "pickups", "maxKgPerPickup", "turnaroundHours",
-  "highlights", "price", "originalPrice", "validityDays", "badge", "sortOrder", "active"];
+  "highlights", "price", "originalPrice", "validityDays", "badge", "sortOrder", "active", "imageUrl"];
 const pick = (p) => (p ? Object.fromEntries(PLAN_FIELDS.filter((k) => p[k] !== undefined).map((k) => [k, p[k]])) : null);
 
 /** Audit record written in the same batch as the plan change. */
@@ -123,13 +125,23 @@ function PlanModal({ plan, nextOrder, onClose, onSaved, collectionName = "subscr
         pieces: Object.fromEntries(PIECE_SERVICES.map((s) => [s.value, plan.pieces?.[s.value] ?? ""])),
         pickupCount: plan.pickups?.count ?? "", pickupPer: plan.pickups?.per === "week" ? "week" : "month",
         maxKgPerPickup: plan.maxKgPerPickup ?? "", turnaroundHours: plan.turnaroundHours ?? "",
-        highlights: Array.isArray(plan.highlights) ? plan.highlights.join("\n") : "",
+        highlights: Array.isArray(plan.highlights) ? plan.highlights.join("\n") : "", imageUrl: plan.imageUrl ?? "",
         price: plan.price ?? "", originalPrice: plan.originalPrice ?? "", validityDays: plan.validityDays ?? 30,
         badge: plan.badge ?? "", sortOrder: plan.sortOrder ?? "", active: plan.active !== false && plan.isActive !== false,
       }
     : { ...EMPTY, sortOrder: String(nextOrder) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const imagePreview = useMemo(() => (imageFile ? URL.createObjectURL(imageFile) : form.imageUrl || ""), [imageFile, form.imageUrl]);
+  const pickImage = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!/^image\//.test(f.type)) return setError("Choose an image file (PNG with a transparent background looks best).");
+    if (f.size > 8 * 1024 * 1024) return setError("That image is too large. Use one under 8 MB.");
+    setError(""); setImageFile(f);
+  };
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const setPiece = (k) => (e) => setForm((f) => ({ ...f, pieces: { ...f.pieces, [k]: e.target.value } }));
 
@@ -171,6 +183,8 @@ function PlanModal({ plan, nextOrder, onClose, onSaved, collectionName = "subscr
     setError("");
     try {
       const includes = planIncludes({ ...preview, kg: kgNum });
+      let imageUrl = form.imageUrl || "";
+      if (imageFile) imageUrl = await uploadServiceImage(imageFile, `plan-${slug(String(form.label)) || kind}`);
       const data = {
         label: String(form.label).trim() || includes[0] || "Subscription plan",
         subtitle: String(form.subtitle).trim() || includes.join(" + "),
@@ -182,6 +196,7 @@ function PlanModal({ plan, nextOrder, onClose, onSaved, collectionName = "subscr
         maxKgPerPickup: usesKg ? maxKg : null,
         turnaroundHours: turnaround,
         highlights,
+        imageUrl,
         price, validityDays: Math.round(validityDays),
         originalPrice: isNaN(original) ? price : original,
         badge: String(form.badge).trim(),
@@ -278,6 +293,25 @@ function PlanModal({ plan, nextOrder, onClose, onSaved, collectionName = "subscr
           <div><label className={lab}>Validity (days)</label><input className={field} type="number" min="1" max="365" value={form.validityDays} onChange={set("validityDays")} /></div>
           <div><label className={lab}>Badge</label><input className={field} value={form.badge} onChange={set("badge")} placeholder="e.g. Best value" /></div>
           <div><label className={lab}>Sort order</label><input className={field} type="number" value={form.sortOrder} onChange={set("sortOrder")} /></div>
+          <div className="col-span-2">
+            <label className={lab}>Card picture (optional)</label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                {imagePreview ? <img src={imagePreview} alt="" className="h-full w-full object-contain" /> : <span className="px-1 text-center text-[10px] text-slate-400">App default</span>}
+              </div>
+              <div className="space-y-1">
+                <label className="inline-block cursor-pointer rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                  {imagePreview ? "Change picture" : "Upload picture"}
+                  <input type="file" accept="image/*" className="hidden" onChange={pickImage} />
+                </label>
+                {imagePreview && (
+                  <button type="button" onClick={() => { setImageFile(null); setForm((f) => ({ ...f, imageUrl: "" })); }}
+                    className="ml-2 text-xs font-bold text-slate-500 hover:text-red-600">Use app default</button>
+                )}
+                <p className="text-[11px] text-slate-400">Shown on the right of this plan's card in the app. A PNG with a transparent background looks best. Leave it empty to use the app's picture.</p>
+              </div>
+            </div>
+          </div>
           <div className="col-span-2">
             <label className={lab}>Extra highlights (one per line, up to 6)</label>
             <textarea className={field} rows={3} value={form.highlights} onChange={set("highlights")} placeholder={"Free pickup and delivery\nPriority handling"} />
@@ -675,6 +709,7 @@ export default function AdminSubscriptions() {
 
         <div className="space-y-4 p-4 lg:p-8">
           <SubscriptionsMasterSwitch isViewer={isViewer} />
+          <SubscriptionHeroImage isViewer={isViewer} />
           <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             {[["regular", "Regular plans"], ["society", "Society plans"]].map(([k, label]) => (
               <button key={k} type="button" onClick={() => setSection(k)}
