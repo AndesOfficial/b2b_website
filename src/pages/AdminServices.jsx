@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import PremiumCarouselManager from "../components/Services/PremiumCarouselManager";
 import ServiceEditor from "../components/Services/ServiceEditor";
+import InstantSwitch from "../components/Services/InstantSwitch";
 import DashboardSkeleton from "../components/Shared/DashboardSkeleton";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { SERVICE_CATEGORIES, SERVICE_STATUSES, canonicalCategory, instantUnitOf, unitOf } from "../constants/serviceCatalog";
@@ -207,6 +208,7 @@ export default function AdminServices() {
         </header>
 
         <div className="space-y-4 p-4 lg:p-8">
+          <InstantSwitch isViewer={isViewer} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-2">
               {SERVICE_STATUSES.map((s) => (
