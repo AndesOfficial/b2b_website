@@ -28,10 +28,8 @@ export default function AdminSidebar({ activeTab, setActiveTab, user, onLogout, 
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{ fontFamily: "DM Sans, sans-serif" }}
       >
-        <div className="px-6 pb-5 pt-7">
-          <span className="text-[26px] font-extrabold leading-none tracking-tight">
-            andes<span className="text-[#5fd0b0]">.</span>
-          </span>
+        <div className="px-6 pb-5 pt-6">
+          <img src="/andes-logo.png" alt="Andes" className="block h-11 w-11" />
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
