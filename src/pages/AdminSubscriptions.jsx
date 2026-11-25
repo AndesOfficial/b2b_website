@@ -6,6 +6,7 @@ import { FiClock, FiEdit2, FiMenu, FiPlus, FiRepeat, FiTrash2, FiX } from "react
 import { auth, db, functions } from "../firebase";
 import AdminSidebar from "../components/Layout/AdminSidebar";
 import StallCodesPanel from "../components/Services/StallCodesPanel";
+import SubscriptionCouponsPanel from "../components/Services/SubscriptionCouponsPanel";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
 // Plans the user app offers (`subscription_plans`). The app reads active plans;
@@ -51,9 +52,9 @@ const PLAN_FIELDS = ["label", "subtitle", "kind", "kg", "kgService", "pieces", "
 const pick = (p) => (p ? Object.fromEntries(PLAN_FIELDS.filter((k) => p[k] !== undefined).map((k) => [k, p[k]])) : null);
 
 /** Audit record written in the same batch as the plan change. */
-function auditEntry(planId, action, before, after) {
+function auditEntry(planId, action, before, after, coll = "subscription_plans") {
   return {
-    kind: "subscription_plan", target: `subscription_plans/${planId}`, action,
+    kind: coll === "society_plans" ? "society_plan" : "subscription_plan", target: `${coll}/${planId}`, action,
     before: pick(before), after: pick(after),
     by: auth.currentUser?.email || null, byUid: auth.currentUser?.uid || null, at: serverTimestamp(),
   };
@@ -112,7 +113,8 @@ const EMPTY = {
   price: "", originalPrice: "", validityDays: "30", badge: "", sortOrder: "", active: true,
 };
 
-function PlanModal({ plan, nextOrder, onClose, onSaved }) {
+function PlanModal({ plan, nextOrder, onClose, onSaved, collectionName = "subscription_plans" }) {
+  const isSociety = collectionName === "society_plans";
   const isNew = !plan;
   const [form, setForm] = useState(() => plan
     ? {
@@ -187,11 +189,11 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
         active: !!form.active,
         updatedAt: serverTimestamp(),
       };
-      const id = isNew ? `plan_${slug(data.label) || kind}_${Date.now().toString(36)}` : plan.id;
+      const id = isNew ? `${isSociety ? "soc" : "plan"}_${slug(data.label) || kind}_${Date.now().toString(36)}` : plan.id;
       const batch = writeBatch(db);
-      if (isNew) batch.set(doc(db, "subscription_plans", id), { ...data, createdAt: serverTimestamp() });
-      else batch.update(doc(db, "subscription_plans", id), data);
-      batch.set(doc(collection(db, "admin_settings_audit")), auditEntry(id, isNew ? "create" : "update", plan, data));
+      if (isNew) batch.set(doc(db, collectionName, id), { ...data, createdAt: serverTimestamp() });
+      else batch.update(doc(db, collectionName, id), data);
+      batch.set(doc(collection(db, "admin_settings_audit")), auditEntry(id, isNew ? "create" : "update", plan, data, collectionName));
       await batch.commit();
       onSaved();
     } catch (err) {
@@ -211,7 +213,7 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-slate-900">{isNew ? "New subscription plan" : "Edit plan"}</h2>
+          <h2 className="text-lg font-extrabold text-slate-900">{isNew ? (isSociety ? "New society plan" : "New subscription plan") : (isSociety ? "Edit society plan" : "Edit plan")}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><FiX size={20} /></button>
         </div>
 
@@ -294,7 +296,13 @@ function PlanModal({ plan, nextOrder, onClose, onSaved }) {
         <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
           <input type="checkbox" checked={form.active} onChange={set("active")} /> Shown in the app
         </label>
-        <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+        {isSociety ? (
+          <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800">
+            Society plans are shown only to customers who signed up with a society stall code and haven't bought a plan yet.
+            Set the original price to the regular plan's price so they see the saving. After this first plan they renew on the regular plans.
+          </p>
+        ) : null}
+        <p className={`mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800 ${isSociety ? "hidden" : ""}`}>
           The current app only knows kg plans: it shows piece and "both" plans properly after the next app update. Raising the price of
           one of the 3 built-in plans makes payment activation fail on older apps, so raise those only once the new app is out.
         </p>
@@ -532,6 +540,8 @@ export default function AdminSubscriptions() {
     navigate("/admin", { state: { initialTab: tab } });
   }, [navigate]);
   const [plans, setPlans] = useState(null);
+  const [societyPlans, setSocietyPlans] = useState(null);
+  const [section, setSection] = useState("regular"); // regular | society
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [editing, setEditing] = useState(undefined); // undefined: closed, null: new
@@ -563,9 +573,20 @@ export default function AdminSubscriptions() {
     (err) => setLoadError(err.message),
   ), []);
 
+  useEffect(() => onSnapshot(
+    collection(db, "society_plans"),
+    (snap) => setSocietyPlans(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => setLoadError(err.message),
+  ), []);
+
+  const isSocietySection = section === "society";
+  const coll = isSocietySection ? "society_plans" : "subscription_plans";
   // Deleted plans stay in Firestore (for in-flight payments) but not on this page.
-  const sorted = useMemo(() => (plans || []).filter((p) => p.deleted !== true).sort(
-    (a, b) => (Number(a.sortOrder) || 999) - (Number(b.sortOrder) || 999) || Number(a.kg) - Number(b.kg)), [plans]);
+  const byOrder = (list) => (list || []).filter((p) => p.deleted !== true).sort(
+    (a, b) => (Number(a.sortOrder) || 999) - (Number(b.sortOrder) || 999) || Number(a.kg) - Number(b.kg));
+  const regularSorted = useMemo(() => byOrder(plans), [plans]);
+  const societySorted = useMemo(() => byOrder(societyPlans), [societyPlans]);
+  const sorted = isSocietySection ? societySorted : regularSorted;
   const nextOrder = sorted.reduce((m, p) => Math.max(m, Number(p.sortOrder) || 0), 0) + 1;
   const isActive = (p) => p.active !== false && p.isActive !== false;
 
@@ -576,9 +597,9 @@ export default function AdminSubscriptions() {
     setBusyId(p.id);
     try {
       const batch = writeBatch(db);
-      batch.update(doc(db, "subscription_plans", p.id), { active: !hiding, updatedAt: serverTimestamp() });
+      batch.update(doc(db, coll, p.id), { active: !hiding, updatedAt: serverTimestamp() });
       batch.set(doc(collection(db, "admin_settings_audit")),
-        auditEntry(p.id, hiding ? "turn_off" : "turn_on", p, { ...pick(p), active: !hiding }));
+        auditEntry(p.id, hiding ? "turn_off" : "turn_on", p, { ...pick(p), active: !hiding }, coll));
       await batch.commit();
     }
     catch (err) { setActionError(err?.message || "Could not update the plan."); }
@@ -593,7 +614,7 @@ export default function AdminSubscriptions() {
         isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen}
       />
       {editing !== undefined && (
-        <PlanModal plan={editing} nextOrder={nextOrder} onClose={() => setEditing(undefined)} onSaved={() => setEditing(undefined)} />
+        <PlanModal plan={editing} nextOrder={nextOrder} collectionName={coll} onClose={() => setEditing(undefined)} onSaved={() => setEditing(undefined)} />
       )}
       {deleting && (
         <DeleteModal plan={deleting} defaultName={client?.name || auth.currentUser?.displayName || ""} onClose={() => setDeleting(null)} />
@@ -616,7 +637,7 @@ export default function AdminSubscriptions() {
             {!isViewer && (
               <button type="button" onClick={() => setEditing(null)}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-blue-700">
-                <FiPlus size={16} /> New plan
+                <FiPlus size={16} /> {isSocietySection ? "New society plan" : "New plan"}
               </button>
             )}
           </div>
@@ -624,13 +645,28 @@ export default function AdminSubscriptions() {
 
         <div className="space-y-4 p-4 lg:p-8">
           <SubscriptionsMasterSwitch isViewer={isViewer} />
-          <StallCodesPanel isViewer={isViewer} />
+          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {[["regular", "Regular plans"], ["society", "Society plans"]].map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setSection(k)}
+                className={`rounded-lg px-4 py-2 text-sm font-bold ${section === k ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">
+            {isSocietySection
+              ? "For customers who signed up at a society stall with a stall code: a special price on their first plan. Regular customers never see these. After the first plan they renew on the regular plans."
+              : "For everyone else (and for society customers when they renew). First-purchase coupons below give a regular customer a lower price on their first plan only."}
+          </p>
+          {isSocietySection && <StallCodesPanel isViewer={isViewer} />}
+          {!isSocietySection && <SubscriptionCouponsPanel isViewer={isViewer} plans={regularSorted} />}
           {loadError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">Could not load plans: {loadError}</p>}
           {actionError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{actionError}</p>}
-          {plans && plans.length === 0 && !loadError && (
+          {((isSocietySection ? societyPlans : plans) || null) && sorted.length === 0 && !loadError && (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-              No plans yet, so the app shows its built-in plans (5, 10 and 20 kg). Once any plan is saved here, the app
-              shows only the plans listed on this page.
+              {isSocietySection
+                ? "No society plans yet. Add the plans stall customers should see for their first purchase."
+                : "No plans yet, so the app shows its built-in plans (5, 10 and 20 kg). Once any plan is saved here, the app shows only the plans listed on this page."}
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -677,10 +713,12 @@ export default function AdminSubscriptions() {
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
                         <FiEdit2 size={13} /> Edit
                       </button>
-                      <button type="button" onClick={() => setDeleting(p)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
-                        <FiTrash2 size={13} /> Delete
-                      </button>
+                      {!isSocietySection && (
+                        <button type="button" onClick={() => setDeleting(p)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
+                          <FiTrash2 size={13} /> Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -688,7 +726,7 @@ export default function AdminSubscriptions() {
             })}
           </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          {!isSocietySection && <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
               <FiClock size={16} className="text-slate-400" /> Deletion history
             </h2>
@@ -731,7 +769,7 @@ export default function AdminSubscriptions() {
                 </table>
               </div>
             )}
-          </section>
+          </section>}
         </div>
       </main>
     </div>
