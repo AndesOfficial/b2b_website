@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMenu, FiInbox } from "react-icons/fi";
 import AdminSidebar from "../components/Layout/AdminSidebar";
+import AdminPageHeader from "../components/Layout/AdminPageHeader";
 import AdminRegularTab from "../components/AdminRegularTab";
 import { useHostelOrders } from "../context/HostelAuthContext";
 import { useAdminDashboardData } from "../hooks/useAdminDashboardData";
@@ -60,7 +61,7 @@ export default function AdminRegularOrders() {
   if (loading) return <LoadingSpinner fullscreen />;
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab="regular"
         setActiveTab={handleSidebarTabChange}
@@ -78,29 +79,13 @@ export default function AdminRegularOrders() {
         } ml-0`}
       >
         {/* Clean page-level top bar — no global date picker, no expenses/calculator shortcuts */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur shadow-sm">
-          <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
-                aria-label="Open sidebar"
-              >
-                <FiMenu size={20} />
-              </button>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Admin Portal</p>
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-950 flex items-center gap-2">
-                  <FiInbox size={20} className="text-blue-500" />
-                  B2C Orders
-                </h1>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AdminPageHeader
+          title="B2C Orders"
+          subtitle="Track consumer orders and delivery exceptions."
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+        />
 
-        <div className="p-4 lg:p-8">
+        <div className="px-4 pb-10 pt-6 lg:px-10">
           {!isDataLoaded ? (
             <DashboardSkeleton />
           ) : (

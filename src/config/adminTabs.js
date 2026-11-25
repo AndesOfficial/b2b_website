@@ -60,7 +60,7 @@ export const ADMIN_TAB_CONFIG = {
     title: "ANDES Expenses",
     navLabel: "Expenses",
     navIcon: FaIndianRupeeSign,
-    showSidebar: true,
+    showSidebar: false,
     showHeaderActions: false,
     showKpis: false,
     kpiColumnsClass: "",
@@ -80,7 +80,7 @@ export const ADMIN_TAB_CONFIG = {
     title: "Revenue Calculator",
     navLabel: "Calculator",
     navIcon: FaCalculator,
-    showSidebar: true,
+    showSidebar: false,
     showHeaderActions: false,
     showKpis: false,
     kpiColumnsClass: "",
@@ -90,7 +90,7 @@ export const ADMIN_TAB_CONFIG = {
     title: "Daily Operations Report",
     navLabel: "Daily Report",
     navIcon: FiFileText,
-    showSidebar: true,
+    showSidebar: false,
     showHeaderActions: false,
     showKpis: false,
     kpiColumnsClass: "",
@@ -140,7 +140,17 @@ export const ADMIN_TAB_CONFIG = {
     title: "Data Export",
     navLabel: "Data Export",
     navIcon: MdOutlineFileDownload,
-    showSidebar: true,
+    showSidebar: false,
+    showHeaderActions: false,
+    showKpis: false,
+    kpiColumnsClass: "",
+  },
+  kpis: {
+    key: "kpis",
+    title: "Advanced KPIs",
+    navLabel: "Advanced KPIs",
+    navIcon: FiPieChart,
+    showSidebar: false,
     showHeaderActions: false,
     showKpis: false,
     kpiColumnsClass: "",
@@ -160,7 +170,7 @@ export const ADMIN_TAB_CONFIG = {
     title: "Meta Ads Leads",
     navLabel: "Meta Leads",
     navIcon: FiUsers,
-    showSidebar: true,
+    showSidebar: false,
     showHeaderActions: false,
     showKpis: false,
     kpiColumnsClass: "",
@@ -168,6 +178,26 @@ export const ADMIN_TAB_CONFIG = {
 };
 
 export const ADMIN_SIDEBAR_TABS = Object.values(ADMIN_TAB_CONFIG).filter((tab) => tab.showSidebar);
+
+// The menu, in the order and groups the admin sees it.
+export const ADMIN_NAV_GROUPS = [
+  { label: "Workspace", items: [["overview", "Overview"], ["analytics", "Analytics"], ["kpis", "Advanced KPIs"]] },
+  { label: "Operations", items: [["b2b", "B2B Orders"], ["regular", "B2C Orders"], ["issues", "Issues"]] },
+  { label: "Finance", items: [["salaries", "Salaries"], ["investors", "Investor Relations"]] },
+  { label: "Commerce", items: [["services", "Services"], ["coupons", "Coupons & Offers"], ["subscriptions", "Subscriptions"], ["wallets", "Wallets"]] },
+];
+
+// Pages with their own address. Everything else is a tab inside /admin.
+export const ADMIN_TAB_ROUTES = {
+  b2b: "/admin/b2b-orders",
+  regular: "/admin/regular-orders",
+  salaries: "/admin/salaries",
+  investors: "/admin/investors",
+  services: "/admin/services",
+  coupons: "/admin/coupons",
+  subscriptions: "/admin/subscriptions",
+  wallets: "/admin/wallets",
+};
 
 export function getAdminTabConfig(tabKey) {
   return ADMIN_TAB_CONFIG[tabKey] || ADMIN_TAB_CONFIG.overview;

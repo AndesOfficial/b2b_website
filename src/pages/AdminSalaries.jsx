@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import { FaIndianRupeeSign } from "react-icons/fa6";
 import AdminSidebar from "../components/Layout/AdminSidebar";
+import AdminPageHeader from "../components/Layout/AdminPageHeader";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import { useHostelAuth } from "../context/HostelAuthContext";
 import { useSalaryData } from "../hooks/useSalaryData";
@@ -195,7 +196,7 @@ export default function AdminSalaries() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* Sidebar */}
       <AdminSidebar
         activeTab="salaries"
@@ -215,228 +216,59 @@ export default function AdminSalaries() {
         } ml-0`}
       >
         {/* Sticky Header */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur shadow-sm">
-          <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
-                aria-label="Open sidebar"
+        <AdminPageHeader
+          title="Salaries"
+          subtitle={`Review payroll for ${monthOptions.find((o) => o.val === selectedMonth)?.label || "the selected period"}.`}
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+          actions={(
+            <>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] focus:outline-none"
               >
-                <FiMenu size={20} />
+                {monthOptions.map((opt) => (
+                  <option key={opt.val} value={opt.val}>{opt.label}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => setShowAttendanceModal(true)}
+                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                Attendance
               </button>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
-                    Salary Management
-                  </h1>
-                  {isTodayThursday ? (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200">
-                      <FiClock size={12} /> Today: Thursday Weekly Off
-                    </span>
-                  ) : (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
-                      <FiCheckCircle size={12} /> Normal Working Day
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                  Automated daily wage expenses, attendance tracking, and monthly salary disbursements
-                </p>
-              </div>
-            </div>
-
-            {/* Top Bar Actions */}
-            <div className="flex items-center gap-2.5">
-              {/* Period Dropdown */}
-              <div className="relative">
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs lg:text-sm font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.val} value={opt.val}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sync Team Button */}
-              <button
-                type="button"
-                onClick={() => seedInitialData()}
-                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs lg:text-sm font-bold shadow-sm transition-colors flex items-center gap-1.5"
-                title="Sync all 8 operational workers"
-              >
-                <FiRefreshCw size={14} className="text-blue-600" />
-                <span className="hidden xl:inline">Sync Team</span>
+              <button type="button" onClick={() => handleOpenAdjustment()}
+                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                Overtime
               </button>
-
-              {/* Attendance Button */}
-              <button
-                type="button"
-                onClick={() => setShowAttendanceModal(true)}
-                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs lg:text-sm font-bold shadow-sm transition-colors flex items-center gap-1.5"
-                title="Mark daily attendance overrides"
-              >
-                <FiCalendar size={15} className="text-blue-600" />
-                <span className="hidden md:inline">Attendance</span>
+              <button type="button" onClick={() => handleOpenPayment()}
+                className="rounded-lg bg-[#1e5a4c] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#174a3e]">
+                Record payment
               </button>
-
-              {/* Overtime Button */}
-              <button
-                type="button"
-                onClick={() => handleOpenAdjustment()}
-                className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs lg:text-sm font-bold transition-colors flex items-center gap-1.5"
-                title="Add overtime or extra work payment"
-              >
-                <FiPlus size={15} />
-                <span className="hidden md:inline">Overtime</span>
+              <button type="button" onClick={() => { setEditingWorker(null); setShowAddWorkerModal(true); }}
+                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                Add worker
               </button>
-
-              {/* Record Payment Button */}
-              <button
-                type="button"
-                onClick={() => handleOpenPayment()}
-                className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs lg:text-sm font-bold transition-colors flex items-center gap-1.5"
-                title="Record salary payment"
-              >
-                <FiCreditCard size={15} />
-                <span className="hidden md:inline">Pay</span>
-              </button>
-
-              {/* Add Worker Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingWorker(null);
-                  setShowAddWorkerModal(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm font-bold shadow-sm transition-all flex items-center gap-1.5"
-              >
-                <FiPlus size={16} />
-                <span>Add Worker</span>
-              </button>
-            </div>
-          </div>
-        </header>
+            </>
+          )}
+        />
 
         {/* Page Body Container */}
-        <div className="flex-1 p-4 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
-          {/* 7 KPI Dashboard Summary Cards (Section 14) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
-            {/* 1. Total Workers */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Workers</span>
-                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <FiUsers size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-slate-900 tracking-tight">{metrics.totalWorkers}</p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Active team</p>
-              </div>
+        <div className="flex-1 px-4 pb-10 pt-6 lg:px-10 space-y-6 w-full">
+          {/* Payroll summary */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-[#1e5a4c] bg-[#1e5a4c] p-5 text-white">
+              <p className="text-[15px] font-medium">Earned</p>
+              <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.currentMonthAccrued)}</p>
+              <p className="mt-2 text-[12.5px] text-white/80">{metrics.totalWorkers} workers</p>
             </div>
-
-            {/* 2. Today's Salary Expense */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Today's Cost</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <FaIndianRupeeSign size={13} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-emerald-600 tracking-tight">
-                  {formatCurrency(metrics.todaySalaryExpense)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Today's payroll</p>
-              </div>
+            <div className="rounded-xl border border-[#e3eae8] bg-white p-5 text-[#10262b]">
+              <p className="text-[15px] font-medium">Paid</p>
+              <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.totalPaid)}</p>
+              <p className="mt-2 text-[12.5px] text-[#5f726f]">This period</p>
             </div>
-
-            {/* 3. Current Month Accrued */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Accrued</span>
-                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <FiTrendingUp size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-blue-700 tracking-tight">
-                  {formatCurrency(metrics.currentMonthAccrued)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Earned to-date</p>
-              </div>
-            </div>
-
-            {/* 4. Overtime */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Overtime</span>
-                <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <FiClock size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-purple-700 tracking-tight">
-                  {formatCurrency(metrics.totalOvertime)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Extra shifts</p>
-              </div>
-            </div>
-
-            {/* 5. Additional Payments */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Extras</span>
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <FiPlus size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-indigo-700 tracking-tight">
-                  {formatCurrency(metrics.totalAdditionalPayments)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Allowances</p>
-              </div>
-            </div>
-
-            {/* 6. Total Paid */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Paid</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <FiCheckCircle size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-emerald-700 tracking-tight">
-                  {formatCurrency(metrics.totalPaid)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Disbursed</p>
-              </div>
-            </div>
-
-            {/* 7. Pending / Remaining */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between text-slate-500 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Pending</span>
-                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-                  <FiAlertCircle size={14} />
-                </div>
-              </div>
-              <div>
-                <p className="text-2xl font-black text-rose-600 tracking-tight">
-                  {formatCurrency(metrics.totalRemaining)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Balance due</p>
-              </div>
+            <div className="rounded-xl border border-[#e3eae8] bg-white p-5 text-[#10262b]">
+              <p className="text-[15px] font-medium">Outstanding</p>
+              <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.totalRemaining)}</p>
+              <p className="mt-2 text-[12.5px] text-[#5f726f]">Still to pay</p>
             </div>
           </div>
 

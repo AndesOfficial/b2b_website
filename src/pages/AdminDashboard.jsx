@@ -2,13 +2,14 @@ import { Component, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHostelOrders } from "../context/HostelAuthContext";
 import AdminSidebar from "../components/Layout/AdminSidebar";
-import AdminTopBar from "../components/Layout/AdminTopBar";
+import AdminPageHeader from "../components/Layout/AdminPageHeader";
+import BusinessOverview from "../components/Overview/BusinessOverview";
+import AdvancedKpis, { useKpiMonths } from "../components/Overview/AdvancedKpis";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import OpsRevenueDashboard from "../components/Overview/OpsRevenueDashboard";
 import CustomerAcquisitionDashboard from "../components/Overview/CustomerAcquisitionDashboard";
 import AdminIssuesTab from "../components/Issues/AdminIssuesTab";
 import AdminExpensesTab from "../components/Expenses/AdminExpensesTab";
-import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
 import InvoiceGeneratorModal from "../components/Shared/InvoiceGeneratorModal";
 import AdminAddOrderModal from "../components/Shared/AdminAddOrderModal";
 import AdminPageActions from "../components/Shared/AdminPageActions";
@@ -51,6 +52,18 @@ class TabErrorBoundary extends Component {
   }
 }
 
+const longDate = () => new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const PAGE_HEADINGS = {
+  overview: { title: "Business overview", subtitle: () => `${longDate()} · Today so far` },
+  analytics: { title: "Analytics", subtitle: () => `Detailed reports · ${longDate()}` },
+  kpis: {
+    title: "Advanced KPIs",
+    subtitle: ({ kpiMonths }) => `${MONTH_NAME(kpiMonths.lastMonth)} compared with ${MONTH_NAME(kpiMonths.before)} · Monthly review`,
+  },
+  issues: { title: "Issues", subtitle: "Resolve the highest-priority open issues first." },
+};
+const MONTH_NAME = (d) => d.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,6 +77,7 @@ export default function AdminDashboard() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
   const [overviewSubView, setOverviewSubView] = useState("acquisition");
+  const kpiMonths = useKpiMonths();
 
   useEffect(() => {
     if (location.state?.initialTab) {
@@ -189,6 +203,12 @@ export default function AdminDashboard() {
     setIsMobileMenuOpen(false);
   }, [navigate]);
 
+  // From the Overview links: open a tab, optionally on one analytics report.
+  const goTo = useCallback((tab, sub) => {
+    if (sub) setOverviewSubView(sub);
+    handleTabChange(tab);
+  }, [handleTabChange]);
+
   useEffect(() => {
     if (!saveMessage) return undefined;
     const timeoutId = window.setTimeout(() => setSaveMessage(null), 4500);
@@ -198,51 +218,23 @@ export default function AdminDashboard() {
   // A single registry keeps tab rendering in one place instead of scattering conditionals.
   const activeTabPanel = useMemo(() => {
     const panels = {
-      overview: (
-        <div className="space-y-4">
-          {/* Overview Sub-view Switcher & Operational Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
-            <div className="inline-flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+      overview: <BusinessOverview orders={baseOrders} onGo={goTo} />,
+      analytics: (
+        <div className="space-y-5 px-4 pb-10 pt-6 lg:px-10">
+          <div className="flex gap-6 border-b border-[#e3eae8]">
+            {[["acquisition", "Customer acquisition & orders"], ["ops", "Operations & revenue breakdown"]].map(([key, label]) => (
               <button
+                key={key}
                 type="button"
-                onClick={() => setOverviewSubView("acquisition")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  overviewSubView === "acquisition"
-                    ? "bg-white text-blue-600 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
+                onClick={() => setOverviewSubView(key)}
+                className={`-mb-px border-b-2 pb-3 text-[14px] font-semibold ${
+                  overviewSubView === key ? "border-[#1b6b58] text-[#1b6b58]" : "border-transparent text-[#5f726f] hover:text-[#10262b]"
                 }`}
               >
-                Customer Acquisition & Orders
+                {label}
               </button>
-              <button
-                type="button"
-                onClick={() => setOverviewSubView("ops")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  overviewSubView === "ops"
-                    ? "bg-white text-blue-600 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Operations & Revenue Breakdown
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              {!isViewer && <OrderAcceptanceToggle />}
-              {!isViewer && (
-                <button
-                  type="button"
-                  onClick={() => setShowInvoiceModal(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl transition-all shadow-sm hover:shadow cursor-pointer"
-                  title="Generate Invoice from orders"
-                >
-                  <FiFileText size={15} />
-                  <span>Generate Invoice</span>
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-
           {overviewSubView === "acquisition" ? (
             <CustomerAcquisitionDashboard orders={baseOrders} />
           ) : (
@@ -250,6 +242,7 @@ export default function AdminDashboard() {
           )}
         </div>
       ),
+      kpis: <AdvancedKpis orders={baseOrders} />,
       regular: null, // Handled by dedicated /admin/regular-orders route
       issues: (
         <AdminIssuesTab
@@ -260,21 +253,6 @@ export default function AdminDashboard() {
         />
       ),
       expenses: null, // Handled by dedicated /admin/expenses route
-      analytics: (
-        <AdminAnalyticsTab
-          orders={orders}
-          allOrders={baseOrders}
-          screens={screenStats}
-          searches={searchStats}
-          totalUsers={totalUsers}
-          currentDateFrom={dateFrom}
-          currentDateTo={dateTo}
-          onDateRangeChange={(from, to) => {
-            setDateFrom(from);
-            setDateTo(to);
-          }}
-        />
-      ),
     };
 
     return panels[activeTab] || null;
@@ -286,11 +264,8 @@ export default function AdminDashboard() {
     handleAddIssue,
     handleDeleteData,
     handleEditIssue,
-    orders,
+    goTo,
     overviewSubView,
-    screenStats,
-    searchStats,
-    totalUsers,
     isViewer
   ]);
 
@@ -298,7 +273,7 @@ export default function AdminDashboard() {
 
   return (
 
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
@@ -312,20 +287,25 @@ export default function AdminDashboard() {
       />
 
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
-        <AdminTopBar
-          title={activeTabConfig.title}
-          dateFrom={dateFrom}
-          setDateFrom={setDateFrom}
-          dateTo={dateTo}
-          setDateTo={setDateTo}
-          onExpensesClick={() => navigate("/admin/expenses")}
-          onCalculatorClick={() => navigate("/admin/calculator")}
-          orders={orders}
+        <AdminPageHeader
+          title={PAGE_HEADINGS[activeTab]?.title || activeTabConfig.title}
+          subtitle={typeof PAGE_HEADINGS[activeTab]?.subtitle === "function" ? PAGE_HEADINGS[activeTab].subtitle({ kpiMonths }) : PAGE_HEADINGS[activeTab]?.subtitle}
           onMenuClick={() => setIsMobileMenuOpen(true)}
-          hideDateFilter={activeTab === "overview"}
+          actions={activeTab === "overview" && !isViewer ? (
+            <>
+              <OrderAcceptanceToggle />
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]"
+              >
+                <FiFileText size={14} /> Generate invoice
+              </button>
+            </>
+          ) : null}
         />
 
-        <div className="p-4 lg:p-8">
+        <div className={activeTab === "issues" ? "px-4 pb-10 pt-6 lg:px-10" : ""}>
           {saveMessage && (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 shadow-sm">
               {saveMessage}

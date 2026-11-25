@@ -4,22 +4,17 @@ import AdminRoute from "./components/Auth/AdminRoute";
 import ClientProtectedRoute from "./components/Auth/ClientProtectedRoute";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminExpenses from "./pages/AdminExpenses";
 import AdminRegularOrders from "./pages/AdminRegularOrders";
 import AdminB2BOrders from "./pages/AdminB2BOrders";
 import InvestorDashboard from "./pages/InvestorDashboard";
-import Calculator from "./pages/Calculator";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientCategoryOrders from "./pages/ClientCategoryOrders";
 import ClientOrderDetail from "./pages/ClientOrderDetail";
-import AdminMetaAdsLeads from "./pages/AdminMetaAdsLeads";
-import AdminDailyReport from "./pages/AdminDailyReport";
 import AdminSalaries from "./pages/AdminSalaries";
 import AdminServices from "./pages/AdminServices";
 import AdminCouponsOffers from "./pages/AdminCouponsOffers";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminWallets from "./pages/AdminWallets";
-import AdminDataExport from "./pages/AdminDataExport";
 import NotFound from "./pages/NotFound";
 import HostelOrderForm from "./pages/HostelOrderForm";
 
@@ -38,17 +33,17 @@ export default function App() {
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/b2b-orders" element={<AdminRoute><AdminB2BOrders /></AdminRoute>} />
           <Route path="/admin/regular-orders" element={<AdminRoute><AdminRegularOrders /></AdminRoute>} />
-          <Route path="/admin/expenses" element={<AdminRoute><AdminExpenses /></AdminRoute>} />
+          <Route path="/admin/expenses" element={<Navigate to="/admin" replace />} />
           <Route path="/admin/salaries" element={<AdminRoute><AdminSalaries /></AdminRoute>} />
           <Route path="/admin/investors" element={<AdminRoute><InvestorDashboard /></AdminRoute>} />
-          <Route path="/admin/calculator" element={<AdminRoute><Calculator /></AdminRoute>} />
-          <Route path="/admin/meta-leads" element={<AdminRoute><AdminMetaAdsLeads /></AdminRoute>} />
-          <Route path="/admin/daily-report" element={<AdminRoute><AdminDailyReport /></AdminRoute>} />
+          <Route path="/admin/calculator" element={<Navigate to="/admin" replace />} />
+          <Route path="/admin/meta-leads" element={<Navigate to="/admin" replace />} />
+          <Route path="/admin/daily-report" element={<Navigate to="/admin" replace />} />
           <Route path="/admin/services" element={<AdminRoute><AdminServices /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
           <Route path="/admin/coupons" element={<AdminRoute><AdminCouponsOffers /></AdminRoute>} />
           <Route path="/admin/wallets" element={<AdminRoute><AdminWallets /></AdminRoute>} />
-          <Route path="/admin/data-export" element={<AdminRoute><AdminDataExport /></AdminRoute>} />
+          <Route path="/admin/data-export" element={<Navigate to="/admin" replace />} />
 
           {/* Client Portal */}
           <Route path="/client/dashboard" element={<ClientProtectedRoute><ClientDashboard /></ClientProtectedRoute>} />

@@ -1,143 +1,71 @@
 import { useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiLogOut, FiMenu } from "react-icons/fi";
-import BrandLogo from "../Shared/BrandLogo";
-import { ADMIN_SIDEBAR_TABS } from "../../config/adminTabs";
+import { FiLogOut } from "react-icons/fi";
+import { ADMIN_NAV_GROUPS, ADMIN_TAB_ROUTES } from "../../config/adminTabs";
 
-const SIDEBAR_ITEM_BASE_CLASS = "w-full flex items-center text-[13.5px] font-medium transition-all duration-200 group relative";
-
-export default function AdminSidebar({ activeTab, setActiveTab, issuesCount, user, onLogout, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
+// Andes Admin menu: four groups, text only. Pages with their own address are
+// opened from here directly; the rest are tabs inside /admin.
+export default function AdminSidebar({ activeTab, setActiveTab, user, onLogout, isMobileOpen, setIsMobileOpen }) {
   const navigate = useNavigate();
+
+  const open = (key) => {
+    setIsMobileOpen?.(false);
+    const route = ADMIN_TAB_ROUTES[key];
+    if (route) {
+      navigate(route);
+      return;
+    }
+    setActiveTab?.(key);
+  };
+
   return (
     <>
       {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileOpen?.(false)} />
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen bg-[#0F172A] text-white flex flex-col z-50 border-r border-[#1E293B] transition-all duration-300 ease-in-out
-          ${isCollapsed ? "w-[80px]" : "w-[220px]"}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[220px] flex-col bg-[#153a3f] text-white transition-transform duration-300
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{ fontFamily: "DM Sans, sans-serif" }}
       >
-        <div className={`p-6 flex items-center justify-between ${isCollapsed ? "px-4" : "px-6"}`}>
-          <div className="flex items-center gap-3 overflow-hidden">
-            <BrandLogo className="h-9 w-9 text-blue-400 flex-shrink-0" />
-            {!isCollapsed && (
-              <div className="animate-fade-in whitespace-nowrap">
-                <span className="font-extrabold text-white text-lg leading-tight tracking-tight">Andes</span>
-                <span className="block text-[10px] text-[#64748B] font-bold tracking-[0.15em] uppercase mt-0.5">
-                  Admin Portal
-                </span>
-              </div>
-            )}
-          </div>
-
-          {!isCollapsed && (
-            <button
-              onClick={() => {
-                if (window.innerWidth < 1024) setIsMobileOpen(false);
-                else setIsCollapsed(true);
-              }}
-              aria-label="Collapse sidebar"
-              className="p-1.5 rounded-lg hover:bg-[#1E293B] text-[#64748B] hover:text-white transition-colors"
-            >
-              <FiChevronLeft size={18} />
-            </button>
-          )}
+        <div className="px-6 pb-5 pt-7">
+          <span className="text-[26px] font-extrabold leading-none tracking-tight">
+            andes<span className="text-[#5fd0b0]">.</span>
+          </span>
         </div>
 
-        {isCollapsed && (
-          <div className="px-4 mb-4">
-            <button
-              onClick={() => setIsCollapsed(false)}
-              aria-label="Expand sidebar"
-              className="w-full flex items-center justify-center p-3 rounded-xl bg-[#1E293B] text-blue-400 hover:text-white transition-all shadow-lg"
-            >
-              <FiMenu size={20} />
-            </button>
-          </div>
-        )}
-
-        <nav className="flex-1 mt-4 space-y-1 px-3 overflow-y-auto scrollbar-hide">
-          {ADMIN_SIDEBAR_TABS.map((item) => {
-            const badge = 0;
-
-            return (
-              <button
-                key={item.key}
-                onClick={() => {
-                  // This page routes itself, so no other page's tab handler needs to know it.
-                  if (item.key === "subscriptions") {
-                    setIsMobileOpen?.(false);
-                    navigate("/admin/subscriptions");
-                    return;
-                  }
-                  setActiveTab(item.key);
-                }}
-                title={isCollapsed ? item.navLabel : ""}
-                className={`${SIDEBAR_ITEM_BASE_CLASS} ${isCollapsed ? "justify-center py-3.5 rounded-xl mx-1" : "justify-between px-4 py-3 rounded-xl"} ${
-                  activeTab === item.key
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30 border-l-4 border-l-blue-300"
-                    : "text-[#94A3B8] hover:bg-[#1E293B] hover:text-white border-l-4 border-l-transparent"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <item.navIcon size={20} className={activeTab === item.key ? "text-white" : "text-[#475569] group-hover:text-blue-400 transition-colors"} />
-                  {!isCollapsed && <span className="animate-fade-in font-semibold">{item.navLabel}</span>}
-                </div>
-
-                {!isCollapsed && badge > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-fade-in">
-                    {badge}
-                  </span>
-                )}
-
-                {isCollapsed && badge > 0 && (
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[#0F172A]" />
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 pb-4">
+          {ADMIN_NAV_GROUPS.map((group) => (
+            <div key={group.label} className="mb-5">
+              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8fb2ae]">{group.label}</p>
+              {group.items.map(([key, label]) => {
+                const active = activeTab === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => open(key)}
+                    className={`block w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium transition-colors ${
+                      active ? "bg-white/15 text-white" : "text-[#d6e6e3] hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div className={`p-4 border-t border-[#1E293B] bg-[#1E293B]/30 mb-2 transition-all flex-shrink-0 ${isCollapsed ? "px-2" : "px-4"}`}>
-          <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : "px-2"}`}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-xs text-white shadow-lg flex-shrink-0">
-              {user?.name?.charAt(0) || "A"}
-            </div>
-
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0 animate-fade-in">
-                <p className="text-xs font-black text-white truncate uppercase tracking-tight">{user?.name}</p>
-                <p className="text-[10px] text-[#64748B] uppercase font-black tracking-wider mt-0.5">Admin Role</p>
-              </div>
-            )}
-
-            {!isCollapsed && (
-              <button
-                onClick={onLogout}
-                title="Logout Session"
-                aria-label="Logout Session"
-                className="p-2 text-[#475569] hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-              >
-                <FiLogOut size={18} />
-              </button>
-            )}
-          </div>
-
-          {isCollapsed && (
-            <button
-              onClick={onLogout}
-              title="Logout Session"
-              aria-label="Logout Session"
-              className="mt-4 w-full flex items-center justify-center p-2 text-[#475569] hover:text-red-400 transition-all"
-            >
-              <FiLogOut size={20} />
-            </button>
-          )}
+        <div className="border-t border-white/10 px-3 py-3">
+          {user?.email && <p className="truncate px-3 pb-1 text-[11px] text-[#8fb2ae]">{user.email}</p>}
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#d6e6e3] hover:bg-white/10 hover:text-white"
+          >
+            <FiLogOut size={15} /> Sign out
+          </button>
         </div>
       </aside>
     </>

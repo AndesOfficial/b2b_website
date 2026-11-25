@@ -499,6 +499,8 @@ export function useOpsDashboard(orders, range, trendDays) {
     const prev = periodMetrics(orders, prevRange);
     const alerts = buildAlerts(cur, prev, orders);
     const trend = trendSeries(orders, range.to, trendDays);
-    return { ...cur, prev, alerts, trend };
+    const cutoff = addDays(toDateStr(new Date()), -3);
+    const delayedDeliveries = orders.filter((o) => isB2C(o) && !isCancelled(o) && reached(o, "pickedUp") && !reached(o, "delivered") && o.date && o.date < cutoff).length;
+    return { ...cur, prev, alerts, trend, delayedDeliveries };
   }, [orders, range, trendDays]);
 }

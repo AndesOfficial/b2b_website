@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiDownload, FiMenu } from "react-icons/fi";
 import AdminSidebar from "../components/Layout/AdminSidebar";
+import AdminPageHeader from "../components/Layout/AdminPageHeader";
 import InvestorMetrics from "../components/InvestorMetrics";
 import { useHostelAuth } from "../context/HostelAuthContext";
 
@@ -40,7 +41,7 @@ export default function InvestorDashboard() {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab="investors"
         setActiveTab={handleSidebarTabChange}
@@ -57,35 +58,22 @@ export default function InvestorDashboard() {
           isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"
         } ml-0`}
       >
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#F1F5F9]/95 backdrop-blur">
-          <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
-                aria-label="Open sidebar"
-              >
-                <FiMenu size={20} />
-              </button>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Admin Portal</p>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">Investor Relations</h1>
-              </div>
-            </div>
-
+        <AdminPageHeader
+          title="Investor Relations"
+          subtitle="Quarterly financial performance."
+          onMenuClick={() => setIsMobileMenuOpen(true)}
+          actions={(
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]"
             >
-              <FiDownload size={16} />
-              Export Report
+              <FiDownload size={14} /> Export report
             </button>
-          </div>
-        </header>
+          )}
+        />
 
-        <div className="p-4 lg:p-8">
+        <div className="px-4 pb-10 pt-6 lg:px-10">
           <InvestorMetrics />
         </div>
       </main>
