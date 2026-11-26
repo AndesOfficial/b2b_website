@@ -182,7 +182,7 @@ export const ADMIN_SIDEBAR_TABS = Object.values(ADMIN_TAB_CONFIG).filter((tab) =
 // The menu, in the order and groups the admin sees it.
 export const ADMIN_NAV_GROUPS = [
   { label: "Workspace", items: [["overview", "Overview"], ["analytics", "Analytics"], ["kpis", "Advanced KPIs"]] },
-  { label: "Operations", items: [["b2b", "B2B Orders"], ["regular", "B2C Orders"], ["issues", "Issues"]] },
+  { label: "Operations", items: [["b2b", "B2B Orders"], ["regular", "B2C Orders"], ["issues", "Issues"], ["botRequests", "Bot Requests"]] },
   { label: "Finance", items: [["salaries", "Salaries"], ["investors", "Investor Relations"]] },
   { label: "Commerce", items: [["services", "Services"], ["coupons", "Coupons & Offers"], ["subscriptions", "Subscriptions"], ["wallets", "Wallets"]] },
 ];
@@ -197,6 +197,7 @@ export const ADMIN_TAB_ROUTES = {
   coupons: "/admin/coupons",
   subscriptions: "/admin/subscriptions",
   wallets: "/admin/wallets",
+  botRequests: "/admin/bot-requests",
 };
 
 export function getAdminTabConfig(tabKey) {
