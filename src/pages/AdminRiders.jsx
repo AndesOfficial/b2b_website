@@ -122,13 +122,13 @@ function AddRiderModal({ onClose, onDone }) {
   };
 
   return (
-    <Modal title="Add rider" subtitle="Name, mobile, email and a temporary password are required" onClose={onClose}>
+    <Modal title="Add rider" subtitle="Name, email and a temporary password are required; mobile can come later" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-bold text-rose-700">{error}</div>}
         {warn && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 font-bold text-amber-800">{warn}</div>}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label className={labelCls}>Name *</label><input className={inputCls} value={f.name} onChange={(e) => set("name", e.target.value)} required maxLength={60} /></div>
-          <div><label className={labelCls}>Mobile number *</label><input className={inputCls} inputMode="numeric" value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="10 digits" required /></div>
+          <div><label className={labelCls}>Mobile number <span className="normal-case tracking-normal font-semibold text-slate-400">(add later if unknown)</span></label><input className={inputCls} inputMode="numeric" value={f.phone} onChange={(e) => set("phone", e.target.value)} placeholder="10 digits" /></div>
           <div><label className={labelCls}>Email (login) *</label><input type="email" className={inputCls} value={f.email} onChange={(e) => set("email", e.target.value)} required /></div>
           <div><label className={labelCls}>Temporary password *</label><input type="text" autoComplete="off" className={inputCls} value={f.password} onChange={(e) => set("password", e.target.value)} placeholder="At least 8 characters" required minLength={8} /></div>
         </div>
@@ -150,7 +150,8 @@ function AddRiderModal({ onClose, onDone }) {
   );
 }
 
-function EditRiderModal({ rider, onClose, onDone }) {
+function EditRiderModal({ rider, allRiders, onClose, onDone }) {
+  const [phone, setPhone] = useState(rider.phone || "");
   const [areas, setAreas] = useState((rider.assignedAreas || []).join(", "));
   const [files, setFiles] = useState({ aadhaar: null, license: null });
   const [saving, setSaving] = useState(false);
@@ -160,6 +161,12 @@ function EditRiderModal({ rider, onClose, onDone }) {
     e.preventDefault();
     setError(""); setSaving(true);
     try {
+      const cleanPhone = phone.replace(/[\s-]/g, "").replace(/^(\+91|91)(?=\d{10}$)/, "");
+      if (cleanPhone !== (rider.phone || "")) {
+        if (cleanPhone && !/^[6-9]\d{9}$/.test(cleanPhone)) throw new Error("Enter a valid 10 digit mobile number.");
+        if (cleanPhone && allRiders.some((r) => r.id !== rider.id && r.phone === cleanPhone)) throw new Error("Another rider already has this mobile number.");
+        await updateDoc(doc(db, "riders", rider.id), { phone: cleanPhone, updatedAt: serverTimestamp() });
+      }
       const next = parseAreas(areas);
       const prev = (rider.assignedAreas || []).join("|");
       if (next.join("|") !== prev) await call("setRiderRole", { riderId: rider.id, assignedAreas: next });
@@ -175,6 +182,10 @@ function EditRiderModal({ rider, onClose, onDone }) {
     <Modal title={`Edit ${rider.name}`} subtitle={`${rider.phone || ""} · ${rider.email || ""}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-bold text-rose-700">{error}</div>}
+        <div>
+          <label className={labelCls}>Mobile number</label>
+          <input className={inputCls} inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10 digits" />
+        </div>
         <div>
           <label className={labelCls}>Assigned areas <span className="normal-case tracking-normal font-semibold text-slate-400">(comma separated)</span></label>
           <input className={inputCls} value={areas} onChange={(e) => setAreas(e.target.value)} placeholder="e.g. Baner, Aundh" />
@@ -297,7 +308,7 @@ function RidersPanel() {
       )}
 
       {adding && <AddRiderModal onClose={() => setAdding(false)} onDone={say} />}
-      {editing && <EditRiderModal rider={editing} onClose={() => setEditing(null)} onDone={say} />}
+      {editing && <EditRiderModal rider={editing} allRiders={riders || []} onClose={() => setEditing(null)} onDone={say} />}
     </div>
   );
 }
