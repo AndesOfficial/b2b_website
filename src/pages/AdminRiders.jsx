@@ -228,12 +228,30 @@ function RidersPanel() {
     })
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""))), [riders, showRemoved, search]);
 
-  const remove = async (r) => {
-    if (!window.confirm(`Remove ${r.name}? Their login is switched off and they leave the area list. Past orders are kept.`)) return;
+  const [removing, setRemoving] = useState(null); // { rider, orders }
+
+  const doRemove = async (r, unassignOrders) => {
     setBusyId(r.id);
-    try { await call("adminRemoveRider", { riderId: r.id }); say(`${r.name} removed.`); }
-    catch (err) { setError(errText(err)); }
+    try {
+      await call("adminRemoveRider", { riderId: r.id, unassignOrders });
+      say(`${r.name} removed.${unassignOrders ? " Their orders are now under Needs a rider in the rider app." : ""}`);
+      setRemoving(null);
+    } catch (err) { setError(errText(err)); }
     setBusyId("");
+  };
+
+  // Looks up the rider's unfinished orders first and shows them before asking.
+  const remove = async (r) => {
+    setBusyId(r.id);
+    let orders;
+    try { ({ orders } = await call("adminRiderOpenOrders", { riderId: r.id })); }
+    catch (err) { setError(errText(err)); setBusyId(""); return; }
+    setBusyId("");
+    if (orders.length === 0) {
+      if (window.confirm(`Remove ${r.name}? Their login is switched off and they leave the area list. Past orders are kept.`)) doRemove(r, false);
+      return;
+    }
+    setRemoving({ rider: r, orders });
   };
 
   const roleLabel = (r) => (r.role === "admin" ? "Admin" : r.role === "riderManager" ? "Manager" : "Rider");
@@ -307,6 +325,30 @@ function RidersPanel() {
         </div>
       )}
 
+      {removing && (
+        <Modal title={`Remove ${removing.rider.name}?`} subtitle={`${removing.orders.length} order${removing.orders.length === 1 ? " is" : "s are"} still assigned to this rider`} onClose={() => setRemoving(null)}>
+          <div className="max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100">
+            {removing.orders.map((o) => (
+              <div key={`${o.collection}-${o.id}`} className="flex items-center justify-between gap-3 p-3">
+                <div>
+                  <div className="font-extrabold text-slate-900">#{o.number}{o.collection === "hostels_orders" ? " · Hostel" : ""}</div>
+                  <div className="text-slate-500 font-semibold">{o.area || "No area"} · pickup {o.pickupDate || "—"} · drop {o.dropDate || "—"}</div>
+                </div>
+                <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase text-slate-600">{o.status || "new"}</span>
+              </div>
+            ))}
+          </div>
+          <p className="font-semibold text-slate-600">
+            If you remove them, these orders are taken off {removing.rider.name} and appear under “Needs a rider” in the rider app until a manager assigns someone. The rider’s login is switched off.
+          </p>
+          <div className="flex gap-2">
+            <button disabled={busyId === removing.rider.id} onClick={() => doRemove(removing.rider, true)} className="flex-1 rounded-xl bg-rose-600 py-2.5 font-black text-white hover:bg-rose-700 disabled:opacity-60">
+              {busyId === removing.rider.id ? "Removing…" : "Unassign orders and remove"}
+            </button>
+            <button onClick={() => setRemoving(null)} className="rounded-xl px-4 py-2.5 font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+          </div>
+        </Modal>
+      )}
       {adding && <AddRiderModal onClose={() => setAdding(false)} onDone={say} />}
       {editing && <EditRiderModal rider={editing} allRiders={riders || []} onClose={() => setEditing(null)} onDone={say} />}
     </div>
