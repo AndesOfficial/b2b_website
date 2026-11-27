@@ -4,7 +4,7 @@ import { db } from "../../firebase";
 import {
   FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiDownload,
   FiEye, FiFilter, FiImage, FiLayers, FiRefreshCw, FiSearch, FiTag, FiUsers, FiX,
-  FiEdit2, FiPlus, FiTrash2, FiCheck,
+  FiEdit2, FiPlus, FiTrash2, FiCheck, FiMapPin,
 } from "react-icons/fi";
 import { FaIndianRupeeSign, FaWeightHanging } from "react-icons/fa6";
 import LoadingSpinner from "../Shared/LoadingSpinner";
@@ -35,6 +35,7 @@ export default function AdminB2BTab() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showProps, setShowProps] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   // Filters
@@ -388,6 +389,13 @@ export default function AdminB2BTab() {
           </div>
 
           <button
+            onClick={() => setShowProps(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white text-slate-700 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <FiMapPin size={14} /> Properties
+          </button>
+
+          <button
             onClick={() => setShowAdd(true)}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
@@ -727,6 +735,8 @@ export default function AdminB2BTab() {
         </div>
       )}
 
+      {showProps && <B2BPropertiesModal onClose={() => setShowProps(false)} />}
+
       {/* ADD B2B ENTRY MODAL (single date or a date range) */}
       {showAdd && (
         <B2BAddModal
@@ -751,6 +761,111 @@ export default function AdminB2BTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * B2B properties: name + area + location. The manager dashboard reads these
+ * so the manager can enter each property's order for the day.
+ */
+function B2BPropertiesModal({ onClose }) {
+  const [props, setProps] = useState([]);
+  const [form, setForm] = useState({ id: null, name: "", area: "", location: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => onSnapshot(collection(db, "b2bProperties"), (snap) => {
+    setProps(snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => String(a.area || "").localeCompare(String(b.area || "")) || String(a.name).localeCompare(String(b.name))));
+  }, (err) => setError(err.message)), []);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setError("");
+    const name = form.name.trim();
+    const area = form.area.trim();
+    if (!name) return setError("Enter the property name.");
+    if (!area) return setError("Enter the area.");
+    const id = form.id || b2bSlug(name);
+    if (!form.id && props.some((p) => p.id === id)) return setError("A property with this name already exists.");
+    setSaving(true);
+    try {
+      await setDoc(doc(db, "b2bProperties", id), {
+        name, area, location: form.location.trim(), active: true, updatedAt: serverTimestamp(),
+        ...(form.id ? {} : { createdAt: serverTimestamp() }),
+      }, { merge: true });
+      setForm({ id: null, name: "", area: "", location: "" });
+    } catch (err) {
+      setError(err.message || "Could not save.");
+    }
+    setSaving(false);
+  };
+
+  const toggle = (p) => updateDoc(doc(db, "b2bProperties", p.id), { active: p.active === false, updatedAt: serverTimestamp() }).catch((err) => setError(err.message));
+  const remove = (p) => {
+    if (!window.confirm(`Delete ${p.name}? Past entries are not affected.`)) return;
+    deleteDoc(doc(db, "b2bProperties", p.id)).catch((err) => setError(err.message));
+  };
+
+  const inputCls = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-blue-500";
+  const labelCls = "block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] my-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 tracking-tight">B2B properties</h2>
+            <p className="text-xs text-slate-500 font-semibold">The manager sees these each day and enters their orders</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl"><FiX size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          {error && <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl font-bold">{error}</div>}
+
+          <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <div>
+              <label className={labelCls}>Property name</label>
+              <input className={inputCls} value={form.name} disabled={!!form.id} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className={labelCls}>Area</label>
+              <input className={inputCls} value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} placeholder="e.g. Baner" />
+            </div>
+            <div>
+              <label className={labelCls}>Location / address</label>
+              <input className={inputCls} value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="Address or map link" />
+            </div>
+            <div className="sm:col-span-3 flex gap-2">
+              <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 disabled:opacity-60">
+                {saving ? "Saving…" : form.id ? "Save changes" : "Add property"}
+              </button>
+              {form.id && (
+                <button type="button" onClick={() => setForm({ id: null, name: "", area: "", location: "" })} className="px-4 py-2 font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel edit</button>
+              )}
+            </div>
+          </form>
+
+          <div className="border border-slate-100 rounded-xl divide-y divide-slate-100">
+            {props.length === 0 && <div className="p-4 text-slate-400 font-semibold">No properties yet.</div>}
+            {props.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 p-3">
+                <div className={p.active === false ? "opacity-50" : ""}>
+                  <div className="font-extrabold text-slate-900">{p.name}</div>
+                  <div className="text-slate-500 font-semibold">{p.area}{p.location ? ` · ${p.location}` : ""}</div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button type="button" onClick={() => setForm({ id: p.id, name: p.name, area: p.area || "", location: p.location || "" })} className="px-2.5 py-1 font-bold text-blue-600 bg-blue-50 rounded-lg">Edit</button>
+                  <button type="button" onClick={() => toggle(p)} className="px-2.5 py-1 font-bold text-slate-600 bg-slate-100 rounded-lg">{p.active === false ? "Enable" : "Disable"}</button>
+                  <button type="button" onClick={() => remove(p)} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg"><FiTrash2 size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
