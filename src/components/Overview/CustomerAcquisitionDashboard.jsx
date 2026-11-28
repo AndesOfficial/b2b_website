@@ -13,9 +13,7 @@ import {
   FiHelpCircle,
   FiCheck,
   FiTrendingUp,
-  FiArrowRight,
 } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
 import { BiRupee } from 'react-icons/bi';
 import {
   FaWhatsapp,
@@ -88,7 +86,6 @@ function CustomerTypeIcon({ type, size = 15 }) {
 }
 
 export default function CustomerAcquisitionDashboard({ orders = [] }) {
-  const navigate = useNavigate();
 
   // Date filter state: Default to month view through current date
   const [dateFilterPreset, setDateFilterPreset] = useState('month'); // 'today' | 'week' | 'month' | 'custom'
@@ -623,120 +620,6 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
 
         </div>
 
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          META ADS CAMPAIGN & LEADS PERFORMANCE WIDGET
-      ────────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-pink-50 text-[#EC4899] flex items-center justify-center shrink-0 border border-pink-100">
-              <FaBullhorn size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
-                  Meta Ads Campaign & Leads Overview
-                </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-[#EC4899] uppercase tracking-wider">
-                  Paid Advertising
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Inbound lead pipeline, serviceability, and conversions for {formattedRangeLabel}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate('/admin/meta-leads')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100/70 rounded-xl transition-all cursor-pointer self-start sm:self-auto"
-          >
-            Manage Meta Leads <FiArrowRight size={13} />
-          </button>
-        </div>
-
-        {/* 5 KPI Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-4">
-          {/* Card 1: Total Leads */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Leads</p>
-            <p className="text-2xl font-black text-[#0F172A] mt-1">{metaAdsSummary?.totalLeads || 0}</p>
-            <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Meta Ads Inbound</p>
-          </div>
-
-          {/* Card 2: Conversions */}
-          <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/60">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Conversions</p>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {metaAdsSummary?.conversionRate || 0}%
-              </span>
-            </div>
-            <p className="text-2xl font-black text-emerald-800 mt-1">{metaAdsSummary?.conversions || 0}</p>
-            <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">Converted Customers</p>
-          </div>
-
-          {/* Card 3: Potential */}
-          <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/60">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Potential</p>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
-                {metaAdsSummary?.potentialRate || 0}%
-              </span>
-            </div>
-            <p className="text-2xl font-black text-blue-800 mt-1">{metaAdsSummary?.potential || 0}</p>
-            <p className="text-[10px] font-semibold text-blue-600 mt-0.5">Interested Pipeline</p>
-          </div>
-
-          {/* Card 4: OSA (Out of Service Area) */}
-          <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/60">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">OSA (Unserviceable)</p>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                {metaAdsSummary?.osaRate || 0}%
-              </span>
-            </div>
-            <p className="text-2xl font-black text-amber-800 mt-1">{metaAdsSummary?.osa || 0}</p>
-            <p className="text-[10px] font-semibold text-amber-600 mt-0.5">Outside Service Area</p>
-          </div>
-
-          {/* Card 5: No Response */}
-          <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200/60">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700">No Response</p>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-800">
-                {metaAdsSummary?.noResponseRate || 0}%
-              </span>
-            </div>
-            <p className="text-2xl font-black text-rose-800 mt-1">{metaAdsSummary?.noResponse || 0}</p>
-            <p className="text-[10px] font-semibold text-rose-600 mt-0.5">Unresponsive Leads</p>
-          </div>
-        </div>
-
-        {/* Funnel Distribution Bar */}
-        {(metaAdsSummary?.totalLeads || 0) > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1.5">
-              <span>Lead Distribution Pipeline</span>
-              <span>{metaAdsSummary.totalLeads} Total Leads Tracked</span>
-            </div>
-            <div className="flex h-3 rounded-full overflow-hidden bg-slate-100">
-              <div style={{ width: `${metaAdsSummary.conversionRate}%` }} className="bg-emerald-500" title={`Conversions: ${metaAdsSummary.conversions} (${metaAdsSummary.conversionRate}%)`} />
-              <div style={{ width: `${metaAdsSummary.potentialRate}%` }} className="bg-blue-500" title={`Potential: ${metaAdsSummary.potential} (${metaAdsSummary.potentialRate}%)`} />
-              <div style={{ width: `${metaAdsSummary.osaRate}%` }} className="bg-amber-400" title={`OSA: ${metaAdsSummary.osa} (${metaAdsSummary.osaRate}%)`} />
-              <div style={{ width: `${metaAdsSummary.noResponseRate}%` }} className="bg-rose-400" title={`No Response: ${metaAdsSummary.noResponse} (${metaAdsSummary.noResponseRate}%)`} />
-            </div>
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-[10.5px] font-semibold text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Conversions ({metaAdsSummary.conversions})</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Potential ({metaAdsSummary.potential})</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /> OSA / Unserviceable ({metaAdsSummary.osa})</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400" /> No Response ({metaAdsSummary.noResponse})</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
