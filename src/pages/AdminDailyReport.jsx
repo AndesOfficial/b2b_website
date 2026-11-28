@@ -74,7 +74,7 @@ export default function AdminDailyReport() {
   if (loading) return <LoadingSpinner fullscreen />;
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: 'DM Sans, sans-serif' }}>
       <AdminSidebar
         activeTab="dailyReport"
         setActiveTab={handleSidebarTabChange}
@@ -88,7 +88,7 @@ export default function AdminDailyReport() {
 
       <main
         className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[220px]'
+          isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[218px]'
         } ml-0`}
       >
         {/* Header */}

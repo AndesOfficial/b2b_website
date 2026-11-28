@@ -196,7 +196,7 @@ export default function AdminSalaries() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* Sidebar */}
       <AdminSidebar
         activeTab="salaries"
@@ -212,7 +212,7 @@ export default function AdminSalaries() {
       {/* Main Content Area */}
       <main
         className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"
+          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"
         } ml-0`}
       >
         {/* Sticky Header */}
@@ -225,18 +225,18 @@ export default function AdminSalaries() {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] focus:outline-none"
+                className="rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] focus:outline-none"
               >
                 {monthOptions.map((opt) => (
                   <option key={opt.val} value={opt.val}>{opt.label}</option>
                 ))}
               </select>
               <button type="button" onClick={() => setShowAttendanceModal(true)}
-                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                className="rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] hover:bg-[#d9f1e3]">
                 Attendance
               </button>
               <button type="button" onClick={() => handleOpenAdjustment()}
-                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                className="rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] hover:bg-[#d9f1e3]">
                 Overtime
               </button>
               <button type="button" onClick={() => handleOpenPayment()}
@@ -244,7 +244,7 @@ export default function AdminSalaries() {
                 Record payment
               </button>
               <button type="button" onClick={() => { setEditingWorker(null); setShowAddWorkerModal(true); }}
-                className="rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]">
+                className="rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] hover:bg-[#d9f1e3]">
                 Add worker
               </button>
             </>
@@ -260,15 +260,15 @@ export default function AdminSalaries() {
               <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.currentMonthAccrued)}</p>
               <p className="mt-2 text-[12.5px] text-white/80">{metrics.totalWorkers} workers</p>
             </div>
-            <div className="rounded-xl border border-[#e3eae8] bg-white p-5 text-[#10262b]">
+            <div className="rounded-xl border border-[#dfe8e2] bg-white p-5 text-[#172c28]">
               <p className="text-[15px] font-medium">Paid</p>
               <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.totalPaid)}</p>
-              <p className="mt-2 text-[12.5px] text-[#5f726f]">This period</p>
+              <p className="mt-2 text-[12.5px] text-[#58706a]">This period</p>
             </div>
-            <div className="rounded-xl border border-[#e3eae8] bg-white p-5 text-[#10262b]">
+            <div className="rounded-xl border border-[#dfe8e2] bg-white p-5 text-[#172c28]">
               <p className="text-[15px] font-medium">Outstanding</p>
               <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{formatCurrency(metrics.totalRemaining)}</p>
-              <p className="mt-2 text-[12.5px] text-[#5f726f]">Still to pay</p>
+              <p className="mt-2 text-[12.5px] text-[#58706a]">Still to pay</p>
             </div>
           </div>
 

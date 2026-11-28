@@ -41,7 +41,7 @@ export default function AdminExpenses() {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab="expenses"
         setActiveTab={handleSidebarTabChange}
@@ -55,7 +55,7 @@ export default function AdminExpenses() {
 
       <main
         className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"
+          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"
         } ml-0`}
       >
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#F1F5F9]/95 backdrop-blur">

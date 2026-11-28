@@ -11,14 +11,14 @@ export default function AdminPageActions({ activeTab, onGenerateInvoice, onLogOr
       {/* Shared actions live in one place so the tab shell stays declarative. */}
       <button
         onClick={onLogOrder}
-        className={`${ACTION_BUTTON_BASE_CLASS} text-white bg-blue-600 hover:bg-blue-700`}
+        className={`${ACTION_BUTTON_BASE_CLASS} text-white bg-[#16654e] hover:bg-[#0f4f3c]`}
       >
         <FiPlus size={18} /> Log New Order
       </button>
 
       <button
         onClick={onGenerateInvoice}
-        className={`${ACTION_BUTTON_BASE_CLASS} text-white bg-indigo-600 hover:bg-indigo-700`}
+        className={`${ACTION_BUTTON_BASE_CLASS} text-white bg-[#112d25] hover:bg-[#0b2019]`}
       >
         <FiFileText size={18} /> Generate Invoice
       </button>

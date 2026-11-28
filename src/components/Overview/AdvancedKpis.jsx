@@ -13,15 +13,15 @@ function overduePct(money) {
 function Kpi({ label, value, previous, what, how }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-[#e3eae8] bg-white p-5">
+    <div className="rounded-xl border border-[#dfe8e2] bg-white p-5">
       <p className="text-[14px] font-medium text-[#3d5450]">{label}</p>
-      <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight text-[#10262b]">{value}</p>
-      <p className="mt-2 text-[12.5px] text-[#5f726f]">Previous month: {previous}</p>
+      <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight text-[#172c28]">{value}</p>
+      <p className="mt-2 text-[12.5px] text-[#58706a]">Previous month: {previous}</p>
       <p className="mt-3 text-[13px] text-[#3d5450]">{what}</p>
-      <button type="button" onClick={() => setOpen(!open)} className="mt-3 text-[13px] font-semibold text-[#1b6b58] hover:text-[#10463a]">
+      <button type="button" onClick={() => setOpen(!open)} className="mt-3 text-[13px] font-semibold text-[#16654e] hover:text-[#10463a]">
         How to measure it
       </button>
-      {open && <p className="mt-2 rounded-lg bg-[#f2f7f6] p-3 text-[12.5px] text-[#3d5450]">{how}</p>}
+      {open && <p className="mt-2 rounded-lg bg-[#eef5f0] p-3 text-[12.5px] text-[#3d5450]">{how}</p>}
     </div>
   );
 }
@@ -29,7 +29,7 @@ function Kpi({ label, value, previous, what, how }) {
 function Group({ title, children }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[20px] font-extrabold text-[#10262b]">{title}</h2>
+      <h2 className="text-[20px] font-extrabold text-[#172c28]">{title}</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   );

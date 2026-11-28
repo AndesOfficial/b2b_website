@@ -221,14 +221,14 @@ export default function AdminDashboard() {
       overview: <BusinessOverview orders={baseOrders} onGo={goTo} />,
       analytics: (
         <div className="space-y-5 px-4 pb-10 pt-6 lg:px-10">
-          <div className="flex gap-6 border-b border-[#e3eae8]">
+          <div className="flex gap-6 border-b border-[#dfe8e2]">
             {[["acquisition", "Customer acquisition & orders"], ["ops", "Operations & revenue breakdown"]].map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setOverviewSubView(key)}
                 className={`-mb-px border-b-2 pb-3 text-[14px] font-semibold ${
-                  overviewSubView === key ? "border-[#1b6b58] text-[#1b6b58]" : "border-transparent text-[#5f726f] hover:text-[#10262b]"
+                  overviewSubView === key ? "border-[#16654e] text-[#16654e]" : "border-transparent text-[#58706a] hover:text-[#172c28]"
                 }`}
               >
                 {label}
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
 
   return (
 
-    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
@@ -286,8 +286,9 @@ export default function AdminDashboard() {
         setIsMobileOpen={setIsMobileMenuOpen}
       />
 
-      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
+      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"} ml-0`}>
         <AdminPageHeader
+          eyebrow={activeTab === "overview" ? "Operations workspace" : undefined}
           title={PAGE_HEADINGS[activeTab]?.title || activeTabConfig.title}
           subtitle={typeof PAGE_HEADINGS[activeTab]?.subtitle === "function" ? PAGE_HEADINGS[activeTab].subtitle({ kpiMonths }) : PAGE_HEADINGS[activeTab]?.subtitle}
           onMenuClick={() => setIsMobileMenuOpen(true)}
@@ -297,7 +298,7 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={() => setShowInvoiceModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]"
+                className="inline-flex items-center gap-2 rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] hover:bg-[#d9f1e3]"
               >
                 <FiFileText size={14} /> Generate invoice
               </button>

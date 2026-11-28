@@ -10,10 +10,10 @@ export const countHighPriorityIssues = (orders) =>
 
 function Tile({ label, value, sub, dark }) {
   return (
-    <div className={`rounded-xl border p-5 ${dark ? "border-[#1e5a4c] bg-[#1e5a4c] text-white" : "border-[#e3eae8] bg-white text-[#10262b]"}`}>
-      <p className={`text-[15px] font-medium leading-snug ${dark ? "text-white" : "text-[#10262b]"}`}>{label}</p>
+    <div className={`rounded-xl border p-5 ${dark ? "border-[#1e5a4c] bg-[#1e5a4c] text-white" : "border-[#dfe8e2] bg-white text-[#172c28]"}`}>
+      <p className={`text-[15px] font-medium leading-snug ${dark ? "text-white" : "text-[#172c28]"}`}>{label}</p>
       <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight">{value}</p>
-      <p className={`mt-2 text-[12.5px] leading-snug ${dark ? "text-white/80" : "text-[#5f726f]"}`}>{sub}</p>
+      <p className={`mt-2 text-[12.5px] leading-snug ${dark ? "text-white/80" : "text-[#58706a]"}`}>{sub}</p>
     </div>
   );
 }
@@ -21,7 +21,7 @@ function Tile({ label, value, sub, dark }) {
 function LinkRow({ children, onClick }) {
   return (
     <button type="button" onClick={onClick}
-      className="block w-full border-b border-[#e3eae8] py-3 text-left text-[15px] font-semibold text-[#1b6b58] last:border-0 hover:text-[#10463a]">
+      className="block w-full border-b border-[#dfe8e2] py-3 text-left text-[15px] font-semibold text-[#16654e] last:border-0 hover:text-[#10463a]">
       {children}
     </button>
   );
@@ -44,8 +44,8 @@ export default function BusinessOverview({ orders, onGo }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <section className="rounded-xl border border-[#e3eae8] bg-white p-6">
-          <h2 className="text-[20px] font-extrabold text-[#10262b]">Revenue by channel</h2>
+        <section className="rounded-xl border border-[#dfe8e2] bg-white p-6">
+          <h2 className="text-[20px] font-extrabold text-[#172c28]">Revenue by channel</h2>
           <div className="mt-5 space-y-3">
             {[["B2B", overall.b2bRevenue], ["B2C", overall.b2cRevenue]].map(([name, value]) => (
               <div key={name} className="flex items-center gap-4">
@@ -53,18 +53,18 @@ export default function BusinessOverview({ orders, onGo }) {
                 <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#dfe9e6]">
                   <div className="h-full rounded-full bg-[#258a73]" style={{ width: `${Math.round((value / top) * 100)}%` }} />
                 </div>
-                <span className="w-24 text-right text-[14px] font-bold text-[#10262b]">{rs(value)}</span>
+                <span className="w-24 text-right text-[14px] font-bold text-[#172c28]">{rs(value)}</span>
               </div>
             ))}
           </div>
           <button type="button" onClick={() => onGo("analytics", "ops")}
-            className="mt-6 text-[15px] font-semibold text-[#1b6b58] hover:text-[#10463a]">
+            className="mt-6 text-[15px] font-semibold text-[#16654e] hover:text-[#10463a]">
             View operations &amp; revenue
           </button>
         </section>
 
-        <section className="rounded-xl border border-[#e3eae8] bg-white p-6">
-          <h2 className="text-[20px] font-extrabold text-[#10262b]">Needs attention</h2>
+        <section className="rounded-xl border border-[#dfe8e2] bg-white p-6">
+          <h2 className="text-[20px] font-extrabold text-[#172c28]">Needs attention</h2>
           <div className="mt-3">
             {delayedDeliveries > 0 && (
               <LinkRow onClick={() => onGo("regular")}>
@@ -76,13 +76,13 @@ export default function BusinessOverview({ orders, onGo }) {
                 {issues} high-priority issue{issues === 1 ? "" : "s"} open
               </LinkRow>
             )}
-            {delayedDeliveries === 0 && issues === 0 && <p className="py-3 text-[14px] text-[#5f726f]">Nothing needs attention right now.</p>}
+            {delayedDeliveries === 0 && issues === 0 && <p className="py-3 text-[14px] text-[#58706a]">Nothing needs attention right now.</p>}
           </div>
         </section>
       </div>
 
-      <section className="rounded-xl border border-[#e3eae8] bg-white p-6">
-        <h2 className="text-[20px] font-extrabold text-[#10262b]">Detailed reports</h2>
+      <section className="rounded-xl border border-[#dfe8e2] bg-white p-6">
+        <h2 className="text-[20px] font-extrabold text-[#172c28]">Detailed reports</h2>
         <div className="mt-2">
           <LinkRow onClick={() => onGo("analytics", "acquisition")}>Customer acquisition &amp; orders</LinkRow>
           <LinkRow onClick={() => onGo("analytics", "ops")}>Operations &amp; revenue breakdown</LinkRow>

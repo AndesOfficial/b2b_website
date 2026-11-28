@@ -362,7 +362,7 @@ export default function AdminCouponsOffers() {
   }, [couponOrders, orderSearchQuery]);
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* Toast Alert */}
       {toast && (
         <div
@@ -396,7 +396,7 @@ export default function AdminCouponsOffers() {
       {/* Main Content */}
       <main
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"
+          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"
         }`}
       >
         {/* Top Bar */}

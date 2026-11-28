@@ -41,7 +41,7 @@ export default function InvestorDashboard() {
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab="investors"
         setActiveTab={handleSidebarTabChange}
@@ -55,7 +55,7 @@ export default function InvestorDashboard() {
 
       <main
         className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"
+          isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"
         } ml-0`}
       >
         <AdminPageHeader
@@ -66,7 +66,7 @@ export default function InvestorDashboard() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-[#d5e0dd] bg-white px-3 py-1.5 text-xs font-semibold text-[#153a3f] hover:bg-[#f2f7f6]"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#dfe8e2] bg-white px-3 py-1.5 text-xs font-semibold text-[#172c28] hover:bg-[#d9f1e3]"
             >
               <FiDownload size={14} /> Export report
             </button>

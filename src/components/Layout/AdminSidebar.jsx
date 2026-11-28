@@ -20,34 +20,44 @@ export default function AdminSidebar({ activeTab, setActiveTab, user, onLogout, 
   return (
     <>
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileOpen?.(false)} />
+        <div className="fixed inset-0 z-50 bg-[#10292188] backdrop-blur-sm lg:hidden" onClick={() => setIsMobileOpen?.(false)} />
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[220px] flex-col bg-[#153a3f] text-white transition-transform duration-300
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[218px] flex-col bg-[#112d25] text-[#e4eee9] transition-transform duration-300
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{ fontFamily: "DM Sans, sans-serif" }}
       >
-        <div className="px-6 pb-5 pt-6">
-          <img src="/andes-logo.png" alt="Andes" className="block h-10 w-10" />
+        <div className="flex items-center gap-2.5 px-5 pb-5 pt-6">
+          <span className="grid h-[33px] w-[33px] place-items-center rounded-[9px] bg-[#bceb90]">
+            <img src="/andes-logo.png" alt="" className="h-[22px] w-[22px] object-contain" />
+          </span>
+          <span className="text-[28px] font-extrabold leading-none tracking-[-1.5px] text-white">andes</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
           {ADMIN_NAV_GROUPS.map((group) => (
-            <div key={group.label} className="mb-5">
-              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8fb2ae]">{group.label}</p>
+            <div key={group.label} className="mb-2">
+              <p className="px-2.5 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9dbab0]">{group.label}</p>
               {group.items.map(([key, label]) => {
                 const active = activeTab === key;
+                const launch = key === "analytics";
                 return (
                   <button
                     key={key}
                     type="button"
                     onClick={() => open(key)}
-                    className={`block w-full rounded-lg px-3 py-2 text-left text-[14px] font-medium transition-colors ${
-                      active ? "bg-white/15 text-white" : "text-[#d6e6e3] hover:bg-white/10 hover:text-white"
+                    aria-current={active ? "page" : undefined}
+                    className={`my-0.5 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[14px] font-medium transition-colors ${
+                      active
+                        ? "bg-[#285143] text-white"
+                        : launch
+                          ? "border border-[#568577] text-[#d6f9b7] hover:bg-[#285143] hover:text-white"
+                          : "text-[#e4eee9] hover:bg-[#285143] hover:text-white"
                     }`}
                   >
-                    {label}
+                    <span>{label}</span>
+                    {launch && <span aria-hidden="true">↗</span>}
                   </button>
                 );
               })}
@@ -56,11 +66,11 @@ export default function AdminSidebar({ activeTab, setActiveTab, user, onLogout, 
         </nav>
 
         <div className="border-t border-white/10 px-3 py-3">
-          {user?.email && <p className="truncate px-3 pb-1 text-[11px] text-[#8fb2ae]">{user.email}</p>}
+          {user?.email && <p className="truncate px-2.5 pb-1 text-[11px] text-[#9dbab0]">{user.email}</p>}
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#d6e6e3] hover:bg-white/10 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-[#e4eee9] hover:bg-[#285143] hover:text-white"
           >
             <FiLogOut size={15} /> Sign out
           </button>

@@ -375,10 +375,10 @@ export default function AdminRiders() {
   const onSidebar = useCallback((tab) => navigate("/admin", { state: { initialTab: tab } }), [navigate]);
 
   return (
-    <div className="flex min-h-screen bg-white" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar activeTab="riders" setActiveTab={onSidebar} user={client} onLogout={logout}
         isCollapsed={collapsed} setIsCollapsed={setCollapsed} isMobileOpen={mobileOpen} setIsMobileOpen={setMobileOpen} />
-      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${collapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
+      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${collapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"} ml-0`}>
         <AdminPageHeader title="Riders" subtitle="Add, edit and remove riders, their areas and documents." onMenuClick={() => setMobileOpen(true)} />
         <div className="px-4 pb-10 pt-6 lg:px-10">
           <SectionErrorBoundary section="riders" title="Riders could not be displayed">

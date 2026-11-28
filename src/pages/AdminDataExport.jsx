@@ -181,11 +181,11 @@ export default function AdminDataExport() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar activeTab="dataExport" setActiveTab={onSidebar} issuesCount={0} user={client} onLogout={logout}
         isCollapsed={collapsed} setIsCollapsed={setCollapsed} isMobileOpen={mobileOpen} setIsMobileOpen={setMobileOpen} />
 
-      <main className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ${collapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"}`}>
+      <main className={`flex min-w-0 flex-1 flex-col transition-all duration-300 ${collapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"}`}>
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/95 px-6 py-4 backdrop-blur-md">
           <button type="button" onClick={() => setMobileOpen(true)} className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open navigation menu"><FiMenu size={22} /></button>
           <span className="rounded-lg bg-blue-50 p-1.5 text-blue-600"><MdOutlineFileDownload size={20} /></span>

@@ -1641,7 +1641,7 @@ export default function Calculator() {
         isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen}
       />
 
-      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed?"lg:ml-[80px]":"lg:ml-[220px]"} ml-0`}>
+      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed?"lg:ml-[80px]":"lg:ml-[218px]"} ml-0`}>
         <header className={`${activeSt.hero} px-6 py-5 relative overflow-hidden`}>
           <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/5 pointer-events-none"/>
           <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">

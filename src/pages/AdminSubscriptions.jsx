@@ -671,7 +671,7 @@ export default function AdminSubscriptions() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F1F5F9]" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="flex min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <AdminSidebar
         activeTab="subscriptions" setActiveTab={onSidebar} user={client} onLogout={logout}
         isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed}
@@ -683,7 +683,7 @@ export default function AdminSubscriptions() {
       {deleting && (
         <DeleteModal plan={deleting} defaultName={client?.name || auth.currentUser?.displayName || ""} onClose={() => setDeleting(null)} />
       )}
-      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[220px]"} ml-0`}>
+      <main className={`flex min-h-screen flex-1 flex-col transition-all duration-300 ${isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"} ml-0`}>
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
             <div className="flex items-center gap-3">
