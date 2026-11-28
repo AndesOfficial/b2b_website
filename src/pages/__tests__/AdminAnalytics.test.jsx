@@ -58,3 +58,14 @@ describe("AdminAnalytics page", () => {
     }
   });
 });
+
+describe("service names", () => {
+  it("uses real service lines, never the order's description text", async () => {
+    const { primaryService } = await import("../../utils/analyticsData");
+    expect(primaryService({ service: "11 + 1 More", serviceBreakdown: [{ name: "Iron", amount: 20 }, { name: "Wash & Fold", amount: 200 }] })).toBe("Wash & Fold");
+    expect(primaryService({ service: "x", services: [{ serviceName: "Dry Clean_regular", totalCost: 300 }] })).toBe("Dry Clean");
+    expect(primaryService({ service: "5 Kg Wash & Fold" })).toBe("Wash & Fold");
+    expect(primaryService({ service: "2 Shirts Dryclean" })).toBe("Dry Clean");
+    expect(primaryService({ service: "11 + 2 More" })).toBe("Other");
+  });
+});

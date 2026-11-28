@@ -1,7 +1,6 @@
 // Turns the admin's live order list into the rows the Analytics workspace
 // reports on, and holds the small calculations those reports share.
 // Nothing here reads or writes the database.
-import { getServiceLabel } from "../hooks/useRegularOrders";
 
 const DAY_MS = 86400000;
 
@@ -26,6 +25,51 @@ export const today = () => toDayStr(new Date());
 
 const EXCLUDED_TYPES = new Set(["issue", "rider_tracking", "abandoned"]);
 
+const B2B_LABELS = {
+  STUDENT_LAUNDRY: "Student laundry",
+  INDIVIDUAL_STUDENT: "Individual student",
+  LINEN: "Linen",
+  AIRBNB: "Hotel / Airbnb",
+};
+
+const clean = (name) =>
+  String(name || "")
+    .replace(/_(regular|instant)$/i, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const KEYWORD_SERVICES = [
+  [/wash\s*(&|and)?\s*fold/i, "Wash & Fold"],
+  [/wash\s*(&|and)?\s*iron/i, "Wash & Iron"],
+  [/dry\s*-?\s*clean/i, "Dry Clean"],
+  [/\biron/i, "Iron"],
+  [/shoe|sneaker|loafer/i, "Shoes"],
+  [/blanket|curtain|bedsheet|linen/i, "Home care"],
+];
+
+/**
+ * The service an order is mainly for: the named service line worth the most,
+ * else the first one, else a guess from the order's text, else "Other".
+ * The order's own text ("11 + 1 More", "5 Kg Wash & Fold") is a description,
+ * not a service, so it is never used as the name.
+ */
+export function primaryService(o) {
+  const lines = Array.isArray(o.serviceBreakdown) && o.serviceBreakdown.length
+    ? o.serviceBreakdown.map((l) => ({ name: l.name, amount: Number(l.amount) || 0 }))
+    : Array.isArray(o.services)
+      ? o.services.map((l) => ({ name: l?.serviceName || l?.name, amount: Number(l?.totalCost ?? l?.totalPrice) || 0 }))
+      : [];
+  const named = lines.filter((l) => clean(l.name));
+  if (named.length) {
+    const best = named.reduce((m, l) => (l.amount > m.amount ? l : m), named[0]);
+    return clean(best.name);
+  }
+  const text = `${o.service || ""} ${o.serviceBreakdownSummary || ""}`;
+  for (const [re, label] of KEYWORD_SERVICES) if (re.test(text)) return label;
+  return "Other";
+}
+
 /** Orders that count as real placed orders (B2C and B2B), one row each. */
 export function buildRows(orders = []) {
   const rows = [];
@@ -49,7 +93,7 @@ export function buildRows(orders = []) {
       day: dayIndex(dayStr),
       b2b,
       channel: b2b ? "Institutional" : o.channel || "Other",
-      service: b2b ? o.category || "B2B" : getServiceLabel(o.service || "Wash & Fold"),
+      service: b2b ? B2B_LABELS[o.category] || clean(o.category) || "B2B" : primaryService(o),
       status: o.status || "Pending",
       delivered,
       cancelled,
