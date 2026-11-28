@@ -19,6 +19,8 @@ const sample = [
   order(105, { isB2bRoomSync: true }),
 ];
 
+vi.mock("../../firebase", () => ({ db: {} }));
+vi.mock("firebase/firestore", () => ({ collection: () => ({}), getDocs: () => Promise.resolve({ docs: [] }) }));
 vi.mock("../../context/HostelAuthContext", () => ({
   useHostelOrders: () => ({ orders: sample, isDataLoaded: true }),
 }));
@@ -40,7 +42,9 @@ describe("analytics rows", () => {
 
 describe("AdminAnalytics page", () => {
   it("renders every report", async () => {
-    const { default: AdminAnalytics } = await import("../AdminAnalytics");
+    const { AnalyticsView } = await import("../AdminAnalytics");
+    const { buildCatalog } = await import("../../utils/analyticsData");
+    const catalog = buildCatalog([{ serviceName: "Wash & Fold", category: "general", status: "active" }]);
     const slugs = [
       "executive-overview", "customer-acquisition-and-orders", "retention-and-cohorts", "order-intelligence",
       "revenue-and-unit-economics", "service-intelligence", "dark-store-and-processing", "rider-and-logistics",
@@ -50,7 +54,7 @@ describe("AdminAnalytics page", () => {
     for (const slug of slugs) {
       const html = renderToString(
         <MemoryRouter initialEntries={[`/admin/analytics/${slug}`]}>
-          <Routes><Route path="/admin/analytics/:report" element={<AdminAnalytics />} /></Routes>
+          <Routes><Route path="/admin/analytics/:report" element={<AnalyticsView orders={sample} catalog={catalog} />} /></Routes>
         </MemoryRouter>,
       );
       expect(html).toContain("Andes Analytics");
@@ -60,12 +64,15 @@ describe("AdminAnalytics page", () => {
 });
 
 describe("service names", () => {
-  it("uses real service lines, never the order's description text", async () => {
-    const { primaryService } = await import("../../utils/analyticsData");
-    expect(primaryService({ service: "11 + 1 More", serviceBreakdown: [{ name: "Iron", amount: 20 }, { name: "Wash & Fold", amount: 200 }] })).toBe("Wash & Fold");
-    expect(primaryService({ service: "x", services: [{ serviceName: "Dry Clean_regular", totalCost: 300 }] })).toBe("Dry Clean");
-    expect(primaryService({ service: "5 Kg Wash & Fold" })).toBe("Wash & Fold");
-    expect(primaryService({ service: "2 Shirts Dryclean" })).toBe("Dry Clean");
-    expect(primaryService({ service: "11 + 2 More" })).toBe("Other");
+  it("matches order lines to the prices catalog and ignores everything else", async () => {
+    const { buildCatalog, primaryService } = await import("../../utils/analyticsData");
+    const catalog = buildCatalog([
+      { serviceName: "Wash & Fold", category: "general", status: "active" },
+      { serviceName: "Shirt/Pant", category: "dry cleaning", status: "active", subServices: [{ name: "Shirts(Wash)" }] },
+    ]);
+    expect(primaryService({ serviceBreakdown: [{ name: "11", amount: 900 }, { name: "Wash & Fold_regular", amount: 200 }] }, catalog)).toBe("Wash & Fold");
+    expect(primaryService({ serviceBreakdown: [{ name: "totalCost", amount: 5 }, { name: "Shirts(Wash) piece", amount: 80 }] }, catalog)).toBe("Shirt/Pant");
+    expect(primaryService({ service: "11 + 1 More" }, catalog)).toBe("Other");
+    expect(primaryService({ serviceBreakdown: [{ name: "Cancelled on 31 Aug", amount: 1 }] }, catalog)).toBe("Other");
   });
 });

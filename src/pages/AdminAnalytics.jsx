@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { SERVICE_CATEGORIES, canonicalCategory } from "../constants/serviceCatalog";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useHostelOrders } from "../context/HostelAuthContext";
 import LoadingSpinner from "../components/Shared/LoadingSpinner";
 import {
-  addDays, avg, between, bins, breakdown, cohorts, count, delivered, delta, dayToStr, firstOrderMap, fmtDay, buildRows,
+  OTHER_SERVICE, addDays, avg, between, bins, breakdown, buildCatalog, cohorts, count, delivered, delta, dayToStr, firstOrderMap, fmtDay, buildRows,
   rate, resolveRange, rupee, spanDays, sum, today, uniq,
 } from "../utils/analyticsData";
 import "./analytics.css";
@@ -339,10 +342,9 @@ function reportBody(report, ctx) {
   }
 }
 
-export default function AdminAnalytics() {
+export function AnalyticsView({ orders, catalog }) {
   const navigate = useNavigate();
   const { report: slug } = useParams();
-  const { orders, isDataLoaded } = useHostelOrders();
   const [days, setDays] = useState("30");
   const [customStart, setCustomStart] = useState(() => addDays(today(), -29));
   const [customEnd, setCustomEnd] = useState(today());
@@ -352,9 +354,22 @@ export default function AdminAnalytics() {
   const entry = REPORTS.find(([s]) => s === slug) || REPORTS[0];
   const report = entry[1];
 
-  const all = useMemo(() => buildRows(orders), [orders]);
+  const all = useMemo(() => buildRows(orders, catalog), [orders, catalog]);
   const firstOrders = useMemo(() => firstOrderMap(all), [all]);
-  const services = useMemo(() => [...new Set(all.map((r) => r.service))].sort(), [all]);
+  // Only catalog services that appear in orders, grouped by catalog category.
+  const serviceGroups = useMemo(() => {
+    const used = new Set(all.filter((r) => !r.b2b).map((r) => r.service));
+    const labels = Object.fromEntries(SERVICE_CATEGORIES.map((c) => [c.value, c.label]));
+    const groups = new Map();
+    for (const s of catalog?.services || []) {
+      if (!used.has(s.name)) continue;
+      const key = canonicalCategory(s.category);
+      const label = labels[key] || key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+      if (!groups.has(label)) groups.set(label, []);
+      if (!groups.get(label).includes(s.name)) groups.get(label).push(s.name);
+    }
+    return { groups: [...groups.entries()], hasOther: used.has(OTHER_SERVICE) };
+  }, [all, catalog]);
   const channels = useMemo(() => [...new Set(all.map((r) => r.channel))].sort(), [all]);
 
   const { start, end } = resolveRange({ days, start: customStart, end: customEnd });
@@ -377,7 +392,6 @@ export default function AdminAnalytics() {
     };
   }, [all, firstOrders, valid, service, channel, start, end, span, orders]);
 
-  if (!isDataLoaded) return <LoadingSpinner fullscreen />;
 
   const bounds = all.reduce((m, o) => (o.dayStr < m ? o.dayStr : m), today());
 
@@ -417,7 +431,13 @@ export default function AdminAnalytics() {
           )}
           <label className="filterlabel">Service
             <select value={service} onChange={(e) => setService(e.target.value)}>
-              {["All services", ...services].map((s) => <option key={s}>{s}</option>)}
+              <option>All services</option>
+              {serviceGroups.groups.map(([label, names]) => (
+                <optgroup key={label} label={label}>
+                  {names.map((s) => <option key={s}>{s}</option>)}
+                </optgroup>
+              ))}
+              {serviceGroups.hasOther && <option>{OTHER_SERVICE}</option>}
             </select>
           </label>
           <label className="filterlabel">Channel
@@ -444,4 +464,19 @@ export default function AdminAnalytics() {
       </main>
     </div>
   );
+}
+
+// Loads the live orders and the `prices` catalog, then shows the workspace.
+export default function AdminAnalytics() {
+  const { orders, isDataLoaded } = useHostelOrders();
+  const [catalog, setCatalog] = useState(null);
+  useEffect(() => {
+    let live = true;
+    getDocs(collection(db, "prices"))
+      .then((snap) => live && setCatalog(buildCatalog(snap.docs.map((d) => d.data()))))
+      .catch(() => live && setCatalog(buildCatalog([])));
+    return () => { live = false; };
+  }, []);
+  if (!isDataLoaded || !catalog) return <LoadingSpinner fullscreen />;
+  return <AnalyticsView orders={orders} catalog={catalog} />;
 }

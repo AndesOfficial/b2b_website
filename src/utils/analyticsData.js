@@ -34,44 +34,73 @@ const B2B_LABELS = {
 
 const clean = (name) =>
   String(name || "")
-    .replace(/_(regular|instant)$/i, "")
+    .replace(/_(regular|instant|premium)$/i, "")
     .replace(/_/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-
-const KEYWORD_SERVICES = [
-  [/wash\s*(&|and)?\s*fold/i, "Wash & Fold"],
-  [/wash\s*(&|and)?\s*iron/i, "Wash & Iron"],
-  [/dry\s*-?\s*clean/i, "Dry Clean"],
-  [/\biron/i, "Iron"],
-  [/shoe|sneaker|loafer/i, "Shoes"],
-  [/blanket|curtain|bedsheet|linen/i, "Home care"],
-];
+const ALIASES = {
+  "wash fold": "wash & fold",
+  "wash and fold": "wash & fold",
+  "wash iron": "wash & iron",
+  "wash and iron": "wash & iron",
+  "dry cleaning": "dry clean",
+  "dryclean": "dry clean",
+};
+// Key used to match a name on an order to a name in the `prices` catalog.
+const norm = (s) => {
+  const key = clean(s)
+    .toLowerCase()
+    .replace(/\s+(piece|kg)$/i, "")
+    .trim();
+  return ALIASES[key] || key;
+};
 
 /**
- * The service an order is mainly for: the named service line worth the most,
- * else the first one, else a guess from the order's text, else "Other".
- * The order's own text ("11 + 1 More", "5 Kg Wash & Fold") is a description,
- * not a service, so it is never used as the name.
+ * The service catalog (`prices` collection): one entry per service, with the
+ * names of its sub-services pointing back to it. `docs` are the raw documents.
  */
-export function primaryService(o) {
+export function buildCatalog(docs = []) {
+  const services = [];
+  const lookup = new Map();
+  for (const d of docs) {
+    const name = clean(d.serviceName || d.name);
+    if (!name) continue;
+    const status = ["active", "hidden", "archived"].includes(d.status) ? d.status : d.isActive === false ? "hidden" : "active";
+    services.push({ name, category: String(d.category || "general"), status });
+    if (!lookup.has(norm(name))) lookup.set(norm(name), name);
+    for (const s of Array.isArray(d.subServices) ? d.subServices : []) {
+      const sub = norm(s?.name);
+      if (sub && !lookup.has(sub)) lookup.set(sub, name);
+    }
+  }
+  services.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+  return { services, lookup };
+}
+
+export const OTHER_SERVICE = "Other";
+
+/**
+ * The catalog service an order is mainly for: the matching service line worth
+ * the most. Lines that are not in the catalog (counts, totals, notes) are
+ * ignored, and an order with no matching line is "Other".
+ */
+export function primaryService(o, catalog) {
+  if (!catalog) return OTHER_SERVICE;
   const lines = Array.isArray(o.serviceBreakdown) && o.serviceBreakdown.length
     ? o.serviceBreakdown.map((l) => ({ name: l.name, amount: Number(l.amount) || 0 }))
     : Array.isArray(o.services)
       ? o.services.map((l) => ({ name: l?.serviceName || l?.name, amount: Number(l?.totalCost ?? l?.totalPrice) || 0 }))
       : [];
-  const named = lines.filter((l) => clean(l.name));
-  if (named.length) {
-    const best = named.reduce((m, l) => (l.amount > m.amount ? l : m), named[0]);
-    return clean(best.name);
+  let best = null;
+  for (const l of lines) {
+    const match = catalog.lookup.get(norm(l.name));
+    if (match && (!best || l.amount > best.amount)) best = { name: match, amount: l.amount };
   }
-  const text = `${o.service || ""} ${o.serviceBreakdownSummary || ""}`;
-  for (const [re, label] of KEYWORD_SERVICES) if (re.test(text)) return label;
-  return "Other";
+  return best ? best.name : OTHER_SERVICE;
 }
 
 /** Orders that count as real placed orders (B2C and B2B), one row each. */
-export function buildRows(orders = []) {
+export function buildRows(orders = [], catalog = null) {
   const rows = [];
   for (const o of orders) {
     if (!o || o.isB2bRoomSync || EXCLUDED_TYPES.has(o.type)) continue;
@@ -93,7 +122,7 @@ export function buildRows(orders = []) {
       day: dayIndex(dayStr),
       b2b,
       channel: b2b ? "Institutional" : o.channel || "Other",
-      service: b2b ? B2B_LABELS[o.category] || clean(o.category) || "B2B" : primaryService(o),
+      service: b2b ? B2B_LABELS[o.category] || clean(o.category) || "B2B" : primaryService(o, catalog),
       status: o.status || "Pending",
       delivered,
       cancelled,
