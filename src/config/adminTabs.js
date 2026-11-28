@@ -199,6 +199,7 @@ export const ADMIN_TAB_ROUTES = {
   wallets: "/admin/wallets",
   botRequests: "/admin/bot-requests",
   riders: "/admin/riders",
+  analytics: "/admin/analytics",
 };
 
 export function getAdminTabConfig(tabKey) {

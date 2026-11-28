@@ -17,6 +17,7 @@ import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminWallets from "./pages/AdminWallets";
 import AdminBotRequests from "./pages/AdminBotRequests";
 import AdminRiders from "./pages/AdminRiders";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import NotFound from "./pages/NotFound";
 import HostelOrderForm from "./pages/HostelOrderForm";
 
@@ -47,6 +48,8 @@ export default function App() {
           <Route path="/admin/wallets" element={<AdminRoute><AdminWallets /></AdminRoute>} />
           <Route path="/admin/bot-requests" element={<AdminRoute><AdminBotRequests /></AdminRoute>} />
           <Route path="/admin/riders" element={<AdminRoute><AdminRiders /></AdminRoute>} />
+          <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+          <Route path="/admin/analytics/:report" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
           <Route path="/admin/data-export" element={<Navigate to="/admin" replace />} />
 
           {/* Client Portal */}
