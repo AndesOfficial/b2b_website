@@ -169,7 +169,7 @@ function SectionHeader({ title, subtitle, phase, color, badge }) {
           P{phase}
         </div>
         <div>
-          <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{title}</h2>
+          <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">{title}</h2>
           <p className="text-[12px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{subtitle}</p>
         </div>
       </div>
@@ -555,7 +555,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
           PHASE 1: DEMAND / INPUT
           ───────────────────────────────────────────────────────────── */}
       <section>
-        <SectionHeader phase="1" title="Demand & Input" subtitle="What work is coming in" color="#3B82F6" />
+        <SectionHeader phase="1" title="Demand & Input" subtitle="What work is coming in" color="#2f8267" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* B2C PANEL — LIVE DATA */}
           <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
@@ -838,7 +838,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
                         ? "linear-gradient(90deg, #f59e0b, #ef4444)"
                         : livePhase3.utilizationPct >= 70
                         ? "linear-gradient(90deg, #10b981, #f59e0b)"
-                        : "linear-gradient(90deg, #3b82f6, #10b981)",
+                        : "linear-gradient(90deg, #2f8267, #10b981)",
                       transition: "width 0.9s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   />
@@ -938,7 +938,7 @@ export default function ExpandedOverviewLayout({ orders = [] }) {
             <div className="p-5 space-y-4">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                <p className="text-[34px] font-black text-[#0F172A] leading-none">
+                <p className="text-[34px] font-black text-[#172c28] leading-none">
                   ₹{liveP4.totalRevenue > 0 ? liveP4.totalRevenue.toLocaleString("en-IN", { maximumFractionDigits: 0 }) : "0"}
                 </p>
               </div>

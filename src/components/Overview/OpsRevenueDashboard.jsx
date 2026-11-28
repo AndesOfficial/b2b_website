@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { FiArrowDown } from "react-icons/fi";
 import { rangeFor, toDateStr, useOpsDashboard } from "../../hooks/useOpsDashboard";
 
-const B2B_COLOR = "#2563EB";
+const B2B_COLOR = "#16654e";
 const B2C_COLOR = "#059669";
 
 const kg = (n) => (n === null || n === undefined ? "—" : `${(Math.round(n * 10) / 10).toLocaleString("en-IN")} KG`);
@@ -41,7 +41,7 @@ function Kpi({ label, value, hint, accent, big }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <p className={`mt-1 font-extrabold tracking-tight ${big ? "text-2xl lg:text-3xl" : "text-xl lg:text-2xl"}`} style={{ color: accent || "#0F172A" }}>
+      <p className={`mt-1 font-extrabold tracking-tight ${big ? "text-2xl lg:text-3xl" : "text-xl lg:text-2xl"}`} style={{ color: accent || "#172c28" }}>
         {value}
       </p>
       {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
@@ -111,7 +111,7 @@ function TrendChart({ data, title, b2bKey, b2cKey, format }) {
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dfe8e2" />
             <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 10 }} />
             <Tooltip formatter={(v) => format(v)} />

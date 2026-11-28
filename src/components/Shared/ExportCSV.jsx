@@ -49,7 +49,7 @@ export default function ExportCSV({ orders = [] }) {
         <button
             onClick={handleExport}
             disabled={!orders || orders.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E3F2FD] text-[#1976D2] border border-brand-200 font-semibold text-sm hover:bg-[#1976D2] hover:text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#d9f1e3] text-[#16654e] border border-brand-200 font-semibold text-sm hover:bg-[#16654e] hover:text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
         >
             <FiDownload size={14} />

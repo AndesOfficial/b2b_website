@@ -20,13 +20,13 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC", padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-          <div style={{ maxWidth: "550px", width: "100%", background: "#fff", padding: "32px", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.05)", border: "1px solid #E2E8F0" }}>
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f6f2", padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+          <div style={{ maxWidth: "550px", width: "100%", background: "#fff", padding: "32px", borderRadius: "16px", boxShadow: "0 10px 25px rgba(0,0,0,0.05)", border: "1px solid #dfe8e2" }}>
             <h2 style={{ margin: "0 0 8px 0", color: "#E11D48", fontSize: "20px", fontWeight: "800" }}>Application Error</h2>
-            <p style={{ margin: "0 0 16px 0", color: "#64748B", fontSize: "14px" }}>
+            <p style={{ margin: "0 0 16px 0", color: "#58706a", fontSize: "14px" }}>
               Something caused a rendering failure. Details below:
             </p>
-            <pre style={{ background: "#F1F5F9", padding: "14px", borderRadius: "10px", color: "#0F172A", fontSize: "12px", overflowX: "auto", whiteSpace: "pre-wrap" }}>
+            <pre style={{ background: "#eef5f0", padding: "14px", borderRadius: "10px", color: "#172c28", fontSize: "12px", overflowX: "auto", whiteSpace: "pre-wrap" }}>
               {this.state.error?.toString()}
             </pre>
             <div style={{ marginTop: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -35,7 +35,7 @@ class ErrorBoundary extends Component {
                   this.setState({ hasError: false, error: null });
                   window.location.reload();
                 }}
-                style={{ padding: "10px 20px", background: "#1976D2", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
+                style={{ padding: "10px 20px", background: "#16654e", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
               >
                 Reload Application
               </button>
@@ -44,7 +44,7 @@ class ErrorBoundary extends Component {
                   sessionStorage.clear();
                   window.location.href = "/login";
                 }}
-                style={{ padding: "10px 20px", background: "#E2E8F0", color: "#334155", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
+                style={{ padding: "10px 20px", background: "#dfe8e2", color: "#26403a", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}
               >
                 Reset Session & Go to Login
               </button>

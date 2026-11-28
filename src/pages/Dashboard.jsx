@@ -12,7 +12,7 @@ import { FiPackage, FiUsers, FiBarChart2, FiSearch, FiArrowRight } from "react-i
 import { BiRupee } from "react-icons/bi";
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const AVATAR_COLORS = ['#1976D2', '#7C3AED', '#059669', '#DC2626', '#D97706'];
+const AVATAR_COLORS = ['#16654e', '#7C3AED', '#059669', '#DC2626', '#D97706'];
 
 // 1. Timezone-Proof Date Extractor
 export const parseOrderDate = (o) => {
@@ -50,8 +50,8 @@ export const parseOrderDate = (o) => {
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="bg-white border-l-4 border-[#1976D2] shadow-lg rounded-xl p-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <p className="text-[#1976D2] font-semibold text-xs mb-1">{label}</p>
+            <div className="bg-white border-l-4 border-[#16654e] shadow-lg rounded-xl p-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <p className="text-[#16654e] font-semibold text-xs mb-1">{label}</p>
                 <p className="text-gray-800 font-bold text-sm">{payload[0].value} orders</p>
             </div>
         );
@@ -141,11 +141,11 @@ export default function Dashboard() {
     if (loading) return <LoadingSpinner fullscreen />;
 
     return (
-        <div className="min-h-screen bg-[#F0F7FF]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        <div className="min-h-screen bg-[#f3f6f2]" style={{ fontFamily: 'Poppins, sans-serif' }}>
             <TopNav />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Greeting Banner */}
-                <div className="bg-gradient-to-r from-[#1976D2] to-[#1565C0] rounded-2xl p-6 mb-8 text-white shadow-lg relative overflow-hidden">
+                <div className="bg-gradient-to-r from-[#16654e] to-[#0f4f3c] rounded-2xl p-6 mb-8 text-white shadow-lg relative overflow-hidden">
                     <div className="absolute right-0 top-0 w-64 h-full pointer-events-none">
                         <div className="absolute right-[-20%] top-[-40%] w-64 h-64 bg-white opacity-10 rounded-full" />
                     </div>
@@ -172,8 +172,8 @@ export default function Dashboard() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f5" vertical={false} />
                                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F7FF' }} />
-                                    <Bar dataKey="orders" fill="#1976D2" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f6f2' }} />
+                                    <Bar dataKey="orders" fill="#16654e" radius={[4, 4, 0, 0]} maxBarSize={50} />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -211,7 +211,7 @@ export default function Dashboard() {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[650px]">
                             <thead>
-                                <tr className="bg-[#F0F7FF] border-y border-blue-50">
+                                <tr className="bg-[#f3f6f2] border-y border-blue-50">
                                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3 rounded-tl-xl w-12">#</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Tenant</th>
                                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Last Order</th>
@@ -228,7 +228,7 @@ export default function Dashboard() {
                                     const orderDateStr = row.lastOrder ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(row.lastOrder) : '—';
 
                                     return (
-                                        <tr key={row.name} className="border-b border-gray-50 hover:bg-[#F0F7FF]/50 transition-colors">
+                                        <tr key={row.name} className="border-b border-gray-50 hover:bg-[#f3f6f2]/50 transition-colors">
                                             <td className="px-4 py-3 text-xs font-bold text-gray-400">{row.rank}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
@@ -240,7 +240,7 @@ export default function Dashboard() {
                                             <td className="px-4 py-3 text-sm text-gray-600 font-semibold">{row.count}</td>
                                             <td className="px-4 py-3 text-sm font-medium text-gray-800">₹{row.revenue.toLocaleString()}</td>
                                             <td className="px-4 py-3 text-right">
-                                                <button onClick={() => navigate(`/tenants/${encodeURIComponent(row.name)}/months`)} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#E3F2FD] text-[#1976D2] text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition-all">
+                                                <button onClick={() => navigate(`/tenants/${encodeURIComponent(row.name)}/months`)} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#d9f1e3] text-[#16654e] text-xs font-semibold border border-blue-100 hover:bg-blue-100 transition-all">
                                                     View <FiArrowRight size={12} />
                                                 </button>
                                             </td>

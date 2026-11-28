@@ -1,7 +1,7 @@
 import { BiRupee } from "react-icons/bi";
 export default function MonthCard({ month, count, revenue, onClick }) {
     const gradients = [
-        'from-[#1976D2] to-[#1565C0]',
+        'from-[#16654e] to-[#0f4f3c]',
         'from-[#0891b2] to-[#0e7490]',
         'from-[#0284c7] to-[#0369a1]',
     ];

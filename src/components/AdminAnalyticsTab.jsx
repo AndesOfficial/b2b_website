@@ -37,7 +37,7 @@ import { getCustomerKey } from '../api/customerAcquisitionApi';
 
 // Standard Category Colors
 const SEGMENT_COLORS = {
-  'B2C Retail': '#3B82F6',
+  'B2C Retail': '#2f8267',
   'Student Laundry': '#10B981',
   'Commercial Linen': '#8B5CF6',
   'Hotel / Airbnb': '#F59E0B',
@@ -98,7 +98,7 @@ function classifyServiceItem(itemStr, fallback = 'Other') {
 const CustomChartTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#0F172A] text-white p-3 rounded-xl shadow-xl border border-slate-700 text-xs">
+      <div className="bg-[#172c28] text-white p-3 rounded-xl shadow-xl border border-slate-700 text-xs">
         <p className="font-bold text-slate-300 mb-1.5">{label}</p>
         {payload.map((entry, idx) => (
           <div key={`item-${idx}`} className="flex items-center justify-between gap-4 py-0.5">
@@ -583,7 +583,7 @@ export default function AdminAnalyticsTab({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight">Business Analytics & KPIs</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-[#172c28] tracking-tight">Business Analytics & KPIs</h2>
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Live Synced
@@ -802,15 +802,15 @@ export default function AdminAnalyticsTab({
                     <AreaChart data={timeSeriesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor="#2f8267" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#2f8267" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                      <XAxis dataKey="formattedDate" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eef5f0" vertical={false} />
+                      <XAxis dataKey="formattedDate" stroke="#8aa39b" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#8aa39b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
                       <Tooltip content={<CustomChartTooltip />} />
-                      <Area type="monotone" dataKey="revenue" name="Daily Revenue" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
+                      <Area type="monotone" dataKey="revenue" name="Daily Revenue" stroke="#2f8267" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

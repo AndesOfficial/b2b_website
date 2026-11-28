@@ -39,8 +39,8 @@ const PINNED_STATUS_STYLES = {
   "Pending":            { bg: "#FEF3C7", text: "#92400E", border: "#FDE68A" },
   "Closed":             { bg: "#D1FAE5", text: "#065F46", border: "#6EE7B7" },
   "No Response":        { bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
-  "Service Completed":  { bg: "#DBEAFE", text: "#1E40AF", border: "#93C5FD" },
-  "Unserviceable":      { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
+  "Service Completed":  { bg: "#d9f1e3", text: "#1E40AF", border: "#93C5FD" },
+  "Unserviceable":      { bg: "#eef5f0", text: "#3d5450", border: "#c7d5cd" },
   "Follow-up Required": { bg: "#EDE9FE", text: "#5B21B6", border: "#C4B5FD" },
 };
 
@@ -49,7 +49,7 @@ const DYNAMIC_PALETTE = [
   { bg: "#FFF0F6", text: "#9D174D", border: "#FBCFE8" }, // pink
   { bg: "#FFF7ED", text: "#9A3412", border: "#FDBA74" }, // orange
   { bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" }, // teal
-  { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" }, // blue
+  { bg: "#EFF6FF", text: "#1D4ED8", border: "#b7e0c8" }, // blue
   { bg: "#F5F3FF", text: "#6D28D9", border: "#DDD6FE" }, // violet
   { bg: "#FDF4FF", text: "#7E22CE", border: "#E9D5FF" }, // purple
   { bg: "#ECFEFF", text: "#155E75", border: "#A5F3FC" }, // cyan
@@ -72,7 +72,7 @@ function hashString(str) {
 
 // Returns an inline style object { backgroundColor, color, borderColor } for any status.
 function getStatusStyle(status) {
-  if (!status) return { backgroundColor: "#F1F5F9", color: "#475569", borderColor: "#CBD5E1" };
+  if (!status) return { backgroundColor: "#eef5f0", color: "#3d5450", borderColor: "#c7d5cd" };
   const pinned = PINNED_STATUS_STYLES[status];
   if (pinned) return { backgroundColor: pinned.bg, color: pinned.text, borderColor: pinned.border };
   const palette = DYNAMIC_PALETTE[hashString(status) % DYNAMIC_PALETTE.length];
@@ -558,7 +558,7 @@ export default function AdminMetaAdsLeads() {
         } ml-0`}
       >
         {/* ── Top Bar ── */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#F1F5F9]/95 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#eef5f0]/95 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
             <div className="flex items-center gap-3">
               <button

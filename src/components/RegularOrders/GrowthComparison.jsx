@@ -30,7 +30,7 @@ export default function GrowthComparison({ analytics }) {
         <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</span>
         <div className="flex items-center gap-1 mb-2">
           {isCurrency && <BiRupee size={16} className="text-slate-400" />}
-          <span className="text-[20px] font-black text-[#0F172A] tracking-tight">
+          <span className="text-[20px] font-black text-[#172c28] tracking-tight">
             {isCurrency
               ? Number(current).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })
               : typeof current === "number" ? current.toLocaleString() : current}
@@ -63,7 +63,7 @@ export default function GrowthComparison({ analytics }) {
   return (
     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
       <div className="mb-6">
-        <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">Growth Comparison</h3>
+        <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">Growth Comparison</h3>
         <p className="text-[12px] font-medium text-slate-400">Current period performance against the previous period</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

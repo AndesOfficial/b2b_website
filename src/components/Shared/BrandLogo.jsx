@@ -1,4 +1,4 @@
-export default function BrandLogo({ className = "w-8 h-8 text-[#1976D2]" }) {
+export default function BrandLogo({ className = "w-8 h-8 text-[#16654e]" }) {
     return (
         <div className={className}>
             <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">

@@ -27,12 +27,12 @@ function Metric({ k, result }) {
   return (
     <div className={`relative bg-white rounded-xl border p-4 ${flagged ? "border-amber-300" : "border-gray-100"}`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">{def.label}</div>
+        <div className="text-[11px] font-bold text-[#8aa39b] uppercase tracking-wider">{def.label}</div>
         <button type="button" aria-label={`About ${def.label}`} onClick={() => setOpen((o) => !o)} className="text-gray-400 hover:text-gray-700">
           <FiInfo size={14} />
         </button>
       </div>
-      <div className="text-xl font-extrabold text-[#0F172A] mt-1">{display(k, result)}</div>
+      <div className="text-xl font-extrabold text-[#172c28] mt-1">{display(k, result)}</div>
       {(result?.note || result?.reason) && <div className="text-[11px] text-amber-700 mt-1">{result.note || result.reason}</div>}
       {open && (
         <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-[12px] text-gray-700 space-y-1">
@@ -53,8 +53,8 @@ export default function VerifiedMetricsPanel({ dateFrom, dateTo }) {
     <section className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-[15px] font-bold text-[#0F172A]">Verified metrics (beta)</h2>
-          <p className="text-[12px] text-[#64748B]">
+          <h2 className="text-[15px] font-bold text-[#172c28]">Verified metrics (beta)</h2>
+          <p className="text-[12px] text-[#58706a]">
             {dateFrom} → {dateTo} · pickup day, IST · verified by manager only
             {computedAt && ` · server totals as of ${computedAt.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}`}
           </p>

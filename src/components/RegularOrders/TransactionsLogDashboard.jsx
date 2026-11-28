@@ -11,7 +11,7 @@ import { calculateTAT } from "../../utils/dateUtils";
 import { useHostelAuth } from "../../context/HostelAuthContext";
 
 const CHANNEL_ICONS = { App: FiSmartphone, Auto: FiMapPin, Website: FiShoppingBag, WhatsApp: FiMessageSquare, Outlet: FiShoppingBag, Call: FiPhone, Student: FiUser };
-const CHANNEL_COLORS = { App: "#1976D2", Auto: "#0EA5E9", Website: "#6366F1", WhatsApp: "#25D366", Outlet: "#D97706", Call: "#7C3AED", Student: "#059669" };
+const CHANNEL_COLORS = { App: "#16654e", Auto: "#0EA5E9", Website: "#6366F1", WhatsApp: "#25D366", Outlet: "#D97706", Call: "#7C3AED", Student: "#059669" };
 const STATUS_BADGE = {
   Delivered:      "bg-emerald-50 text-emerald-700 border-emerald-100",
   Confirmed:      "bg-blue-50 text-blue-700 border-blue-100",
@@ -208,20 +208,20 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
         {/* ── Desktop Table ── */}
         <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full min-w-full">
-            <thead className="bg-[#F8FAFC] sticky top-0 z-10">
+            <thead className="bg-[#f3f6f2] sticky top-0 z-10">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em]">Customer</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em]">Service</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em] whitespace-nowrap">KG / PCS</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Amount</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Payment</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Placed On</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Pickup</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">Status</th>
-                <th className="hidden 2xl:table-cell text-center text-[11px] font-black text-[#64748B] px-2 py-3.5 uppercase tracking-[0.08em]">TAT</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-2.5 py-3.5 uppercase tracking-[0.08em]">Customer</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-2.5 py-3.5 uppercase tracking-[0.08em]">Service</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em] whitespace-nowrap">KG / PCS</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Amount</th>
+                <th className="text-center text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Payment</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Placed On</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Pickup</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Delivery</th>
+                <th className="text-center text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">Status</th>
+                <th className="hidden 2xl:table-cell text-center text-[11px] font-black text-[#58706a] px-2 py-3.5 uppercase tracking-[0.08em]">TAT</th>
                 {!isViewer && (
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-2.5 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#F8FAFC] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-2.5 py-3.5 uppercase tracking-[0.08em] sticky right-0 bg-[#f3f6f2] z-20 shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">Actions</th>
                 )}
               </tr>
             </thead>
@@ -240,13 +240,13 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                 <Fragment key={order.id}>
                   <tr
                     onClick={() => { setSelectedDrilldownOrder(order); setIsDrilldownOpen(true); }}
-                    className={`border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer ${
+                    className={`border-b border-gray-50 hover:bg-[#f3f6f2] transition-colors group cursor-pointer ${
                       (order.status === "Cancelled" || order.type === "abandoned") ? "opacity-50" : ""
                     }`}
                   >
                     {/* Customer */}
                     <td className="px-2.5 py-3">
-                      <p className="text-[13px] font-black text-[#0F172A] tracking-tight">{order.customerName || "Anonymous"}</p>
+                      <p className="text-[13px] font-black text-[#172c28] tracking-tight">{order.customerName || "Anonymous"}</p>
                       <p className="text-[11px] font-medium text-slate-400">{order.customerNumber || "no contact"}</p>
                       {order.address && (
                         <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[130px]">{order.address}</p>
@@ -347,7 +347,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
                     </td>
                     {/* Actions — sticky right with Tailwind arbitrary shadow */}
                     {!isViewer && (
-                      <td className="px-4 py-3 text-right sticky right-0 bg-white z-20 group-hover:bg-[#F8FAFC] transition-colors shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">
+                      <td className="px-4 py-3 text-right sticky right-0 bg-white z-20 group-hover:bg-[#f3f6f2] transition-colors shadow-[-4px_0_8px_rgba(0,0,0,0.04)]">
                         <div className="flex items-center justify-end gap-1">
                           {onEditOrder && (
                             <button onClick={(e) => { e.stopPropagation(); onEditOrder(order); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
@@ -455,7 +455,7 @@ export default function TransactionsLogDashboard({ currentOrders, onAddOrder, on
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h4 className="text-sm font-black text-[#0F172A]">{order.customerName || "Anonymous"}</h4>
+                  <h4 className="text-sm font-black text-[#172c28]">{order.customerName || "Anonymous"}</h4>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">{order.customerNumber || "NO CONTACT"}</p>
                   {order.address && (
                     <p className="text-[9px] text-slate-500 mt-1 truncate max-w-[180px]">{order.address}</p>

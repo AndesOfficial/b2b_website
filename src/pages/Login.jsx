@@ -38,7 +38,7 @@ export default function Login() {
     return (
         <div className="min-h-screen flex" style={{ fontFamily: 'Poppins, sans-serif' }}>
             {/* Left Panel */}
-            <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#1976D2] via-[#1565C0] to-[#0D47A1] flex-col items-center justify-center p-12 relative overflow-hidden">
+            <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#16654e] via-[#0f4f3c] to-[#0b3d2f] flex-col items-center justify-center p-12 relative overflow-hidden">
                 {/* Decorative circles */}
                 <div className="absolute top-[-80px] left-[-80px] w-72 h-72 bg-white/10 rounded-full" />
                 <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 bg-white/10 rounded-full" />
@@ -48,7 +48,7 @@ export default function Login() {
                     {/* Logo */}
                     <div className="flex items-center justify-center gap-3 mb-8">
                         <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-lg">
-                            <BrandLogo className="w-10 h-10 text-[#1976D2]" />
+                            <BrandLogo className="w-10 h-10 text-[#16654e]" />
                         </div>
                         <span className="text-white font-bold text-3xl tracking-tight">Andes</span>
                     </div>
@@ -78,12 +78,12 @@ export default function Login() {
             </div>
 
             {/* Right Panel - Login Form */}
-            <div className="flex-1 flex items-center justify-center bg-[radial-gradient(circle_at_top_right,_#DBEAFE_0%,_#F0F7FF_60%)] p-6">
+            <div className="flex-1 flex items-center justify-center bg-[radial-gradient(circle_at_top_right,_#d9f1e3_0%,_#f3f6f2_60%)] p-6">
                 <div className="w-full max-w-md">
                     {/* Mobile logo */}
                     <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-                        <BrandLogo className="w-10 h-10 text-[#1976D2]" />
-                        <span className="font-bold text-[#1976D2] text-2xl">Andes B2B</span>
+                        <BrandLogo className="w-10 h-10 text-[#16654e]" />
+                        <span className="font-bold text-[#16654e] text-2xl">Andes B2B</span>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-8">
@@ -108,7 +108,7 @@ export default function Login() {
                                         onChange={e => setEmail(e.target.value)}
                                         placeholder="partner@example.com"
                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-900
-                      focus:border-2 focus:border-[#1976D2] focus:outline-none transition-all placeholder-gray-400"
+                      focus:border-2 focus:border-[#16654e] focus:outline-none transition-all placeholder-gray-400"
                                     />
                                 </div>
                             </div>
@@ -128,7 +128,7 @@ export default function Login() {
                                         onChange={e => setPassword(e.target.value)}
                                         placeholder="Enter your password"
                                         className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 text-sm text-gray-900
-                      focus:border-2 focus:border-[#1976D2] focus:outline-none transition-all placeholder-gray-400"
+                      focus:border-2 focus:border-[#16654e] focus:outline-none transition-all placeholder-gray-400"
                                     />
                                     <button
                                         type="button"
@@ -151,7 +151,7 @@ export default function Login() {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="w-full py-3 bg-[#1976D2] hover:bg-[#1565C0] disabled:bg-[#1976D2] disabled:opacity-70
+                                className="w-full py-3 bg-[#16654e] hover:bg-[#0f4f3c] disabled:bg-[#16654e] disabled:opacity-70
                   text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
                             >
                                 {submitting ? (

@@ -778,7 +778,7 @@ export default function HostelOrderForm() {
   const inputCls = (field) =>
     `w-full pl-10 pr-4 py-3 rounded-xl border text-sm text-gray-900 focus:outline-none transition-all duration-200 placeholder-gray-300 bg-white ${
       focusedField === field
-        ? "border-[#1976D2] ring-2 ring-[#1976D2]/20 shadow-sm"
+        ? "border-[#16654e] ring-2 ring-[#16654e]/20 shadow-sm"
         : "border-gray-200 hover:border-gray-300"
     }`;
 
@@ -788,7 +788,7 @@ export default function HostelOrderForm() {
   if (submitted) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0D47A1] via-[#1565C0] to-[#1976D2] px-4 relative overflow-hidden"
+        className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b3d2f] via-[#0f4f3c] to-[#16654e] px-4 relative overflow-hidden"
         style={{ fontFamily: "Poppins, sans-serif" }}
       >
         <Bubble style={{ width: 320, height: 320, top: "-80px", left: "-80px" }} />
@@ -809,26 +809,26 @@ export default function HostelOrderForm() {
                 { label: "Clothes", value: `${form.clothes} items` },
                 { label: "Pickup Day", value: nextPickup?.date ? DAY_FULL[nextPickup.date.getDay()] : "—" },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-[#F0F7FF] rounded-2xl p-3">
+                <div key={label} className="bg-[#f3f6f2] rounded-2xl p-3">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
                   <p className="text-sm font-semibold text-gray-800 truncate">{value}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-gradient-to-r from-[#EBF4FF] to-[#DBEAFE] rounded-2xl p-4 mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#1976D2] rounded-xl flex items-center justify-center shrink-0">
+            <div className="bg-gradient-to-r from-[#EBF4FF] to-[#d9f1e3] rounded-2xl p-4 mb-6 flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#16654e] rounded-xl flex items-center justify-center shrink-0">
                 <FiCalendar size={18} className="text-white" />
               </div>
               <div className="text-left">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Scheduled Pickup</p>
-                <p className="text-sm font-bold text-[#1976D2]">{formatDateDisplay(nextPickup?.date)}</p>
+                <p className="text-sm font-bold text-[#16654e]">{formatDateDisplay(nextPickup?.date)}</p>
               </div>
             </div>
 
             <button
               onClick={handleReset}
-              className="w-full py-3.5 bg-gradient-to-r from-[#1976D2] to-[#1565C0] hover:from-[#1565C0] hover:to-[#0D47A1] text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#1976D2]/30 hover:-translate-y-0.5"
+              className="w-full py-3.5 bg-gradient-to-r from-[#16654e] to-[#0f4f3c] hover:from-[#0f4f3c] hover:to-[#0b3d2f] text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#16654e]/30 hover:-translate-y-0.5"
             >
               <FiArrowLeft size={16} /> Place Another Request
             </button>
@@ -850,7 +850,7 @@ export default function HostelOrderForm() {
     <div className="min-h-screen flex" style={{ fontFamily: "Poppins, sans-serif" }}>
 
       {/* ── LEFT PANEL ── */}
-      <div className="hidden lg:flex w-[32%] xl:w-[30%] bg-gradient-to-br from-[#0D47A1] via-[#1565C0] to-[#1976D2] flex-col justify-between p-8 xl:p-10 relative overflow-hidden">
+      <div className="hidden lg:flex w-[32%] xl:w-[30%] bg-gradient-to-br from-[#0b3d2f] via-[#0f4f3c] to-[#16654e] flex-col justify-between p-8 xl:p-10 relative overflow-hidden">
         <Bubble style={{ width: 380, height: 380, top: "-100px", left: "-100px" }} />
         <Bubble style={{ width: 240, height: 240, bottom: "-60px", right: "-60px", animationDelay: "3s" }} />
         <Bubble style={{ width: 120, height: 120, top: "55%", left: "8%", animationDelay: "1.5s" }} />
@@ -859,7 +859,7 @@ export default function HostelOrderForm() {
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-xl">
-              <BrandLogo className="w-7 h-7 text-[#1976D2]" />
+              <BrandLogo className="w-7 h-7 text-[#16654e]" />
             </div>
             <div>
               <p className="text-white font-bold text-lg leading-none">Andes Laundry</p>
@@ -906,15 +906,15 @@ export default function HostelOrderForm() {
       </div>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="flex-1 flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,_#DBEAFE_0%,_#F8FAFF_60%)] overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,_#d9f1e3_0%,_#F8FAFF_60%)] overflow-y-auto">
 
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center gap-3 px-6 pt-6 pb-2">
-          <div className="w-9 h-9 rounded-xl bg-[#1976D2] flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-[#16654e] flex items-center justify-center">
             <BrandLogo className="w-6 h-6 text-white" />
           </div>
           <div>
-            <p className="font-bold text-[#1976D2] text-base leading-none">Andes Laundry</p>
+            <p className="font-bold text-[#16654e] text-base leading-none">Andes Laundry</p>
             <p className="text-gray-400 text-[10px]">MITWPU · Hostel Service</p>
           </div>
           <span className="ml-auto text-[10px] bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full border border-green-200 flex items-center gap-1">
@@ -934,7 +934,7 @@ export default function HostelOrderForm() {
                   width: "calc(50% - 4px)",
                   left: activeTab === "pickup" ? "4px" : "calc(50%)",
                   background: activeTab === "pickup"
-                    ? "linear-gradient(135deg,#1976D2,#1565C0)"
+                    ? "linear-gradient(135deg,#16654e,#0f4f3c)"
                     : "linear-gradient(135deg,#C62828,#B71C1C)",
                   boxShadow: activeTab === "pickup"
                     ? "0 4px 12px rgba(25,118,210,0.25)"
@@ -980,7 +980,7 @@ export default function HostelOrderForm() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span className="text-gray-400 font-medium">Form completion</span>
-                    <span className={`font-bold transition-colors duration-300 ${progress === 100 ? "text-green-500" : "text-[#1976D2]"}`}>
+                    <span className={`font-bold transition-colors duration-300 ${progress === 100 ? "text-green-500" : "text-[#16654e]"}`}>
                       {progress}%
                     </span>
                   </div>
@@ -991,7 +991,7 @@ export default function HostelOrderForm() {
                         width: `${progress}%`,
                         background: progress === 100
                           ? "linear-gradient(90deg,#22c55e,#16a34a)"
-                          : "linear-gradient(90deg,#1976D2,#42A5F5)",
+                          : "linear-gradient(90deg,#16654e,#42A5F5)",
                       }}
                     />
                   </div>
@@ -1000,7 +1000,7 @@ export default function HostelOrderForm() {
                 {/* ── Loading / Error state ── */}
                 {configLoading ? (
                   <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-12 flex flex-col items-center justify-center gap-3">
-                    <FiLoader size={28} className="text-[#1976D2] animate-spin" />
+                    <FiLoader size={28} className="text-[#16654e] animate-spin" />
                     <p className="text-sm text-gray-400 font-medium">Loading hostel configuration…</p>
                   </div>
                 ) : configError ? (
@@ -1010,7 +1010,7 @@ export default function HostelOrderForm() {
                       <p className="font-bold text-gray-800 mb-1">Failed to load configuration</p>
                       <p className="text-xs text-gray-400">Could not fetch hostel list. Please check your connection.</p>
                     </div>
-                    <button onClick={() => window.location.reload()} className="flex items-center gap-2 text-sm text-[#1976D2] font-semibold hover:underline">
+                    <button onClick={() => window.location.reload()} className="flex items-center gap-2 text-sm text-[#16654e] font-semibold hover:underline">
                       <FiRefreshCw size={14} /> Retry
                     </button>
                   </div>
@@ -1023,7 +1023,7 @@ export default function HostelOrderForm() {
                         {/* LEFT COLUMN: YOUR DETAILS */}
                         <div className="space-y-3.5">
                           <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
-                            <span className="w-5 h-5 rounded-full bg-blue-100 text-[#1976D2] text-[10px] font-bold flex items-center justify-center">1</span>
+                            <span className="w-5 h-5 rounded-full bg-blue-100 text-[#16654e] text-[10px] font-bold flex items-center justify-center">1</span>
                             <p className="text-[11px] font-bold text-gray-400 tracking-[0.12em] uppercase">Your Details</p>
                           </div>
 
@@ -1031,7 +1031,7 @@ export default function HostelOrderForm() {
                           <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name</label>
                             <div className="relative">
-                              <FiUser size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userName" ? "text-[#1976D2]" : "text-gray-400"}`} />
+                              <FiUser size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userName" ? "text-[#16654e]" : "text-gray-400"}`} />
                               <input
                                 id="userName" type="text"
                                 value={form.userName} onChange={set("userName")}
@@ -1047,7 +1047,7 @@ export default function HostelOrderForm() {
                             <div>
                               <label className="block text-xs font-semibold text-gray-600 mb-1">Email Address</label>
                               <div className="relative">
-                                <FiMail size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userEmail" ? "text-[#1976D2]" : "text-gray-400"}`} />
+                                <FiMail size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userEmail" ? "text-[#16654e]" : "text-gray-400"}`} />
                                 <input
                                   id="userEmail" type="email"
                                   value={form.userEmail} onChange={set("userEmail")}
@@ -1060,7 +1060,7 @@ export default function HostelOrderForm() {
                             <div>
                               <label className="block text-xs font-semibold text-gray-600 mb-1">Mobile Number</label>
                               <div className="relative">
-                                <FiPhone size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userMobile" ? "text-[#1976D2]" : "text-gray-400"}`} />
+                                <FiPhone size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "userMobile" ? "text-[#16654e]" : "text-gray-400"}`} />
                                 <input
                                   id="userMobile" type="tel"
                                   value={form.userMobile} onChange={set("userMobile")}
@@ -1082,13 +1082,13 @@ export default function HostelOrderForm() {
                                   onClick={() => setHostelOpen((v) => !v)}
                                   className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm text-left transition-all duration-200 flex items-center focus:outline-none ${
                                     form.hostel
-                                      ? "border-[#1976D2] text-gray-900 bg-white ring-2 ring-[#1976D2]/20 shadow-sm"
+                                      ? "border-[#16654e] text-gray-900 bg-white ring-2 ring-[#16654e]/20 shadow-sm"
                                       : hostelOpen
-                                      ? "border-[#1976D2] ring-2 ring-[#1976D2]/20 bg-white text-gray-400"
+                                      ? "border-[#16654e] ring-2 ring-[#16654e]/20 bg-white text-gray-400"
                                       : "border-gray-200 text-gray-400 bg-white hover:border-gray-300"
                                   }`}
                                 >
-                                  <FiHome size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${form.hostel || hostelOpen ? "text-[#1976D2]" : "text-gray-400"}`} />
+                                  <FiHome size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${form.hostel || hostelOpen ? "text-[#16654e]" : "text-gray-400"}`} />
                                   <span className={form.hostel ? "text-gray-900" : "text-gray-400"}>
                                     {form.hostel || "Choose your hostel"}
                                   </span>
@@ -1102,7 +1102,7 @@ export default function HostelOrderForm() {
                                           key={h} type="button"
                                           onClick={() => { setForm((f) => ({ ...f, hostel: h })); setHostelOpen(false); setError(""); }}
                                           className={`w-full text-left px-4 py-2 text-sm transition-colors duration-150 flex items-center gap-2 ${
-                                            form.hostel === h ? "bg-[#EBF4FF] text-[#1976D2] font-semibold" : "text-gray-700 hover:bg-gray-50"
+                                            form.hostel === h ? "bg-[#EBF4FF] text-[#16654e] font-semibold" : "text-gray-700 hover:bg-gray-50"
                                           }`}
                                         >
                                           {form.hostel === h && <FiCheckCircle size={13} className="shrink-0" />}
@@ -1118,7 +1118,7 @@ export default function HostelOrderForm() {
                             <div className="sm:w-32">
                               <label className="block text-xs font-semibold text-gray-600 mb-1">Room No.</label>
                               <div className="relative">
-                                <FiHash size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "room" ? "text-[#1976D2]" : "text-gray-400"}`} />
+                                <FiHash size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "room" ? "text-[#16654e]" : "text-gray-400"}`} />
                                 <input
                                   id="roomNumber" type="text"
                                   value={form.room} onChange={set("room")}
@@ -1135,14 +1135,14 @@ export default function HostelOrderForm() {
                         <div className="space-y-3.5 flex flex-col justify-between h-full">
                           <div className="space-y-3.5">
                             <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
-                              <span className="w-5 h-5 rounded-full bg-blue-100 text-[#1976D2] text-[10px] font-bold flex items-center justify-center">2</span>
+                              <span className="w-5 h-5 rounded-full bg-blue-100 text-[#16654e] text-[10px] font-bold flex items-center justify-center">2</span>
                               <p className="text-[11px] font-bold text-gray-400 tracking-[0.12em] uppercase">Pickup Request</p>
                             </div>
 
                             <div>
                               <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Clothes</label>
                               <div className="relative">
-                                <FiShoppingBag size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "clothes" ? "text-[#1976D2]" : "text-gray-400"}`} />
+                                <FiShoppingBag size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "clothes" ? "text-[#16654e]" : "text-gray-400"}`} />
                                 <input
                                   id="clothesCount" type="number"
                                   min="1" max="200"
@@ -1152,7 +1152,7 @@ export default function HostelOrderForm() {
                                   className={inputCls("clothes")}
                                 />
                               </div>
-                              <p className="text-[10px] text-[#1976D2] font-semibold mt-1 pl-0.5">
+                              <p className="text-[10px] text-[#16654e] font-semibold mt-1 pl-0.5">
                                 ℹ Free limit: 10.00 kg per pickup
                               </p>
                             </div>
@@ -1161,17 +1161,17 @@ export default function HostelOrderForm() {
                             {form.hostel && (
                               <div className="rounded-2xl border overflow-hidden transition-all duration-300" style={{ animation: "slideUp 0.25s ease" }}>
                                 {nextPickup ? (
-                                  <div className="bg-gradient-to-r from-[#EBF4FF] to-[#DBEAFE] p-3.5 flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-[#1976D2] rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-[#1976D2]/30">
+                                  <div className="bg-gradient-to-r from-[#EBF4FF] to-[#d9f1e3] p-3.5 flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-[#16654e] rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-[#16654e]/30">
                                       <FiCalendar size={18} className="text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Next Scheduled Pickup</p>
-                                      <p className="text-xs font-bold text-[#1976D2] truncate">{formatDateDisplay(nextPickup.date)}</p>
+                                      <p className="text-xs font-bold text-[#16654e] truncate">{formatDateDisplay(nextPickup.date)}</p>
                                       <div className="flex items-center gap-1 mt-1 flex-wrap">
                                         <span className="text-[9px] text-gray-400 font-medium">Slots:</span>
                                         {nextPickup.days.map((d) => (
-                                          <span key={d} className="text-[9px] font-bold text-[#1976D2] bg-white px-1.5 py-0.5 rounded-full border border-[#1976D2]/20 capitalize">{d}</span>
+                                          <span key={d} className="text-[9px] font-bold text-[#16654e] bg-white px-1.5 py-0.5 rounded-full border border-[#16654e]/20 capitalize">{d}</span>
                                         ))}
                                       </div>
                                     </div>
@@ -1203,7 +1203,7 @@ export default function HostelOrderForm() {
                               style={{
                                 background: submitting || cooldown > 0
                                   ? "#93bde8"
-                                  : "linear-gradient(135deg,#1976D2 0%,#1565C0 100%)",
+                                  : "linear-gradient(135deg,#16654e 0%,#0f4f3c 100%)",
                                 boxShadow: submitting || cooldown > 0 ? "none" : "0 8px 24px rgba(25,118,210,0.35)",
                               }}
                             >
@@ -1256,7 +1256,7 @@ export default function HostelOrderForm() {
             )}
 
             <p className="text-center text-xs text-gray-400 mt-5">
-              Secured by <span className="font-semibold text-[#1976D2]">Andes Laundry</span> · MITWPU Partner Service
+              Secured by <span className="font-semibold text-[#16654e]">Andes Laundry</span> · MITWPU Partner Service
             </p>
           </div>
         </div>

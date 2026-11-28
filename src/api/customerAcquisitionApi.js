@@ -43,7 +43,7 @@ export const ACQUISITION_SOURCE_LIST = [
 
 export const SOURCE_COLORS = {
   [ACQUISITION_SOURCES.WHATSAPP]: '#22C55E',       // Green
-  [ACQUISITION_SOURCES.APP]: '#3B82F6',            // Blue
+  [ACQUISITION_SOURCES.APP]: '#2f8267',            // Blue
   [ACQUISITION_SOURCES.WORD_OF_MOUTH]: '#A855F7',  // Purple
   [ACQUISITION_SOURCES.GOOGLE_SEARCH]: '#EAB308',  // Yellow
   [ACQUISITION_SOURCES.GOOGLE_MAPS]: '#EF4444',    // Red
@@ -51,7 +51,7 @@ export const SOURCE_COLORS = {
   [ACQUISITION_SOURCES.WEBSITE]: '#06B6D4',        // Cyan
   [ACQUISITION_SOURCES.WALK_IN]: '#F97316',        // Orange
   [ACQUISITION_SOURCES.PAID_ADS]: '#F43F5E',       // Crimson
-  [ACQUISITION_SOURCES.UNKNOWN]: '#94A3B8',        // Slate
+  [ACQUISITION_SOURCES.UNKNOWN]: '#8aa39b',        // Slate
 };
 
 /**
@@ -569,7 +569,7 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
       orders: 0,
       revenue: 0,
       pctOfNew: 0,
-      color: SOURCE_COLORS[source] || '#94A3B8',
+      color: SOURCE_COLORS[source] || '#8aa39b',
     });
   });
 
@@ -653,9 +653,9 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
     color: r.color,
   })) : [
     { name: 'WhatsApp', value: 18, pct: 32.7, color: '#22C55E' },
-    { name: 'App', value: 33, pct: 60.0, color: '#3B82F6' },
+    { name: 'App', value: 33, pct: 60.0, color: '#2f8267' },
     { name: 'Word of Mouth', value: 4, pct: 7.3, color: '#A855F7' },
-    { name: 'Others', value: 0, pct: 0.0, color: '#94A3B8' },
+    { name: 'Others', value: 0, pct: 0.0, color: '#8aa39b' },
   ];
 
   // 8. Donut Chart 2: Orders by Source (New Customers)
@@ -667,9 +667,9 @@ export function computeAcquisitionAnalytics({ orders = [], customerSourcesMap = 
     color: r.color,
   })) : [
     { name: 'WhatsApp', value: 27, pct: 37.5, color: '#22C55E' },
-    { name: 'App', value: 41, pct: 56.9, color: '#3B82F6' },
+    { name: 'App', value: 41, pct: 56.9, color: '#2f8267' },
     { name: 'Word of Mouth', value: 4, pct: 5.6, color: '#A855F7' },
-    { name: 'Others', value: 0, pct: 0.0, color: '#94A3B8' },
+    { name: 'Others', value: 0, pct: 0.0, color: '#8aa39b' },
   ];
 
   // 9. Orders Trend Area Chart (Daily New vs Existing Orders)

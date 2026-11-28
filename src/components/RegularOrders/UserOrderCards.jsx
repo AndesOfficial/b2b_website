@@ -8,7 +8,7 @@ function Card({ title, value, hint, icon: Icon, color, bg, suffix }) {
       </div>
       <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p>
       <div className="flex items-center gap-1">
-        <span className="text-xl font-black text-[#0F172A] tracking-tight">
+        <span className="text-xl font-black text-[#172c28] tracking-tight">
           {typeof value === "number" ? value.toLocaleString("en-IN") : value}
         </span>
         {suffix && <span className="text-[11px] font-bold text-slate-400">{suffix}</span>}

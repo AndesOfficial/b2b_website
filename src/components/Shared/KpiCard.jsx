@@ -13,7 +13,7 @@ export default function KpiCard({
 
     // Color mapping for top border and icon backgrounds
     const colorClasses = {
-        blue: { border: "border-t-[3px] border-t-blue-500", icon: "bg-blue-50 text-blue-500", spark: "#3b82f6" },
+        blue: { border: "border-t-[3px] border-t-blue-500", icon: "bg-blue-50 text-blue-500", spark: "#2f8267" },
         purple: { border: "border-t-[3px] border-t-purple-500", icon: "bg-purple-50 text-purple-500", spark: "#a855f7" },
         green: { border: "border-t-[3px] border-t-green-500", icon: "bg-green-50 text-green-500", spark: "#10b981" },
         amber: { border: "border-t-[3px] border-t-amber-500", icon: "bg-amber-50 text-amber-500", spark: "#f59e0b" },
@@ -34,10 +34,10 @@ export default function KpiCard({
             {/* Top Row: Icon & Label */}
             <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div className="min-w-0 pr-2">
-                    <div className="text-[10px] sm:text-[11.5px] font-bold text-[#94A3B8] uppercase tracking-wider mb-0.5 sm:mb-1 min-w-0">
+                    <div className="text-[10px] sm:text-[11.5px] font-bold text-[#8aa39b] uppercase tracking-wider mb-0.5 sm:mb-1 min-w-0">
                         {label}
                     </div>
-                    <div className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight">
+                    <div className="text-xl sm:text-2xl font-extrabold text-[#172c28] leading-tight tracking-tight">
                         {value}
                     </div>
                 </div>

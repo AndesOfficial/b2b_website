@@ -385,7 +385,7 @@ export default function ClientDashboard() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total Orders", value: totalOrders, color: "#1976D2", bgColor: "bg-blue-50", Icon: FiPackage },
+            { label: "Total Orders", value: totalOrders, color: "#16654e", bgColor: "bg-blue-50", Icon: FiPackage },
             { label: "Total Pieces", value: piecesBreakdown.totalPieces.toLocaleString(), color: "#7C3AED", bgColor: "bg-purple-50", Icon: FiShoppingBag, onClick: () => setShowPiecesModal(true) },
             { label: "Total Weight", value: `${totalWeight.toFixed(1)} KG`, color: "#D97706", bgColor: "bg-orange-50", Icon: MdScale },
             { label: "Monthly Billing", value: monthlyBilling !== null ? `₹${monthlyBilling.toLocaleString()}` : "—", color: "#059669", bgColor: "bg-emerald-50", Icon: BiRupee },

@@ -289,9 +289,9 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-sans">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-[#F8FAFC]">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-[#f3f6f2]">
           <div>
-            <h2 className="text-lg font-black text-[#0F172A] tracking-tight">Log New Order</h2>
+            <h2 className="text-lg font-black text-[#172c28] tracking-tight">Log New Order</h2>
             <p className="text-xs font-bold text-slate-500 mt-0.5">Manually add an order to the system</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
@@ -344,7 +344,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 list="property-suggestions"
                 value={propertyName}
                 onChange={(event) => setPropertyName(event.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder={orderCategory === "hostel" ? "e.g., Tulsi" : "e.g., Airbnb Viman Nagar"}
                 required
               />
@@ -380,7 +380,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 type="date"
                 value={orderDate}
                 onChange={(event) => setOrderDate(event.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 required
               />
             </div>
@@ -392,22 +392,22 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Weight (kg)</label>
-                    <input type="number" step="any" min="0" value={weight} onChange={(event) => handleWeightChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 45.5" required />
+                    <input type="number" step="any" min="0" value={weight} onChange={(event) => handleWeightChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 45.5" required />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Number of Students</label>
-                    <input type="number" min="1" value={studentCount} onChange={(event) => handleStudentCountChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 20" required />
+                    <input type="number" min="1" value={studentCount} onChange={(event) => handleStudentCountChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 20" required />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Total Clothes</label>
-                  <input type="number" min="1" value={totalClothes} onChange={(event) => handleTotalClothesChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 150" />
+                  <input type="number" min="1" value={totalClothes} onChange={(event) => handleTotalClothesChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 150" />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Rate Per KG</label>
-                  <input type="number" min="0" step="0.01" value={studentRate} onChange={(event) => handleStudentRateChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 55" />
+                  <input type="number" min="0" step="0.01" value={studentRate} onChange={(event) => handleStudentRateChange(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., 55" />
                 </div>
 
                 <div>
@@ -433,7 +433,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                       step="0.01"
                       value={studentRevenue || aggregatedStudentServiceAmount}
                       onChange={(event) => handleStudentRevenueChange(event.target.value)}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                       placeholder="Enter recorded revenue"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-widest text-slate-400">
@@ -444,16 +444,16 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Student Name</label>
-                    <input value={studentName} onChange={(event) => setStudentName(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., Rhea Sharma" />
+                    <input value={studentName} onChange={(event) => setStudentName(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., Rhea Sharma" />
                   </div>
                   <div>
                     <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Room / Hostel Contact</label>
-                    <input value={studentRoom} onChange={(event) => setStudentRoom(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., Room 502" />
+                    <input value={studentRoom} onChange={(event) => setStudentRoom(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., Room 502" />
                   </div>
                 </div>
                 <div>
                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Student Phone</label>
-                  <input value={studentContact} onChange={(event) => setStudentContact(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., +919876543210" />
+                  <input value={studentContact} onChange={(event) => setStudentContact(event.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="e.g., +919876543210" />
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -573,7 +573,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                       placeholder="Item name (select or type)"
                       value={item.name}
                       onChange={(event) => handleHotelItemChange(index, "name", event.target.value)}
-                      className="flex-1 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="flex-1 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-indigo-500 outline-none"
                       required
                     />
                     <datalist id="hotel-items-admin">
@@ -586,7 +586,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                       min="1"
                       value={item.quantity}
                       onChange={(event) => handleHotelItemChange(index, "quantity", event.target.value)}
-                      className="w-20 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                      className="w-20 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
                       required
                     />
                     <input
@@ -595,7 +595,7 @@ export default function AdminAddOrderModal({ isOpen, onClose, onSuccess }) {
                       step="0.01"
                       value={item.rate ?? ""}
                       onChange={(event) => handleHotelItemChange(index, "rate", event.target.value)}
-                      className="w-24 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#0F172A] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                      className="w-24 p-2.5 border border-slate-200 rounded-xl text-sm font-bold text-[#172c28] focus:ring-2 focus:ring-indigo-500 outline-none text-center"
                       placeholder="Rate ₹"
                       required
                     />

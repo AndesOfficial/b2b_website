@@ -4,7 +4,7 @@ export default function TabSectionCard({ title, subtitle, actions, children, cla
       {(title || subtitle || actions) && (
         <div className="p-4 sm:p-6 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            {title && <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">{title}</h2>}
+            {title && <h2 className="text-[15px] font-black text-[#172c28] tracking-tight mb-0.5">{title}</h2>}
             {subtitle && <p className="text-[12px] font-medium text-slate-400">{subtitle}</p>}
           </div>
           {actions}

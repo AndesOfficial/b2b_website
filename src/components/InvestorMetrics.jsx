@@ -255,7 +255,7 @@ export default function InvestorMetrics() {
 
   return (
     <div className="animate-fade-in space-y-7" style={{ fontFamily: "DM Sans, sans-serif" }}>
-      <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_38%),linear-gradient(135deg,_#ffffff_0%,_#f8fafc_52%,_#eff6ff_100%)] p-5 shadow-sm lg:p-6">
+      <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_38%),linear-gradient(135deg,_#ffffff_0%,_#f3f6f2_52%,_#eff6ff_100%)] p-5 shadow-sm lg:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
@@ -379,12 +379,12 @@ export default function InvestorMetrics() {
           {isChartReady && (
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
               <ComposedChart data={metrics.monthlyRevenue} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#CBD5E1" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#c7d5cd" vertical={false} />
                 <XAxis
                   dataKey="month"
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: "#64748B", fontSize: 12 }}
+                  tick={{ fill: "#58706a", fontSize: 12 }}
                   interval={0}
                   angle={-28}
                   textAnchor="end"
@@ -393,7 +393,7 @@ export default function InvestorMetrics() {
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: "#64748B", fontSize: 12 }}
+                  tick={{ fill: "#58706a", fontSize: 12 }}
                   tickFormatter={(value) => {
                     if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
                     if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
@@ -404,20 +404,20 @@ export default function InvestorMetrics() {
                   formatter={(value, name) => [formatCurrency(value), name]}
                   contentStyle={{
                     borderRadius: "16px",
-                    border: "1px solid #E2E8F0",
+                    border: "1px solid #dfe8e2",
                     boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
                   }}
                 />
                 <Legend />
                 <Bar dataKey="b2cRevenue" name="B2C Revenue" stackId="revenue" fill="#F59E0B" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="b2bRevenue" name="B2B Revenue" stackId="revenue" fill="#2563EB" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="b2bRevenue" name="B2B Revenue" stackId="revenue" fill="#16654e" radius={[6, 6, 0, 0]} />
                 <Line
                   type="monotone"
                   dataKey="totalRevenue"
                   name="Total Revenue"
-                  stroke="#0F172A"
+                  stroke="#172c28"
                   strokeWidth={3}
-                  dot={{ r: 3, fill: "#0F172A" }}
+                  dot={{ r: 3, fill: "#172c28" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>

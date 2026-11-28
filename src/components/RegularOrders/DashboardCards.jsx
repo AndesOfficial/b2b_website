@@ -148,7 +148,7 @@ export default function DashboardCards({ analytics }) {
           <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{card.title}</p>
           <div className="flex items-center gap-1">
             {card.isCurrency && <BiRupee size={16} className="text-slate-400" />}
-            <span className="text-xl font-black text-[#0F172A] tracking-tight">
+            <span className="text-xl font-black text-[#172c28] tracking-tight">
               {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
             </span>
             {card.suffix && <span className="text-[11px] font-bold text-slate-400">{card.suffix}</span>}

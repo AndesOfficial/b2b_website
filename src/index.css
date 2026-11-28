@@ -10,7 +10,7 @@
 
 body {
   font-family: 'Poppins', sans-serif;
-  background-color: #F0F7FF;
+  background-color: #f3f6f2;
   margin: 0;
   padding: 0;
 }
@@ -21,14 +21,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #eef5f0;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1976D2;
+  background: #16654e;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #1565C0;
+  background: #0f4f3c;
 }
 
 /* Recharts custom */

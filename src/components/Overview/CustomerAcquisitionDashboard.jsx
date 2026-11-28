@@ -52,7 +52,7 @@ function SourceIcon({ source, size = 16 }) {
     case ACQUISITION_SOURCES.WHATSAPP:
       return <FaWhatsapp size={size} className="text-[#25D366]" />;
     case ACQUISITION_SOURCES.APP:
-      return <FiSmartphone size={size} className="text-[#3B82F6]" />;
+      return <FiSmartphone size={size} className="text-[#2f8267]" />;
     case ACQUISITION_SOURCES.WORD_OF_MOUTH:
       return <FiUsers size={size} className="text-[#A855F7]" />;
     case ACQUISITION_SOURCES.GOOGLE_SEARCH:
@@ -68,7 +68,7 @@ function SourceIcon({ source, size = 16 }) {
     case ACQUISITION_SOURCES.PAID_ADS:
       return <FaBullhorn size={size} className="text-[#EC4899]" />;
     default:
-      return <FiHelpCircle size={size} className="text-[#94A3B8]" />;
+      return <FiHelpCircle size={size} className="text-[#8aa39b]" />;
   }
 }
 
@@ -233,7 +233,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
       ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-[26px] font-black tracking-tight text-[#0F172A]">
+          <h1 className="text-2xl lg:text-[26px] font-black tracking-tight text-[#172c28]">
             Customer Acquisition & Orders
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
@@ -287,7 +287,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
               onClick={() => handlePresetChange('month')}
               className={`px-3 py-1.5 text-[12px] font-bold rounded-lg transition-all cursor-pointer ${
                 dateFilterPreset === 'month'
-                  ? 'bg-[#2563EB] text-white shadow-xs'
+                  ? 'bg-[#16654e] text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -312,7 +312,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
           2. OVERVIEW SECTION (6 TOP KPI CARDS)
       ────────────────────────────────────────────────────────────── */}
       <div>
-        <h2 className="text-base font-extrabold text-[#0F172A] tracking-tight mb-3">
+        <h2 className="text-base font-extrabold text-[#172c28] tracking-tight mb-3">
           Overview
         </h2>
 
@@ -320,13 +320,13 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
           
           {/* Card 1: Total Orders */}
           <div className="bg-[#EFF6FF] border border-blue-100/70 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 shadow-2xs hover:shadow-xs transition-all">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#d9f1e3] text-[#16654e] flex items-center justify-center shrink-0">
               <FiShoppingCart size={18} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">Total Orders</p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight">
                   {kpis.totalOrders.value.toLocaleString()}
                 </span>
                 <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
@@ -345,7 +345,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">Total Customers</p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight">
                   {kpis.totalCustomers.value.toLocaleString()}
                 </span>
                 <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
@@ -364,7 +364,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">New Customers</p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight">
                   {kpis.newCustomers.value.toLocaleString()}
                 </span>
                 <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
@@ -383,7 +383,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">Existing Customers</p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight">
                   {kpis.existingCustomers.value.toLocaleString()}
                 </span>
                 <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
@@ -402,7 +402,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">Repeat Orders</p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight">
                   {kpis.repeatOrders.value.toLocaleString()}
                 </span>
                 <span className="text-[11px] font-bold text-emerald-600 inline-flex items-center shrink-0">
@@ -421,7 +421,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-slate-500 truncate">Total Revenue</p>
               <div className="mt-0.5">
-                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#0F172A] tracking-tight truncate block">
+                <span className="text-lg sm:text-xl xl:text-[20px] 2xl:text-2xl font-black text-[#172c28] tracking-tight truncate block">
                   ₹{Math.round(kpis.totalRevenue.value).toLocaleString('en-IN')}
                 </span>
               </div>
@@ -444,7 +444,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
           <div>
             <div className="px-5 py-3.5 border-b border-slate-100">
-              <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
+              <h3 className="text-[15px] font-black text-[#172c28] tracking-tight">
                 New Customers by Source
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -510,7 +510,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
           
           {/* Donut Chart 1: New Customers Source Distribution */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex-1 flex flex-col justify-between">
-            <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-2">
+            <h3 className="text-[14px] font-black text-[#172c28] tracking-tight mb-2">
               New Customers Source Distribution
             </h3>
 
@@ -537,7 +537,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 </ResponsiveContainer>
                 {/* Center text overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xl font-black text-[#0F172A] leading-tight">
+                  <span className="text-xl font-black text-[#172c28] leading-tight">
                     {sourceTableTotal.newCustomers}
                   </span>
                   <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
@@ -565,7 +565,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
 
           {/* Donut Chart 2: Orders by Source (New Customers) */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex-1 flex flex-col justify-between">
-            <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-2">
+            <h3 className="text-[14px] font-black text-[#172c28] tracking-tight mb-2">
               Orders by Source (New Customers)
             </h3>
 
@@ -592,7 +592,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 </ResponsiveContainer>
                 {/* Center text overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xl font-black text-[#0F172A] leading-tight">
+                  <span className="text-xl font-black text-[#172c28] leading-tight">
                     {sourceTableTotal.orders}
                   </span>
                   <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">
@@ -631,7 +631,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
           <div>
             <div className="px-5 py-3.5 border-b border-slate-100">
-              <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight">
+              <h3 className="text-[15px] font-black text-[#172c28] tracking-tight">
                 All Customers by Type
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -698,12 +698,12 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
         {/* ─── RIGHT: Chart 3 (Orders Trend Area Chart) ─── */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between gap-3 mb-2">
-            <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">
+            <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">
               Orders Trend
             </h3>
             <div className="flex items-center gap-3 text-[11px] font-bold">
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2f8267]" />
                 <span className="text-slate-600">New Customers</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -721,25 +721,25 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
               >
                 <defs>
                   <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#2f8267" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#2f8267" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="colorExisting" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef5f0" />
                 <XAxis
                   dataKey="label"
                   tickLine={false}
-                  axisLine={{ stroke: '#E2E8F0' }}
-                  tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                  axisLine={{ stroke: '#dfe8e2' }}
+                  tick={{ fontSize: 10, fill: '#58706a', fontWeight: 600 }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                  tick={{ fontSize: 10, fill: '#58706a', fontWeight: 600 }}
                 />
                 <Tooltip
                   content={({ active, payload, label }) => {
@@ -747,7 +747,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                     return (
                       <div className="bg-slate-900 text-white p-2.5 rounded-xl text-xs shadow-xl border border-slate-800">
                         <p className="font-bold text-slate-300 mb-1">{label}</p>
-                        <p className="text-[#60A5FA]">New Customers: <span className="font-extrabold text-white">{payload[0]?.value}</span></p>
+                        <p className="text-[#5aa586]">New Customers: <span className="font-extrabold text-white">{payload[0]?.value}</span></p>
                         <p className="text-[#34D399]">Existing Customers: <span className="font-extrabold text-white">{payload[1]?.value}</span></p>
                       </div>
                     );
@@ -756,7 +756,7 @@ export default function CustomerAcquisitionDashboard({ orders = [] }) {
                 <Area
                   type="monotone"
                   dataKey="New Customers"
-                  stroke="#3B82F6"
+                  stroke="#2f8267"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorNew)"

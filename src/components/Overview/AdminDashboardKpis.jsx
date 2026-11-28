@@ -11,7 +11,7 @@ function getKpiDefinitions({ activeTab, onTabChange, stats }) {
         label: "Revenue (Overall)",
         value: (
           <div>
-            <span className="text-[26px] sm:text-[28px] font-black text-[#0F172A] leading-none tracking-tight">
+            <span className="text-[26px] sm:text-[28px] font-black text-[#172c28] leading-none tracking-tight">
               {`₹${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </span>
             <div className="bg-slate-50 border border-slate-100/80 rounded-xl p-2.5 mt-3 flex divide-x divide-slate-200/60 justify-between items-center">
@@ -61,7 +61,7 @@ function getKpiDefinitions({ activeTab, onTabChange, stats }) {
         label: "KG Processed",
         value: (
           <div>
-            <span className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight">
+            <span className="text-xl sm:text-2xl font-extrabold text-[#172c28] leading-tight tracking-tight">
               {`${stats.totalKg.toFixed(1)}`}
             </span>
             <div className="flex divide-x divide-slate-100 mt-2.5 gap-4">

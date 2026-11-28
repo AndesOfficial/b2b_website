@@ -53,7 +53,7 @@ export default function AdminRegularTab({ orders, registeredUserIds, onAddOrder,
   return (
     <div className="space-y-6" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
+        <div className="fixed top-6 right-6 z-[100] bg-[#172c28] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
           <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
             <FiCheck size={14} />
           </div>

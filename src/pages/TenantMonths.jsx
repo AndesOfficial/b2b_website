@@ -15,8 +15,8 @@ const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
         return (
-            <div className="bg-white border-l-4 border-[#1976D2] shadow-lg rounded-xl p-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <p className="text-[#1976D2] font-semibold text-xs mb-1">{label}</p>
+            <div className="bg-white border-l-4 border-[#16654e] shadow-lg rounded-xl p-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <p className="text-[#16654e] font-semibold text-xs mb-1">{label}</p>
                 <p className="text-gray-800 font-bold text-sm">{data.count} orders</p>
                 <p className="text-green-600 font-bold text-sm">₹{data.revenue?.toLocaleString() || 0}</p>
             </div>
@@ -57,7 +57,7 @@ export default function TenantMonths() {
     }, [orders, decoded]);
 
     return (
-        <div className="min-h-screen bg-[#F0F7FF]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        <div className="min-h-screen bg-[#f3f6f2]" style={{ fontFamily: 'Poppins, sans-serif' }}>
             <TopNav />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <PageHeader
@@ -89,9 +89,9 @@ export default function TenantMonths() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f5" vertical={false} />
                                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#9ca3af', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F7FF' }} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f6f2' }} />
                                 <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                                    {monthData.map((_, i) => <Cell key={i} fill="#1976D2" />)}
+                                    {monthData.map((_, i) => <Cell key={i} fill="#16654e" />)}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>

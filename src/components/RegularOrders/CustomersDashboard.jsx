@@ -38,7 +38,7 @@ function SourceIcon({ source, size = 14 }) {
     case ACQUISITION_SOURCES.WHATSAPP:
       return <FaWhatsapp size={size} className="text-[#25D366]" />;
     case ACQUISITION_SOURCES.APP:
-      return <FiSmartphone size={size} className="text-[#3B82F6]" />;
+      return <FiSmartphone size={size} className="text-[#2f8267]" />;
     case ACQUISITION_SOURCES.WORD_OF_MOUTH:
       return <FiUsers size={size} className="text-[#A855F7]" />;
     case ACQUISITION_SOURCES.GOOGLE_SEARCH:
@@ -54,7 +54,7 @@ function SourceIcon({ source, size = 14 }) {
     case ACQUISITION_SOURCES.PAID_ADS:
       return <FaBullhorn size={size} className="text-[#EC4899]" />;
     default:
-      return <FiHelpCircle size={size} className="text-[#94A3B8]" />;
+      return <FiHelpCircle size={size} className="text-[#8aa39b]" />;
   }
 }
 
@@ -129,7 +129,7 @@ function CustomerHistoryModal({ user, initialSource, onClose, onSourceUpdated })
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-[#0F172A]/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[#172c28]/50 backdrop-blur-sm" />
       <div 
         className="relative w-full max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up"
         onClick={e => e.stopPropagation()}
@@ -138,7 +138,7 @@ function CustomerHistoryModal({ user, initialSource, onClose, onSourceUpdated })
         <div className="p-6 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{user.name}</h2>
+              <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">{user.name}</h2>
               <p className="text-[13px] font-bold text-slate-400 mt-0.5">{user.phone}</p>
             </div>
             <button 
@@ -405,7 +405,7 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[16px] font-black text-[#0F172A] tracking-tight">Customer Database</h3>
+          <h3 className="text-[16px] font-black text-[#172c28] tracking-tight">Customer Database</h3>
           {/* Search box */}
           <div className="relative w-56">
             <FiSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -500,17 +500,17 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[950px]">
-          <thead className="bg-[#F8FAFC]">
+          <thead className="bg-[#f3f6f2]">
             <tr>
-              <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Customer</th>
-              <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Contact</th>
-              <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-4 uppercase tracking-[0.1em]">Customer Type</th>
-              <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-4 uppercase tracking-[0.1em]">Acquisition Source</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Total Orders</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Revenue</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">First Order</th>
-              <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Last Order</th>
-              {activeSubTab === 'Lost' && <th className="text-right text-[11px] font-black text-[#64748B] px-5 py-4 uppercase tracking-[0.1em]">Days Since</th>}
+              <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Customer</th>
+              <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Contact</th>
+              <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-4 uppercase tracking-[0.1em]">Customer Type</th>
+              <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-4 uppercase tracking-[0.1em]">Acquisition Source</th>
+              <th className="text-right text-[11px] font-black text-[#58706a] px-5 py-4 uppercase tracking-[0.1em]">Total Orders</th>
+              <th className="text-right text-[11px] font-black text-[#58706a] px-5 py-4 uppercase tracking-[0.1em]">Revenue</th>
+              <th className="text-right text-[11px] font-black text-[#58706a] px-5 py-4 uppercase tracking-[0.1em]">First Order</th>
+              <th className="text-right text-[11px] font-black text-[#58706a] px-5 py-4 uppercase tracking-[0.1em]">Last Order</th>
+              {activeSubTab === 'Lost' && <th className="text-right text-[11px] font-black text-[#58706a] px-5 py-4 uppercase tracking-[0.1em]">Days Since</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -543,7 +543,7 @@ export default function CustomersDashboard({ analytics, lookbackLabel }) {
                   className="hover:bg-blue-50/60 transition-colors group cursor-pointer"
                 >
                   <td className="px-6 py-4">
-                    <p className="text-[14px] font-black text-[#0F172A] tracking-tight group-hover:text-blue-700 transition-colors">{user.name}</p>
+                    <p className="text-[14px] font-black text-[#172c28] tracking-tight group-hover:text-blue-700 transition-colors">{user.name}</p>
                     {user.address && <p className="text-[10px] text-slate-400 truncate max-w-[200px] mt-0.5">{user.address}</p>}
                   </td>
                   <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{user.phone}</td>

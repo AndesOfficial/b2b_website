@@ -201,11 +201,11 @@ export default function RegularOrderFormModal({ isOpen, onClose, initialOrder, o
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-end p-0 sm:p-4">
-      <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#172c28]/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-left">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
           <div>
-            <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{form.id ? "Modify Transaction" : "Record New Sale"}</h2>
+            <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">{form.id ? "Modify Transaction" : "Record New Sale"}</h2>
             <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Andes B2C Retail Management</p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">

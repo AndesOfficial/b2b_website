@@ -592,11 +592,11 @@ export default function AdminIssuesTab({ orders, onAddIssue, onEditIssue, onDele
       {/* ── Modal for Adding / Modifying Issues ── */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
-          <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="absolute inset-0 bg-[#172c28]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-lg flex flex-col overflow-hidden animate-slide-up sm:animate-fade-in max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-gray-100 bg-slate-50/50 shrink-0">
               <div>
-                <h2 className="text-lg font-black text-[#0F172A] tracking-tight">
+                <h2 className="text-lg font-black text-[#172c28] tracking-tight">
                   {form.id ? 'Modify Issue Record' : 'Log Operational Issue'}
                 </h2>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">

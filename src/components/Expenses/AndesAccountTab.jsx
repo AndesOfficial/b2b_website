@@ -30,8 +30,8 @@ const CAT_COLORS = {
   "Setup cost": "#F59E0B",
   "Workers payment": "#10B981",
   "Out of the box": "#F43F5E",
-  "Vendor payment": "#3B82F6",
-  Other: "#64748B",
+  "Vendor payment": "#2f8267",
+  Other: "#58706a",
   "Dark Store OPEX": "#8B5CF6",
   "COMPANY OPEX": "#06B6D4",
   "Marketing Expense": "#EC4899",
@@ -350,7 +350,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
     <div className="space-y-8" style={{ fontFamily: "DM Sans, sans-serif" }}>
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
+        <div className="fixed top-6 right-6 z-[100] bg-[#172c28] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
           <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
             <FileText size={14} />
           </div>
@@ -383,7 +383,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-slate-50/20">
           <div>
-            <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">Andes Account Ledger</h2>
+            <h2 className="text-[15px] font-black text-[#172c28] tracking-tight mb-0.5">Andes Account Ledger</h2>
             <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest">{computedEntries.length} total entries</p>
           </div>
         </div>
@@ -391,16 +391,16 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[950px]">
-            <thead className="bg-[#F8FAFC]">
+            <thead className="bg-[#f3f6f2]">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Date</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Beneficiary</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Note</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Invoice</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Amount</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Closing Balance</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Debit Breakdown</th>
-                {!isViewer && <th className="text-right text-[11px] font-black text-[#64748B] px-4 py-3 uppercase tracking-[0.1em]">Actions</th>}
+                <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Date</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Beneficiary</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Note</th>
+                <th className="text-center text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Invoice</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Amount</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Closing Balance</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Debit Breakdown</th>
+                {!isViewer && <th className="text-right text-[11px] font-black text-[#58706a] px-4 py-3 uppercase tracking-[0.1em]">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -424,15 +424,15 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
               ) : (
                 computedEntries.map((e) => (
                   <React.Fragment key={e.id}>
-                    <tr className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group">
+                    <tr className="border-b border-gray-50 hover:bg-[#f3f6f2] transition-colors group">
                       {/* Date */}
                       <td className="px-4 py-3 text-[13px] font-bold text-slate-500">{e.date}</td>
                       {/* Beneficiary & Classification */}
                       <td className="px-4 py-3">
-                        <p className="text-[14px] font-black text-[#0F172A] tracking-tight">{e.payee}</p>
+                        <p className="text-[14px] font-black text-[#172c28] tracking-tight">{e.payee}</p>
                         {e.category && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-1 rounded text-[9px] font-black uppercase tracking-wider"
-                            style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
+                            style={{ backgroundColor: (CAT_COLORS[e.category] || "#8aa39b") + "15", color: CAT_COLORS[e.category] || "#8aa39b" }}>
                             {e.category}
                           </span>
                         )}
@@ -480,7 +480,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                               <div className="flex flex-wrap gap-1 max-w-[250px]">
                                 {(e.debitBreakdown || []).slice(0, 2).map((b, i) => (
                                   <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                                    style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "15", color: CAT_COLORS[b.category] || "#94a3b8" }}>
+                                    style={{ backgroundColor: (CAT_COLORS[b.category] || "#8aa39b") + "15", color: CAT_COLORS[b.category] || "#8aa39b" }}>
                                     ₹{Number(b.amount).toLocaleString("en-IN")} {b.itemName}
                                   </span>
                                 ))}
@@ -536,11 +536,11 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                                   <tr key={i}>
                                     <td className="p-4">
                                       <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider"
-                                        style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "15", color: CAT_COLORS[b.category] || "#94a3b8" }}>
+                                        style={{ backgroundColor: (CAT_COLORS[b.category] || "#8aa39b") + "15", color: CAT_COLORS[b.category] || "#8aa39b" }}>
                                         {b.category}
                                       </span>
                                     </td>
-                                    <td className="p-4 text-[13px] font-bold text-[#0F172A]">
+                                    <td className="p-4 text-[13px] font-bold text-[#172c28]">
                                       <div className="flex items-center gap-1.5">
                                         {b.itemName}
                                         {b.invoiceUrl && (
@@ -609,12 +609,12 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
               <div key={e.id} className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-[14px] font-black text-[#0F172A] tracking-tight mb-1">{e.payee}</p>
+                    <p className="text-[14px] font-black text-[#172c28] tracking-tight mb-1">{e.payee}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-[11px] font-bold text-slate-400">{e.date}</p>
                       {e.category && (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: (CAT_COLORS[e.category] || "#94a3b8") + "15", color: CAT_COLORS[e.category] || "#94a3b8" }}>
+                          style={{ backgroundColor: (CAT_COLORS[e.category] || "#8aa39b") + "15", color: CAT_COLORS[e.category] || "#8aa39b" }}>
                           {e.category}
                         </span>
                       )}
@@ -645,7 +645,7 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
                       <div key={i} className="flex justify-between items-center text-[11px] border-b border-slate-100/70 pb-1 last:border-0 last:pb-0">
                         <div className="flex items-center gap-1.5 flex-wrap flex-1 pr-2">
                           <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black flex-shrink-0"
-                            style={{ backgroundColor: (CAT_COLORS[b.category] || "#94a3b8") + "20", color: CAT_COLORS[b.category] || "#94a3b8" }}>
+                            style={{ backgroundColor: (CAT_COLORS[b.category] || "#8aa39b") + "20", color: CAT_COLORS[b.category] || "#8aa39b" }}>
                             {i + 1}
                           </span>
                           <span className="font-bold text-slate-700">{b.itemName}</span>
@@ -706,12 +706,12 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       {/* ─── Side Panel Form ─── */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center sm:justify-end p-0 sm:p-4">
-          <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="absolute inset-0 bg-[#172c28]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up sm:animate-slide-left">
             {/* Header */}
             <div className="p-6 sm:p-8 border-b border-slate-50 flex items-center justify-between bg-emerald-50/30 flex-shrink-0">
               <div>
-                <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">
+                <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">
                   {editingId ? "Edit Andes Entry" : "New Andes Entry"}
                 </h2>
                 <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Andes Account Management</p>
@@ -1007,9 +1007,9 @@ export default function AndesAccountTab({ entries: propEntries = [], loading = f
       {/* ─── Note Prompt Modal ─── */}
       {notePrompt && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setNotePrompt(null)} />
+          <div className="absolute inset-0 bg-[#172c28]/40 backdrop-blur-sm" onClick={() => setNotePrompt(null)} />
           <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 animate-slide-up">
-            <h3 className="text-[16px] font-black text-[#0F172A] mb-4">Note for Remaining Amount</h3>
+            <h3 className="text-[16px] font-black text-[#172c28] mb-4">Note for Remaining Amount</h3>
             <input
               autoFocus
               type="text"

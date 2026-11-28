@@ -17,7 +17,7 @@ export default function EmptyState({
                 <div className="absolute -inset-2 rounded-[2rem] border border-slate-100/60 pointer-events-none" />
             </div>
 
-            <h3 className="text-[17px] font-black text-[#0F172A] mb-2 tracking-tight">
+            <h3 className="text-[17px] font-black text-[#172c28] mb-2 tracking-tight">
                 {title}
             </h3>
             <p className="text-slate-400 text-[13px] font-medium max-w-xs leading-relaxed">

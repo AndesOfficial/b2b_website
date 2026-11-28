@@ -34,7 +34,7 @@ export default function GraphsTrends({ analytics }) {
       {/* Daily Revenue Trend */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="mb-6">
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">Daily Revenue Trend</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">Daily Revenue Trend</h3>
           <p className="text-[12px] font-medium text-slate-400">Revenue generated over selected period</p>
         </div>
         <div className="h-[250px]">
@@ -51,13 +51,13 @@ export default function GraphsTrends({ analytics }) {
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef5f0" />
                 {/* Fix #7 — human-readable date labels */}
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tick={{ fontSize: 10, fill: '#8aa39b' }}
                   dy={10}
                   tickFormatter={fmtDate}
                   interval="preserveStartEnd"
@@ -65,7 +65,7 @@ export default function GraphsTrends({ analytics }) {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tick={{ fontSize: 10, fill: '#8aa39b' }}
                   width={48}
                   tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
                 />
@@ -87,7 +87,7 @@ export default function GraphsTrends({ analytics }) {
       {/* Channel-Wise Revenue — fix #13: skip zero-order channels */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="mb-6">
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">Channel-Wise Revenue</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">Channel-Wise Revenue</h3>
           <p className="text-[12px] font-medium text-slate-400">Revenue comparison across acquisition channels</p>
         </div>
         <div className="h-[250px]">
@@ -98,12 +98,12 @@ export default function GraphsTrends({ analytics }) {
           ) : (
             <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={activeChannels} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eef5f0" />
                 <XAxis
                   type="number"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  tick={{ fontSize: 10, fill: '#8aa39b' }}
                   tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
                 />
                 <YAxis
@@ -111,15 +111,15 @@ export default function GraphsTrends({ analytics }) {
                   type="category"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }}
+                  tick={{ fontSize: 11, fill: '#58706a', fontWeight: 'bold' }}
                   width={80}
                 />
                 <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
+                  cursor={{ fill: '#f3f6f2' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={v => [`₹${v.toLocaleString()}`, 'Revenue']}
                 />
-                <Bar dataKey="revenue" fill="#3B82F6" radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar dataKey="revenue" fill="#2f8267" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           )}

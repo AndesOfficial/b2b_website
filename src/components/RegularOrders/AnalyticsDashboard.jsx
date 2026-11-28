@@ -14,7 +14,7 @@ export default function AnalyticsDashboard({ analytics }) {
       {/* Revenue & Order Stats */}
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-4">Revenue Analytics</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight mb-4">Revenue Analytics</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-emerald-50 p-4 rounded-xl">
               <span className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest block mb-1">Total Revenue</span>
@@ -44,7 +44,7 @@ export default function AnalyticsDashboard({ analytics }) {
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-4">Order Analytics</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight mb-4">Order Analytics</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
               <span className="text-[9px] font-black text-blue-600/70 uppercase tracking-widest block mb-1">Total</span>
@@ -79,7 +79,7 @@ export default function AnalyticsDashboard({ analytics }) {
 
       {/* Retention Dashboard */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight mb-4">Customer Retention Dashboard</h3>
+        <h3 className="text-[14px] font-black text-[#172c28] tracking-tight mb-4">Customer Retention Dashboard</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="border border-slate-100 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                 <span className="text-3xl font-black text-indigo-600 mb-1">{analytics.retentionRate.toFixed(1)}%</span>
@@ -101,25 +101,25 @@ export default function AnalyticsDashboard({ analytics }) {
       {/* Channel-Wise Analytics */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100">
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">Channel-Wise Performance</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">Channel-Wise Performance</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
-            <thead className="bg-[#F8FAFC]">
+            <thead className="bg-[#f3f6f2]">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Channel</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Orders</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Revenue</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Unique Users</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">New / Returning</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">AOV</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Channel</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Orders</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Revenue</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Unique Users</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">New / Returning</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">AOV</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {channelData.filter(c => c.orders > 0).length === 0 ? (
                 <tr><td colSpan="6" className="text-center py-8 text-sm text-slate-400 italic">No channel data available</td></tr>
               ) : channelData.filter(c => c.orders > 0).sort((a,b) => b.revenue - a.revenue).map(c => (
-                <tr key={c.channel} className="hover:bg-[#F8FAFC] transition-colors">
+                <tr key={c.channel} className="hover:bg-[#f3f6f2] transition-colors">
                   <td className="px-6 py-4 text-[13px] font-black text-slate-700">{c.channel}</td>
                   <td className="px-6 py-4 text-[13px] font-bold text-slate-600 text-right">{c.orders}</td>
                   <td className="px-6 py-4 text-right">

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { ORDER_CATEGORIES, ORDER_TYPES } from "../constants/orders";
 
 const DEFAULT_HOTEL_COLORS = { "Airbnb Viman Nagar": "#D97706" };
-const FALLBACK_HOTEL_COLORS = ["#D97706", "#1976D2", "#7C3AED", "#059669", "#BE185D", "#0891B2"];
+const FALLBACK_HOTEL_COLORS = ["#D97706", "#16654e", "#7C3AED", "#059669", "#BE185D", "#0891B2"];
 const HIDDEN_HOTEL_RECORDS = new Set([]);
 
 function getHotelColor(name, index) {

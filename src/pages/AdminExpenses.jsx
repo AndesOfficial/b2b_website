@@ -58,7 +58,7 @@ export default function AdminExpenses() {
           isSidebarCollapsed ? "lg:ml-[80px]" : "lg:ml-[218px]"
         } ml-0`}
       >
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#F1F5F9]/95 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#eef5f0]/95 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-8">
             <div className="flex items-center gap-3">
               <button

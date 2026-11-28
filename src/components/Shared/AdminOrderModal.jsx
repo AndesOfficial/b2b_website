@@ -215,10 +215,10 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
 
       <div className="relative bg-white sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-md overflow-hidden animate-slide-up sm:animate-fade-in flex flex-col sm:max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-100 bg-[#F8FAFC]">
+        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-100 bg-[#f3f6f2]">
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{order.customerName || order.property || order.tenant || 'Unknown Property'}</h2>
+              <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">{order.customerName || order.property || order.tenant || 'Unknown Property'}</h2>
               <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                 Collection: {order.source === "hostels" ? "hostels_orders" : order.source === "b2b" ? "b2b_orders" : order.source === "cartdetails" ? "cartdetails" : order.source === "website" ? "orders" : "b2b_admin_edits"} • ID: {order.id}
               </span>
@@ -289,17 +289,17 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Weight (kg)</p>
                   {isEditing ? (
-                    <input type="number" step="0.1" min="0" value={editForm.weight} onChange={(e) => updatePositiveField("weight", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
+                    <input type="number" step="0.1" min="0" value={editForm.weight} onChange={(e) => updatePositiveField("weight", e.target.value)} className="w-full text-[16px] font-black text-[#172c28] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
-                    <p className="text-[18px] font-black text-[#0F172A]">{Number(order.weight || 0).toFixed(1)} <span className="text-[12px] text-slate-500">kg</span></p>
+                    <p className="text-[18px] font-black text-[#172c28]">{Number(order.weight || 0).toFixed(1)} <span className="text-[12px] text-slate-500">kg</span></p>
                   )}
                 </div>
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Students</p>
                   {isEditing ? (
-                    <input type="number" min="0" value={editForm.studentCount} onChange={(e) => updatePositiveField("studentCount", e.target.value)} className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
+                    <input type="number" min="0" value={editForm.studentCount} onChange={(e) => updatePositiveField("studentCount", e.target.value)} className="w-full text-[16px] font-black text-[#172c28] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
-                    <p className="text-[18px] font-black text-[#0F172A]">{order.studentCount || '—'}</p>
+                    <p className="text-[18px] font-black text-[#172c28]">{order.studentCount || '—'}</p>
                   )}
                 </div>
               </div>
@@ -308,9 +308,9 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                 <div className="flex items-center justify-between py-2 border-b border-slate-50">
                   <span className="text-[14px] font-bold text-slate-600">Total Clothes (pcs)</span>
                   {isEditing ? (
-                    <input type="number" min="0" value={editForm.items} onChange={(e) => updatePositiveField("items", e.target.value)} className="w-24 text-right text-[14px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
+                    <input type="number" min="0" value={editForm.items} onChange={(e) => updatePositiveField("items", e.target.value)} className="w-24 text-right text-[14px] font-black text-[#172c28] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500" />
                   ) : (
-                    <span className="text-[14px] font-black text-[#0F172A]">{order.items || 0} pcs</span>
+                    <span className="text-[14px] font-black text-[#172c28]">{order.items || 0} pcs</span>
                   )}
                 </div>
               </div>
@@ -337,7 +337,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                           min="0"
                           value={editForm.weight}
                           onChange={(e) => handleWeightChange(e.target.value)}
-                          className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-7"
+                          className="w-full text-[16px] font-black text-[#172c28] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-7"
                           placeholder="0.0"
                         />
                         <span className="absolute right-2 top-1.5 text-[11px] font-bold text-slate-400">kg</span>
@@ -347,7 +347,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                       </p>
                     </div>
                   ) : (
-                    <p className="text-[18px] font-black text-[#0F172A]">
+                    <p className="text-[18px] font-black text-[#172c28]">
                       {Number(order.weight ?? order.clothesWeightKg ?? 0).toFixed(1)}{" "}
                       <span className="text-[12px] text-slate-500">kg</span>
                     </p>
@@ -363,13 +363,13 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                         min="0"
                         value={editForm.items}
                         onChange={(e) => updatePositiveField("items", e.target.value)}
-                        className="w-full text-[16px] font-black text-[#0F172A] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-8"
+                        className="w-full text-[16px] font-black text-[#172c28] bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 pr-8"
                         placeholder="0"
                       />
                       <span className="absolute right-2 top-1.5 text-[11px] font-bold text-slate-400">pcs</span>
                     </div>
                   ) : (
-                    <p className="text-[18px] font-black text-[#0F172A]">
+                    <p className="text-[18px] font-black text-[#172c28]">
                       {order.items ?? order.clothesCount ?? Object.values(order.details || {}).reduce((s, v) => s + v, 0) ?? 0}{" "}
                       <span className="text-[12px] text-slate-500">pcs</span>
                     </p>
@@ -390,7 +390,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                     {Object.entries(order.details).filter(([, v]) => v > 0).map(([item, qty]) => (
                       <div key={item} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg opacity-80">
                         <span className="text-[14px] font-bold text-slate-600">{item}</span>
-                        <span className="text-[14px] font-black text-[#0F172A]">{qty}</span>
+                        <span className="text-[14px] font-black text-[#172c28]">{qty}</span>
                       </div>
                     ))}
                   </div>
@@ -469,7 +469,7 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
                     </p>
                   </div>
                   {item.amount !== undefined ? (
-                    <div className="text-[13px] font-black text-[#0F172A]">
+                    <div className="text-[13px] font-black text-[#172c28]">
                       <BiRupee size={14} className="inline-block" /> {Number(item.amount).toLocaleString()}
                     </div>
                   ) : null}
@@ -523,10 +523,10 @@ export default function AdminOrderModal({ isOpen, onClose, order }) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-100 bg-[#F8FAFC]">
+        <div className="p-6 border-t border-gray-100 bg-[#f3f6f2]">
           <div className="flex items-center justify-between pt-2">
             <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">Total Billed</span>
-              <div className="flex items-center gap-1 text-[24px] font-black text-[#1976D2]">
+              <div className="flex items-center gap-1 text-[24px] font-black text-[#16654e]">
                 <BiRupee size={24} className="mb-0.5" />
                 {isEditing ? (
                   <input type="number" min="0" value={editForm.amount} onChange={(e) => updatePositiveField("amount", e.target.value)} className="w-28 text-right bg-white border border-slate-300 rounded-lg px-2 py-1 text-[20px] outline-none focus:border-blue-500" />

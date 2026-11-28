@@ -182,7 +182,7 @@ export default function DailyOpsReportView({ report, selectedDate }) {
   ];
 
   return (
-    <div className="bg-[#0F172A] rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
+    <div className="bg-[#172c28] rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden">
       {/* Report Header */}
       <div className="px-6 py-5 border-b border-slate-700/50">
         <h2 className="text-[18px] font-extrabold text-white tracking-tight">

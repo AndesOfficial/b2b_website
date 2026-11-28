@@ -59,7 +59,7 @@ export default function ClientOrderDetail() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#F0F7FF] flex items-center justify-center" style={{ fontFamily: "Poppins, sans-serif" }}>
+      <div className="min-h-screen bg-[#f3f6f2] flex items-center justify-center" style={{ fontFamily: "Poppins, sans-serif" }}>
         <div className="text-center">
           <FiPackage size={48} className="mx-auto text-gray-300 mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Order Not Found</h2>
@@ -112,7 +112,7 @@ export default function ClientOrderDetail() {
   if (order.solution) fields.push({ label: "Solution / Resolution", value: order.solution });
 
   return (
-    <div className="min-h-screen bg-[#F0F7FF]" style={{ fontFamily: "Poppins, sans-serif" }}>
+    <div className="min-h-screen bg-[#f3f6f2]" style={{ fontFamily: "Poppins, sans-serif" }}>
       {/* Header */}
       <nav className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">

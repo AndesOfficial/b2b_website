@@ -64,7 +64,7 @@ export default function AdminTopBar({ title, dateFrom, setDateFrom, dateTo, setD
                 >
                     <FiMenu size={20} />
                 </button>
-                <h1 className="text-base lg:text-[18px] font-bold text-[#0F172A] truncate max-w-[120px] sm:max-w-none">{title}</h1>
+                <h1 className="text-base lg:text-[18px] font-bold text-[#172c28] truncate max-w-[120px] sm:max-w-none">{title}</h1>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">

@@ -19,8 +19,8 @@ import VerifiedMetricsPanel from "./VerifiedMetricsPanel";
 import { getTodayString, formatDateString } from "../../utils/dateUtils";
 
 // ── Constants ────────────────────────────────────────────────────
-const AVATAR_COLORS = ["#1976D2", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D"];
-const PROPERTY_COLORS = ["#1976D2", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D", "#4338CA"];
+const AVATAR_COLORS = ["#16654e", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D"];
+const PROPERTY_COLORS = ["#16654e", "#7C3AED", "#059669", "#DC2626", "#D97706", "#0891B2", "#BE185D", "#4338CA"];
 const STATUS_FILTERS = ["All", ORDER_STATUSES.PENDING, ORDER_STATUSES.PROCESSING, ORDER_STATUSES.DELIVERED];
 const TYPE_FILTERS = ["All", "Linen", "Student", "Retail", "Hotel"];
 
@@ -39,7 +39,7 @@ function Toast({ message, onDismiss }) {
   }, [onDismiss]);
 
   return (
-    <div className="fixed bottom-6 right-6 z-[200] flex items-center gap-3 bg-[#0F172A] text-white px-4 py-3 rounded-xl shadow-2xl animate-slide-up"
+    <div className="fixed bottom-6 right-6 z-[200] flex items-center gap-3 bg-[#172c28] text-white px-4 py-3 rounded-xl shadow-2xl animate-slide-up"
       style={{ fontFamily: "DM Sans, sans-serif" }}>
       <FiCheckCircle size={18} className="text-emerald-400 flex-shrink-0" />
       <span className="text-[13px] font-bold">{message}</span>
@@ -161,11 +161,11 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1.5 h-5 rounded-full bg-blue-500" />
-            <h2 className="text-[16px] font-black text-[#0F172A] tracking-tight">Revenue Sources</h2>
+            <h2 className="text-[16px] font-black text-[#172c28] tracking-tight">Revenue Sources</h2>
           </div>
           <div className="flex items-center gap-1.5 ml-3.5">
-            <FiCalendar size={11} className="text-[#94A3B8]" />
-            <p className="text-[12px] font-semibold text-[#94A3B8]">{formattedDate}</p>
+            <FiCalendar size={11} className="text-[#8aa39b]" />
+            <p className="text-[12px] font-semibold text-[#8aa39b]">{formattedDate}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                 onClick={() => { setPeriod(opt.key); setExpandedCategory(null); }}
                 className={`px-3 py-1.5 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${
                   period === opt.key
-                    ? "bg-white text-[#0F172A] shadow-sm"
+                    ? "bg-white text-[#172c28] shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -188,8 +188,8 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
           {/* Total revenue */}
           {hasData && (
             <div className="text-right pl-3 border-l border-gray-100">
-              <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Total</p>
-              <div className="flex items-center gap-0.5 text-[18px] font-black text-[#0F172A]">
+              <p className="text-[10px] font-bold text-[#8aa39b] uppercase tracking-widest">Total</p>
+              <div className="flex items-center gap-0.5 text-[18px] font-black text-[#172c28]">
                 <BiRupee size={16} />
                 <span>{periodData.periodTotal.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
               </div>
@@ -198,7 +198,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                   diff={periodData.overallTrendDiff}
                   pct={periodData.overallTrendPct}
                   prevLabel={prevLabel}
-                  color="#1976D2"
+                  color="#16654e"
                 />
               )}
             </div>
@@ -241,7 +241,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                       <span className="text-[15px] mb-0.5">₹</span>
                       <span>{cat.revenue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                    <p className="text-[11px] font-semibold text-[#94A3B8] mt-0.5">
+                    <p className="text-[11px] font-semibold text-[#8aa39b] mt-0.5">
                       {cat.orders} {cat.orders === 1 ? "order" : "orders"}
                     </p>
                   </div>
@@ -256,7 +256,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                     <div className="h-full rounded-full transition-all duration-700" style={{ backgroundColor: cat.color, width: `${cat.share}%` }} />
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-[#94A3B8]">{cat.share.toFixed(1)}% of total</span>
+                    <span className="text-[10px] font-bold text-[#8aa39b]">{cat.share.toFixed(1)}% of total</span>
                     <span className={`text-[10px] font-black flex items-center gap-0.5 transition-opacity ${isExpanded ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} style={{ color: cat.color }}>
                       {isExpanded ? "Collapse" : "Drill down"} <FiArrowUpRight size={10} />
                     </span>
@@ -274,8 +274,8 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                 <div className="flex items-center gap-3">
                   <div className="w-1 h-8 rounded-full" style={{ backgroundColor: expandedCat.color }} />
                   <div>
-                    <h3 className="text-[14px] font-black text-[#0F172A]">{expandedCat.label} — Property Breakdown</h3>
-                    <p className="text-[11px] font-medium text-[#94A3B8]">
+                    <h3 className="text-[14px] font-black text-[#172c28]">{expandedCat.label} — Property Breakdown</h3>
+                    <p className="text-[11px] font-medium text-[#8aa39b]">
                       {expandedProperties.length} {expandedProperties.length === 1 ? "property" : "properties"} ·{" "}
                       {period === "today" ? "today" : period === "week" ? "this week" : "this month"}
                     </p>
@@ -301,7 +301,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                             </div>
                             <div>
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Property</p>
-                              <h4 className="text-[16px] font-bold text-[#0F172A] leading-none mb-1.5">{row.property}</h4>
+                              <h4 className="text-[16px] font-bold text-[#172c28] leading-none mb-1.5">{row.property}</h4>
                               <p className="text-[11px] font-bold text-slate-500">
                                 {row.orders} {row.orders === 1 ? "order" : "orders"} · {row.kg > 0 ? `${row.kg.toFixed(1)} kg · ` : ''}{share}% share
                               </p>
@@ -309,7 +309,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Revenue</p>
-                            <div className="text-[20px] font-black text-[#0F172A] leading-none">
+                            <div className="text-[20px] font-black text-[#172c28] leading-none">
                               <span className="text-[14px] mr-0.5">₹</span>
                               {row.revenue.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </div>
@@ -325,7 +325,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Hostel Bulk</p>
                                   <p className="text-[10px] font-bold text-slate-400">{row.entryModes.bulk.orders} {row.entryModes.bulk.orders === 1 ? "order" : "orders"}</p>
                                 </div>
-                                <p className="text-[16px] font-black text-[#0F172A] mb-2">
+                                <p className="text-[16px] font-black text-[#172c28] mb-2">
                                   <span className="text-[12px] mr-0.5">₹</span>
                                   {row.entryModes.bulk.revenue.toLocaleString("en-IN")}
                                 </p>
@@ -335,7 +335,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                                   {row.entryModes.bulk.clothes > 0 ? `${row.entryModes.bulk.clothes} pcs` : '- pcs'}
                                 </p>
                               </div>
-                              <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-[#94A3B8] pt-3 border-t border-slate-200/50 mt-auto">
+                              <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-[#8aa39b] pt-3 border-t border-slate-200/50 mt-auto">
                                 <span>Path</span>
                                 <span className="text-blue-600 cursor-pointer hover:text-blue-700 transition-colors">Drill In</span>
                               </div>
@@ -348,7 +348,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Student Orders</p>
                                   <p className="text-[10px] font-bold text-slate-400">{row.entryModes.student.orders} {row.entryModes.student.orders === 1 ? "order" : "orders"}</p>
                                 </div>
-                                <p className="text-[16px] font-black text-[#0F172A] mb-2">
+                                <p className="text-[16px] font-black text-[#172c28] mb-2">
                                   <span className="text-[12px] mr-0.5">₹</span>
                                   {row.entryModes.student.revenue.toLocaleString("en-IN")}
                                 </p>
@@ -365,7 +365,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                                     {row.entryModes.student.details.map((detail, idx) => (
                                       <div key={detail.id || idx} className="bg-white rounded-lg p-2.5 flex justify-between items-center border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                                         <div className="overflow-hidden pr-2">
-                                          <p className="text-[11px] font-bold text-[#0F172A] truncate" title={detail.name || "Student"}>
+                                          <p className="text-[11px] font-bold text-[#172c28] truncate" title={detail.name || "Student"}>
                                             {detail.name || "Student"}
                                           </p>
                                           <p className="text-[9px] font-black text-slate-400 mt-0.5 truncate tracking-wide">
@@ -382,7 +382,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                                   </div>
                                 )}
                               </div>
-                              <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-[#94A3B8] pt-3 border-t border-slate-200/50 mt-auto">
+                              <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest text-[#8aa39b] pt-3 border-t border-slate-200/50 mt-auto">
                                 <span>Path</span>
                                 <span className="text-blue-600 cursor-pointer hover:text-blue-700 transition-colors">Drill In</span>
                               </div>
@@ -394,7 +394,7 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
                   })}
                 </div>
               ) : (
-                <div className="py-8 text-center text-[12px] text-[#94A3B8] font-medium">
+                <div className="py-8 text-center text-[12px] text-[#8aa39b] font-medium">
                   No property-level data for this category in this period.
                 </div>
               )}
@@ -406,8 +406,8 @@ function RevenueSources({ buildPeriodData, categorySparklines, todayString }) {
           <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
             <FiTrendingUp size={24} className="text-gray-300" />
           </div>
-          <p className="text-[14px] font-bold text-[#0F172A] mb-1">No revenue in this period</p>
-          <p className="text-[12px] text-[#94A3B8]">Orders will appear here as they are logged.</p>
+          <p className="text-[14px] font-bold text-[#172c28] mb-1">No revenue in this period</p>
+          <p className="text-[12px] text-[#8aa39b]">Orders will appear here as they are logged.</p>
         </div>
       )}
     </div>
@@ -422,14 +422,14 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="p-4 sm:p-6 border-b border-gray-50 flex flex-wrap items-center justify-between gap-4 bg-white">
         <div>
-          <h2 className="text-[15px] font-bold text-[#0F172A] mb-0.5">Top Contributors & Property Performance</h2>
-          <p className="text-[12px] font-medium text-[#94A3B8]">All-time metrics · Click a row to view orders</p>
+          <h2 className="text-[15px] font-bold text-[#172c28] mb-0.5">Top Contributors & Property Performance</h2>
+          <p className="text-[12px] font-medium text-[#8aa39b]">All-time metrics · Click a row to view orders</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Filter */}
           <div className="relative">
             <button onClick={() => { setShowFilterMenu((c) => !c); setShowSortMenu(false); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[12px] font-bold transition-colors ${filterType !== "All" ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-gray-200 text-[#475569] hover:bg-gray-50"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[12px] font-bold transition-colors ${filterType !== "All" ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-gray-200 text-[#3d5450] hover:bg-gray-50"}`}>
               <FiFilter size={14} /> {filterType === "All" ? "Filter" : filterType}
             </button>
             {showFilterMenu && (
@@ -446,7 +446,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
           {/* Sort */}
           <div className="relative">
             <button onClick={() => { setShowSortMenu((c) => !c); setShowFilterMenu(false); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[12px] font-bold transition-colors ${sortConfig.key !== "rev" || sortConfig.direction !== "desc" ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-gray-200 text-[#475569] hover:bg-gray-50"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[12px] font-bold transition-colors ${sortConfig.key !== "rev" || sortConfig.direction !== "desc" ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-white border-gray-200 text-[#3d5450] hover:bg-gray-50"}`}>
               Sort <FiChevronDown size={14} className={`transition-transform ${showSortMenu ? "rotate-180" : ""}`} />
             </button>
             {showSortMenu && (
@@ -468,7 +468,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
           </div>
           {/* Collapse toggle */}
           <button onClick={() => setIsCollapsed((c) => !c)}
-            className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] font-bold text-[#475569] hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-[12px] font-bold text-[#3d5450] hover:bg-gray-50 transition-colors">
             <FiChevronRight size={14} className={`transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`} />
             {isCollapsed ? "Show" : "Hide"}
           </button>
@@ -480,27 +480,27 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[850px]">
-              <thead className="bg-[#F8FAFC]">
+              <thead className="bg-[#f3f6f2]">
                 <tr>
-                  <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Property</th>
-                  <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Type</th>
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Orders</th>
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">KG Processed</th>
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Total Revenue</th>
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Avg Order</th>
-                  <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Last Activity</th>
-                  <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Details</th>
+                  <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Property</th>
+                  <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Type</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Orders</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">KG Processed</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Total Revenue</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Avg Order</th>
+                  <th className="text-center text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Last Activity</th>
+                  <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRows.map((row, index) => (
-                  <tr key={row.id} className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors cursor-pointer" onClick={() => onRowClick(row)}>
+                  <tr key={row.id} className="border-b border-gray-50 hover:bg-[#f3f6f2] transition-colors cursor-pointer" onClick={() => onRowClick(row)}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-[13px] font-extrabold flex-shrink-0 shadow-sm" style={{ backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }}>
                           {row.name?.charAt(0)}
                         </div>
-                        <span className="text-[13.5px] font-bold text-[#0F172A]">{row.name}</span>
+                        <span className="text-[13.5px] font-bold text-[#172c28]">{row.name}</span>
                         {index < 3 && sortConfig.key === "rev" && sortConfig.direction === "desc" && row.rev > 0 && (
                           <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-black rounded-full uppercase tracking-wider">
                             #{index + 1} Top Contributor
@@ -511,19 +511,19 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                     <td className="px-6 py-4">
                       <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-[0.05em] ${getStatusBadgeClass(row.hostelType)}`}>{row.hostelType}</span>
                     </td>
-                    <td className="px-6 py-4 text-[13.5px] font-extrabold text-[#475569] text-right">{row.orders}</td>
-                    <td className="px-6 py-4 text-[13px] font-bold text-[#64748B] text-right">{row.kg > 0 ? row.kg.toFixed(1) : "—"}</td>
-                    <td className="px-6 py-4 text-[13.5px] font-black text-[#0F172A] text-right">
+                    <td className="px-6 py-4 text-[13.5px] font-extrabold text-[#3d5450] text-right">{row.orders}</td>
+                    <td className="px-6 py-4 text-[13px] font-bold text-[#58706a] text-right">{row.kg > 0 ? row.kg.toFixed(1) : "—"}</td>
+                    <td className="px-6 py-4 text-[13.5px] font-black text-[#172c28] text-right">
                       <div className="flex items-center justify-end gap-0.5"><BiRupee size={14} /><span>{row.rev.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                     </td>
-                    <td className="px-6 py-4 text-[13px] font-bold text-[#64748B] text-right">
+                    <td className="px-6 py-4 text-[13px] font-bold text-[#58706a] text-right">
                       {row.orders > 0 ? <div className="flex items-center justify-end gap-0.5"><BiRupee size={12} /><span>{(row.rev / row.orders).toFixed(0)}</span></div> : "—"}
                     </td>
-                    <td className="px-6 py-4 text-[13px] font-medium text-[#94A3B8] text-center">
+                    <td className="px-6 py-4 text-[13px] font-medium text-[#8aa39b] text-center">
                       {row.last ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(row.last) : "—"}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[#475569] text-[12px] font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all">
+                      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-[#3d5450] text-[12px] font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all">
                         View <FiArrowRight size={14} />
                       </button>
                     </td>
@@ -542,7 +542,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                       {row.name?.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-[#0F172A]">{row.name}</h4>
+                      <h4 className="text-sm font-black text-[#172c28]">{row.name}</h4>
                       {index < 3 && sortConfig.key === "rev" && sortConfig.direction === "desc" && row.rev > 0 && (
                         <span className="mr-1 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black rounded-full uppercase tracking-wider">
                           #{index + 1} Top Contributor
@@ -552,7 +552,7 @@ function PropertyPerformanceTable({ visibleRows, showFilterMenu, setShowFilterMe
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end gap-0.5 text-sm font-black text-[#0F172A]">
+                    <div className="flex items-center justify-end gap-0.5 text-sm font-black text-[#172c28]">
                       <BiRupee size={12} className="text-slate-400" /><span>{row.rev.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{row.orders} {row.orders === 1 ? "Order" : "Orders"}</span>
@@ -694,40 +694,40 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6 pb-2 min-w-0">
           <div className="mb-6">
-            <h2 className="text-[15px] font-bold text-[#0F172A]">Revenue Trend</h2>
-            <p className="text-[12px] font-medium text-[#94A3B8]">Daily revenue for the selected period</p>
+            <h2 className="text-[15px] font-bold text-[#172c28]">Revenue Trend</h2>
+            <p className="text-[12px] font-medium text-[#8aa39b]">Daily revenue for the selected period</p>
           </div>
           <ResponsiveContainer width="100%" height={windowWidth < 640 ? 200 : 260} debounce={100} minWidth={1} minHeight={1}>
             <AreaChart data={dailyRevenue} margin={{ top: 10, right: 10, left: windowWidth < 640 ? -25 : -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#2f8267" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#2f8267" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval="preserveStartEnd" minTickGap={20} />
-              <YAxis tick={{ fontSize: 10, fill: "#94A3B8", fontWeight: 500 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} width={windowWidth < 640 ? 35 : 50} />
-              <Tooltip content={<RevenueChartTooltip />} cursor={{ stroke: "#3B82F6", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
-              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }} />
-              <Area type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#3B82F6" strokeWidth={3} fill="url(#revGrad)" dot={{ r: 4, fill: "#3B82F6", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={2000} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef5f0" vertical={false} />
+              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#8aa39b", fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval="preserveStartEnd" minTickGap={20} />
+              <YAxis tick={{ fontSize: 10, fill: "#8aa39b", fontWeight: 500 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} width={windowWidth < 640 ? 35 : 50} />
+              <Tooltip content={<RevenueChartTooltip />} cursor={{ stroke: "#2f8267", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#58706a' }} />
+              <Area type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#2f8267" strokeWidth={3} fill="url(#revGrad)" dot={{ r: 4, fill: "#2f8267", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={2000} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* All-time Category */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 overflow-y-auto">
-          <h2 className="text-[15px] font-bold text-[#0F172A] mb-1">Revenue by Category</h2>
-          <p className="text-[12px] font-medium text-[#94A3B8] mb-5">All-time share</p>
+          <h2 className="text-[15px] font-bold text-[#172c28] mb-1">Revenue by Category</h2>
+          <p className="text-[12px] font-medium text-[#8aa39b] mb-5">All-time share</p>
           <div className="space-y-5">
             {categoryBreakdown.map((category) => (
               <div key={category.label} className="group">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: category.color }} />
-                    <span className="text-[13px] font-bold text-[#475569]">{category.label}</span>
+                    <span className="text-[13px] font-bold text-[#3d5450]">{category.label}</span>
                   </div>
-                  <div className="flex items-center justify-end gap-0.5 text-[13px] font-extrabold text-[#0F172A]">
+                  <div className="flex items-center justify-end gap-0.5 text-[13px] font-extrabold text-[#172c28]">
                     <BiRupee size={12} /><span>{category.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
@@ -735,7 +735,7 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
                   <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ backgroundColor: category.color, width: `${category.share}%` }} />
                 </div>
                 <div className="mt-1 flex justify-between">
-                  <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{category.orders} {category.orders === 1 ? "Order" : "Orders"}</span>
+                  <span className="text-[10px] text-[#8aa39b] font-bold uppercase tracking-wider">{category.orders} {category.orders === 1 ? "Order" : "Orders"}</span>
                   <span className="text-[10px] font-bold" style={{ color: category.color }}>{category.share.toFixed(1)}%</span>
                 </div>
               </div>
@@ -789,7 +789,7 @@ export default function AdminOverviewTab({ orders, daysInRange, dateFrom, setDat
               ))}
               <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-center">
                 <p className="text-xs text-gray-400 font-medium">Total Revenue</p>
-                <div className="flex items-center justify-center gap-0.5 text-lg font-bold text-[#1976D2]">
+                <div className="flex items-center justify-center gap-0.5 text-lg font-bold text-[#16654e]">
                   <BiRupee size={18} /><span>{selectedProperty.rev.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>

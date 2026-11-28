@@ -32,8 +32,8 @@ const CAT_COLORS = {
   "Setup cost": "#F59E0B",
   "Workers payment": "#10B981",
   "Out of the box": "#F43F5E",
-  "Vendor payment": "#3B82F6",
-  Other: "#64748B",
+  "Vendor payment": "#2f8267",
+  Other: "#58706a",
   "Dark Store OPEX": "#8B5CF6",
   "COMPANY OPEX": "#06B6D4",
   "Marketing Expense": "#EC4899",
@@ -340,7 +340,7 @@ export default function AdminExpensesTab() {
     <div className="space-y-8 pb-12" style={{ fontFamily: 'DM Sans, sans-serif' }}>
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 right-6 z-[100] bg-[#0F172A] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
+        <div className="fixed top-6 right-6 z-[100] bg-[#172c28] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-slide-left border border-slate-700/50 backdrop-blur-md">
           <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
             <FileText size={14} />
           </div>
@@ -402,7 +402,7 @@ export default function AdminExpensesTab() {
                   URL.revokeObjectURL(url);
                 }}
                 disabled={filtered.length === 0}
-                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-[#E3F2FD] text-[12px] font-black text-[#1976D2] border border-brand-200 rounded-xl hover:bg-[#1976D2] hover:text-white transition shadow-sm active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#E3F2FD] disabled:hover:text-[#1976D2]"
+                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-[#d9f1e3] text-[12px] font-black text-[#16654e] border border-brand-200 rounded-xl hover:bg-[#16654e] hover:text-white transition shadow-sm active:scale-95 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#d9f1e3] disabled:hover:text-[#16654e]"
               >
                 <Download size={14} /> Export
             </button>
@@ -418,7 +418,7 @@ export default function AdminExpensesTab() {
       {/* Sector Allocation */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 min-w-0 flex flex-col">
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
-          <h3 className="text-[15px] font-black text-[#0F172A] tracking-tight flex items-center gap-2">
+          <h3 className="text-[15px] font-black text-[#172c28] tracking-tight flex items-center gap-2">
             <PieChartIcon size={18} className="text-amber-500" /> Sector Allocation
           </h3>
         </div>
@@ -432,7 +432,7 @@ export default function AdminExpensesTab() {
                   <span className="text-[13px] font-bold text-slate-700 truncate pr-4 group-hover:text-slate-900 transition-colors" title={item.name}>
                     {item.name}
                   </span>
-                  <span className="text-[13px] font-black text-[#0F172A] shrink-0">
+                  <span className="text-[13px] font-black text-[#172c28] shrink-0">
                     ₹{item.value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </div>
@@ -442,7 +442,7 @@ export default function AdminExpensesTab() {
                       className="h-full rounded-full transition-all duration-1000 ease-out"
                       style={{
                         width: `${item.percentage}%`,
-                        backgroundColor: CAT_COLORS[item.name] || "#94a3b8"
+                        backgroundColor: CAT_COLORS[item.name] || "#8aa39b"
                       }}
                     />
                   </div>
@@ -460,7 +460,7 @@ export default function AdminExpensesTab() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h3 className="text-[16px] font-black text-[#0F172A] tracking-tight">Expense Transactions</h3>
+            <h3 className="text-[16px] font-black text-[#172c28] tracking-tight">Expense Transactions</h3>
             <p className="text-[12px] font-medium text-slate-400">
               Showing {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
             </p>
@@ -469,7 +469,7 @@ export default function AdminExpensesTab() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-[#F8FAFC] border-b border-gray-100">
+            <thead className="bg-[#f3f6f2] border-b border-gray-100">
               <tr>
                 <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Date</th>
                 <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Payee / Payer</th>
@@ -501,7 +501,7 @@ export default function AdminExpensesTab() {
                           {e.date || "—"}
                         </td>
                         <td className="px-5 py-4">
-                          <p className="text-[13.5px] font-black text-[#0F172A]">{e.payee || "—"}</p>
+                          <p className="text-[13.5px] font-black text-[#172c28]">{e.payee || "—"}</p>
                           {e.payer && (
                             <p className="text-[11px] font-bold text-slate-400">Paid by: {e.payer}</p>
                           )}
@@ -510,8 +510,8 @@ export default function AdminExpensesTab() {
                           <span
                             className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-block"
                             style={{
-                              backgroundColor: (CAT_COLORS[e.category] || "#64748B") + "18",
-                              color: CAT_COLORS[e.category] || "#64748B",
+                              backgroundColor: (CAT_COLORS[e.category] || "#58706a") + "18",
+                              color: CAT_COLORS[e.category] || "#58706a",
                             }}
                           >
                             {e.category || "Other"}
@@ -621,11 +621,11 @@ export default function AdminExpensesTab() {
       {/* Side Panel Redesign */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center sm:justify-end p-0 sm:p-4">
-          <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="absolute inset-0 bg-[#172c28]/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] bg-white sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up sm:animate-slide-left">
             <div className="p-6 sm:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30 flex-shrink-0">
               <div>
-                <h2 className="text-[18px] font-black text-[#0F172A] tracking-tight">{editingId ? 'Modify Ledger Entry' : 'New Capital Outflow'}</h2>
+                <h2 className="text-[18px] font-black text-[#172c28] tracking-tight">{editingId ? 'Modify Ledger Entry' : 'New Capital Outflow'}</h2>
                 <p className="text-[12px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Personal Account Management</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">

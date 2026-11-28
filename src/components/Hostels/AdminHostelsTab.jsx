@@ -25,10 +25,10 @@ const DEFAULT_HOSTEL_COLORS = {
   "Samshrushti": "#4338CA", 
   "Tara": "#DC2626", 
   "Hostel 99": "#7C3AED", 
-  "One 8": "#2563EB",
+  "One 8": "#16654e",
   "Zolo stays": "#10B981"
 };
-const FALLBACK_COLORS = ["#1976D2", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D", "#DC2626", "#4338CA"];
+const FALLBACK_COLORS = ["#16654e", "#7C3AED", "#059669", "#D97706", "#0891B2", "#BE185D", "#DC2626", "#4338CA"];
 const HIDDEN_HOSTEL_PROPERTIES = new Set(["Unknown Property"]);
 
 function getPropertyColor(name, index) {
@@ -47,7 +47,7 @@ const BarTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-xl p-4 border border-gray-100" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        <p className="text-[#0F172A] font-black text-[11px] uppercase tracking-wider mb-2 border-b border-gray-50 pb-1">{label}</p>
+        <p className="text-[#172c28] font-black text-[11px] uppercase tracking-wider mb-2 border-b border-gray-50 pb-1">{label}</p>
         <div className="space-y-1.5">
           {payload.map((p, i) => (
             <div key={i} className="flex items-center justify-between gap-4">
@@ -55,7 +55,7 @@ const BarTooltip = ({ active, payload, label }) => {
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
                 <span className="text-[12px] font-bold text-slate-500">{p.name}</span>
               </div>
-              <span className="text-[12px] font-black text-[#0F172A]">{p.value.toFixed(1)} KG</span>
+              <span className="text-[12px] font-black text-[#172c28]">{p.value.toFixed(1)} KG</span>
             </div>
           ))}
         </div>
@@ -71,7 +71,7 @@ function SummaryCard({ name, color, orders, kg, clothes, students, avgKgPerStude
       <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: color }} />
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-        <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">{name}</h3>
+        <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">{name}</h3>
       </div>
       <div className="grid grid-cols-2 gap-y-3 gap-x-1 mt-auto">
         {revenue !== undefined && (
@@ -130,7 +130,7 @@ function LinenSummaryCard({ name, color, orders, revenue }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight">{name}</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight">{name}</h3>
         </div>
         <div className="text-right">
           <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-wider block mb-1">
@@ -164,7 +164,7 @@ function UnifiedSummaryCard({ name, color, studentOrderCount, linenOrderCount, k
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-          <h3 className="text-[14px] font-black text-[#0F172A] tracking-tight truncate">{name}</h3>
+          <h3 className="text-[14px] font-black text-[#172c28] tracking-tight truncate">{name}</h3>
         </div>
         <div className="flex items-center gap-0.5 text-[14px] font-black text-green-700 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100">
           <BiRupee size={14} />
@@ -433,7 +433,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
         {view === "all" ? (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight uppercase tracking-widest">Unified Property Summary</h2>
+              <h2 className="text-[15px] font-black text-[#172c28] tracking-tight uppercase tracking-widest">Unified Property Summary</h2>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Combining {unifiedSummaries.length} {unifiedSummaries.length === 1 ? "Property" : "Properties"}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
@@ -454,7 +454,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
       {(view === "student" || view === "all") && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 overflow-hidden min-w-0">
           <div className="mb-6">
-            <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight">Daily KG Distribution</h2>
+            <h2 className="text-[15px] font-black text-[#172c28] tracking-tight">Daily KG Distribution</h2>
             <p className="text-[12px] font-medium text-slate-400">Linen weight trends across student properties</p>
           </div>
           <ResponsiveContainer width="100%" height={windowWidth < 640 ? 240 : 300} debounce={100} minWidth={1} minHeight={1}>
@@ -469,22 +469,22 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                 }
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef5f0" vertical={false} />
               <XAxis
                 dataKey="day"
-                tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }}
+                tick={{ fontSize: 10, fill: '#8aa39b', fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
                 dy={10}
                 interval={windowWidth < 640 ? 2 : 0}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 700 }}
+                tick={{ fontSize: 10, fill: '#8aa39b', fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
                 width={windowWidth < 640 ? 30 : 45}
               />
-              <Tooltip content={<BarTooltip />} cursor={{ fill: '#F8FAFC' }} />
+              <Tooltip content={<BarTooltip />} cursor={{ fill: '#f3f6f2' }} />
               <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }} />
               {studentSummaries.map(s => (
                 <Bar key={s.name} dataKey={s.name} stackId="a" fill={s.color} radius={[3, 3, 0, 0]} maxBarSize={40} animationDuration={1500} className="cursor-pointer" />
@@ -497,7 +497,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-[15px] font-black text-[#0F172A] tracking-tight mb-0.5">
+            <h2 className="text-[15px] font-black text-[#172c28] tracking-tight mb-0.5">
               {view === "all" ? "Unified Hostel Transaction Log" : view === "student" ? "Student Laundry Pick-up Log" : "Linen Management Log"}
             </h2>
             <p className="text-[12px] font-medium text-slate-400">
@@ -543,14 +543,14 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
 
         <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200">
           <table className="w-full min-w-[800px]">
-            <thead className="bg-[#F8FAFC] sticky top-0 z-10">
+            <thead className="bg-[#f3f6f2] sticky top-0 z-10">
               <tr>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Date</th>
-                <th className="text-left text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Property / Type</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Metric / Qty</th>
-                <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Details</th>
-                <th className="text-right text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Billed Amount</th>
-                {!isViewer && <th className="text-center text-[11px] font-black text-[#64748B] px-6 py-4 uppercase tracking-[0.1em]">Action</th>}
+                <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Date</th>
+                <th className="text-left text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Property / Type</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Metric / Qty</th>
+                <th className="text-center text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Details</th>
+                <th className="text-right text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Billed Amount</th>
+                {!isViewer && <th className="text-center text-[11px] font-black text-[#58706a] px-6 py-4 uppercase tracking-[0.1em]">Action</th>}
               </tr>
             </thead>
             <tbody>
@@ -569,11 +569,11 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                   <tr
                     key={o.id}
                     onClick={() => { setSelectedOrder(o); setIsModalOpen(true); }}
-                    className="border-b border-gray-50 hover:bg-[#F8FAFC] transition-colors group cursor-pointer"
+                    className="border-b border-gray-50 hover:bg-[#f3f6f2] transition-colors group cursor-pointer"
                   >
                     <td className="px-6 py-4 text-[13px] font-bold text-slate-500">{o.date}</td>
                     <td className="px-6 py-4">
-                      <p className="text-[13.5px] font-black text-[#0F172A]">{o.property}</p>
+                      <p className="text-[13.5px] font-black text-[#172c28]">{o.property}</p>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                           {o.type === 'student' ? 'Student' : 'Linen'}
@@ -608,7 +608,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                           <span className="text-[11px] font-bold text-slate-500 italic">Wash & Fold/Iron</span>
                         ) : (
                           Object.entries(o.details || {}).filter(([, v]) => v > 0).map(([k, v]) => (
-                            <span key={k} className="text-[10px] font-bold bg-[#F1F5F9] text-slate-600 px-2 py-0.5 rounded whitespace-nowrap">
+                            <span key={k} className="text-[10px] font-bold bg-[#eef5f0] text-slate-600 px-2 py-0.5 rounded whitespace-nowrap">
                               {k}: {v}
                             </span>
                           ))
@@ -675,7 +675,7 @@ export default function AdminHostelsTab({ orders, daysInRange }) {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{o.date}</span>
-                    <h4 className="text-[14px] font-black text-[#0F172A]">{o.property}</h4>
+                    <h4 className="text-[14px] font-black text-[#172c28]">{o.property}</h4>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${o.type === 'student' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>

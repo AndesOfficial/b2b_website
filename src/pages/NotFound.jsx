@@ -6,7 +6,7 @@ export default function NotFound() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#0F172A] flex flex-col items-center justify-center p-6 text-white text-center" style={{ fontFamily: "DM Sans, sans-serif" }}>
+    <div className="min-h-screen bg-[#172c28] flex flex-col items-center justify-center p-6 text-white text-center" style={{ fontFamily: "DM Sans, sans-serif" }}>
       <div className="mb-8 animate-fade-in flex flex-col items-center">
         <BrandLogo className="h-16 w-16 text-blue-400 mb-4" />
         <span className="text-[11px] font-black tracking-[0.2em] uppercase text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
@@ -24,7 +24,7 @@ export default function NotFound() {
       <div className="flex flex-wrap gap-4 justify-center">
         <button
           onClick={() => navigate(-1)}
-          className="px-6 py-3 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-slate-200 font-bold text-sm transition-all flex items-center gap-2 border border-[#334155]"
+          className="px-6 py-3 rounded-xl bg-[#172c28] hover:bg-[#26403a] text-slate-200 font-bold text-sm transition-all flex items-center gap-2 border border-[#26403a]"
         >
           Go Back
         </button>
